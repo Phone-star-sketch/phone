@@ -40,6 +40,10 @@ class PhoneNumber extends Model {
             : [],
         super.fromJson();
 
+  List<System> getExpiredSystems() {
+    return systems?.where((system) => system.isExpired()).toList() ?? [];
+  }
+
   @override
   Map<String, dynamic> toJson() {
     return {

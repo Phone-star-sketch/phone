@@ -116,18 +116,6 @@ class AccountDetails extends StatelessWidget {
           color: Colors.black54,
         ),
         title: "المتابعة"),
-    Page(
-        roles: [UserRoles.admin, UserRoles.manager, UserRoles.assistant], // Update roles to include all users
-        content: Container(
-          color: Colors.white,
-          constraints: const BoxConstraints.expand(),
-          child: CreateUserPage(),
-        ),
-        icon: const Icon(
-          Icons.person_add,
-          color: Colors.black54,
-        ),
-        title: "انشاء مستخدم"),
   ];
   AccountDetailsController pageController = Get.put(AccountDetailsController());
 

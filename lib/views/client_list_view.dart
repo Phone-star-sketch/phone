@@ -42,6 +42,7 @@ class ClientListView extends StatelessWidget {
         "Filtered Data: ${filteredData.map((client) => client.name).toList()}");
 
     return Scaffold(
+      backgroundColor: Colors.white, // Ensure background color is set to white
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.red,
         child: const Icon(Icons.person_add_alt),

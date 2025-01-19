@@ -36,6 +36,10 @@ class System extends Model {
         type = SystemType.fromJson(data[typeTableName]),
         super.fromJson();
 
+  bool isExpired() {
+    return endDate != null && endDate!.isBefore(DateTime.now());
+  }
+
   @override
   Map<String, dynamic> toJson() {
     return {
