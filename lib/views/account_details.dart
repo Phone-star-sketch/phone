@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
@@ -118,12 +119,13 @@ class AccountDetails extends StatelessWidget {
         title: "المتابعة"),
   ];
   AccountDetailsController pageController = Get.put(AccountDetailsController());
+  final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
     screenSize = MediaQuery.of(context).size;
     final colors = Get.theme.colorScheme;
-
+    final isMobile = MediaQuery.of(context).size.width < 1200;
     final content = pages
         .map(
           (e) => e.content,
@@ -195,7 +197,7 @@ class AccountDetails extends StatelessWidget {
             ),
           ],
         ),
-        drawer: (MediaQuery.of(context).size.width < 1200)
+        drawer: (isMobile)
             ? Stack(
                 children: [
                   Positioned.fill(
@@ -214,9 +216,14 @@ class AccountDetails extends StatelessWidget {
                             Expanded(
                                 child: SideBar(
                               pages: pages
-                                  .where((page) => 
-                                    (page.roles.map((role) => role.index).contains(SupabaseAuthentication.myUser!.role)) ||
-                                    (page.title == "انشاء مستخدم" && SupabaseAuthentication.myUser!.role == UserRoles.admin.index))
+                                  .where((page) =>
+                                      (page.roles
+                                          .map((role) => role.index)
+                                          .contains(SupabaseAuthentication
+                                              .myUser!.role)) ||
+                                      (page.title == "انشاء مستخدم" &&
+                                          SupabaseAuthentication.myUser!.role ==
+                                              UserRoles.admin.index))
                                   .toList(),
                             )),
                           ],
@@ -225,12 +232,40 @@ class AccountDetails extends StatelessWidget {
                 ],
               )
             : null,
-        body: (MediaQuery.of(context).size.width < 1200)
-            ? Obx(() => Row(
-                  children: [
-                    Expanded(
-                        child: content[pageController.selectedIndex.value]),
-                  ],
+        bottomNavigationBar: isMobile
+            ? Obx(() => CurvedNavigationBar(
+                  key: _bottomNavigationKey,
+                  index: pageController.selectedIndex.value,
+                  height: 65.0,
+                  items: pages
+                      .where((page) =>
+                          (page.roles
+                              .map((role) => role.index)
+                              .contains(SupabaseAuthentication.myUser!.role)) ||
+                          (page.title == "انشاء مستخدم" &&
+                              SupabaseAuthentication.myUser!.role ==
+                                  UserRoles.admin.index))
+                      .map((page) => Icon(
+                            (page.icon as Icon).icon!,
+                            size: 33,
+                            color: Colors.black54, // Changed to black54
+                          ))
+                      .toList(),
+                  color: Colors.white,
+                  buttonBackgroundColor: Colors.white,
+                  backgroundColor: colors.background,
+                  animationCurve: Curves.easeInOut,
+                  animationDuration: const Duration(milliseconds: 600),
+                  onTap: (index) {
+                    pageController.selectedIndex.value = index;
+                  },
+                  letIndexChange: (index) => true,
+                ))
+            : null,
+        body: isMobile
+            ? Obx(() => Container(
+                  color: colors.background,
+                  child: content[pageController.selectedIndex.value],
                 ))
             : Row(
                 children: [
@@ -239,9 +274,12 @@ class AccountDetails extends StatelessWidget {
                     width: 250,
                     child: SideBar(
                       pages: pages
-                          .where((page) => 
-                            (page.roles.map((role) => role.index).contains(SupabaseAuthentication.myUser!.role)) ||
-                            (page.title == "انشاء مستخدم" && SupabaseAuthentication.myUser!.role == UserRoles.admin.index))
+                          .where((page) =>
+                              (page.roles.map((role) => role.index).contains(
+                                  SupabaseAuthentication.myUser!.role)) ||
+                              (page.title == "انشاء مستخدم" &&
+                                  SupabaseAuthentication.myUser!.role ==
+                                      UserRoles.admin.index))
                           .toList(),
                     ),
                   ),
@@ -305,60 +343,61 @@ class SideBar extends StatelessWidget {
               itemBuilder: (context, index) {
                 return SizedBox(
                     height: 50,
-                    child: Obx(() => (Get.find<AccountDetailsController>()
-                                .selectedIndex
-                                .value ==
-                            index)
-                        ? Container(
-                            margin: const EdgeInsets.only(right: 10, left: 0),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.only(
-                                topRight: Radius.circular(20),
-                                bottomRight: Radius.circular(20),
-                              ),
-                            ),
-                            child: Center(
-                              child: ListTile(
-                                leading: icons[index],
-                                title: Text(
-                                  titles[index],
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                onTap: () {
-                                  Get.find<AccountDetailsController>()
-                                      .selectedIndex
-                                      .value = index;
-                                },
-                                selectedColor: Colors.black,
-                                selected: Get.find<AccountDetailsController>()
+                    child: Obx(() => AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          margin: const EdgeInsets.only(right: 10, left: 0),
+                          decoration: BoxDecoration(
+                            color: Get.find<AccountDetailsController>()
                                         .selectedIndex
                                         .value ==
-                                    index,
+                                    index
+                                ? Colors.white
+                                : Colors.transparent,
+                            borderRadius: const BorderRadius.only(
+                              topRight: Radius.circular(20),
+                              bottomRight: Radius.circular(20),
+                            ),
+                            boxShadow: Get.find<AccountDetailsController>()
+                                        .selectedIndex
+                                        .value ==
+                                    index
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      spreadRadius: 2,
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                          child: Center(
+                            child: ListTile(
+                              leading: icons[index],
+                              title: Text(
+                                titles[index],
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Get.find<AccountDetailsController>()
+                                              .selectedIndex
+                                              .value ==
+                                          index
+                                      ? Colors.black
+                                      : Colors.white,
+                                ),
                               ),
-                            ),
-                          )
-                        : ListTile(
-                            leading: icons[index],
-                            title: Text(
-                              titles[index],
-                            ),
-                            onTap: () {
-                              Get.find<AccountDetailsController>()
-                                  .selectedIndex
-                                  .value = index;
-                            },
-                            titleTextStyle: const TextStyle(
-                                fontFamily: "Cairo",
-                                fontSize: 15,
-                                color: Colors.white),
-                            selectedColor: Colors.white,
-                            selected: Get.find<AccountDetailsController>()
+                              onTap: () {
+                                Get.find<AccountDetailsController>()
                                     .selectedIndex
-                                    .value ==
-                                index,
-                          )));
+                                    .value = index;
+                              },
+                              selected: Get.find<AccountDetailsController>()
+                                      .selectedIndex
+                                      .value ==
+                                  index,
+                            ),
+                          ),
+                        )));
               }),
         ),
       ],
