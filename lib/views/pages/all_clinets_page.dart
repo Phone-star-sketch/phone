@@ -3,7 +3,6 @@ import 'package:flutter/widgets.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
-import 'package:phone_system_app/controllers/account_clinet_info_data.dart';
 import 'package:phone_system_app/controllers/account_profit_controller.dart';
 import 'package:phone_system_app/controllers/money_display_loading.dart';
 import 'package:phone_system_app/models/client.dart';

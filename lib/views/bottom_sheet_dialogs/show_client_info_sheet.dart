@@ -10,7 +10,6 @@ import 'package:get/get_core/get_core.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 import 'package:phone_system_app/components/money_display.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
-import 'package:phone_system_app/controllers/account_clinet_info_data.dart';
 import 'package:phone_system_app/controllers/client_bottom_sheet_controller.dart';
 import 'package:phone_system_app/controllers/money_display_loading.dart';
 import 'package:phone_system_app/models/client.dart';
