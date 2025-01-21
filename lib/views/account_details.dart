@@ -263,10 +263,32 @@ class AccountDetails extends StatelessWidget {
                 ))
             : null,
         body: isMobile
-            ? Obx(() => Container(
-                  color: colors.background,
-                  child: content[pageController.selectedIndex.value],
-                ))
+            ? Obx(() {
+                final accountClientController = Get.find<AccountClientInfo>();
+                print(
+                    "TTILE IS ${pages[pageController.selectedIndex.value].title}");
+                if (pages[pageController.selectedIndex.value].title ==
+                    "العروض المطلوبة") {
+                  print("GETTING THE VERY PAGE");
+                  final expiredSystemsClients = accountClientController
+                      .clinets.value
+                      .where((client) => client.numbers!.any(
+                          (number) => number.getExpiredSystems().isNotEmpty))
+                      .toList();
+                  Get.to(
+                      () => ExpiredSystemsPage(clients: expiredSystemsClients));
+                  return Container();
+                  // return Container(
+                  //   color: colors.background,
+                  //   child: content[pageController.selectedIndex.value],
+                  // );
+                } else {
+                  return Container(
+                    color: colors.background,
+                    child: content[pageController.selectedIndex.value],
+                  );
+                }
+              })
             : Row(
                 children: [
                   Container(
@@ -291,7 +313,31 @@ class AccountDetails extends StatelessWidget {
                       child: Container(
                           decoration: BoxDecoration(),
                           padding: const EdgeInsets.all(10),
-                          child: content[pageController.selectedIndex.value]),
+                          child: () {
+                            print("A7a");
+                            print(pages[pageController.selectedIndex.value]
+                                .title);
+                            final accountClientController =
+                                Get.find<AccountClientInfo>();
+                            if (pages[pageController.selectedIndex.value]
+                                    .title ==
+                                "العروض المطلوبة") {
+                              print("GETTING THE VERY PAGE");
+                              final expiredSystemsClients =
+                                  accountClientController.clinets.value
+                                      .where((client) => client.numbers!.any(
+                                          (number) => number
+                                              .getExpiredSystems()
+                                              .isNotEmpty))
+                                      .toList();
+                              // Get.to(() => ExpiredSystemsPage(clients: expiredSystemsClients));
+                              return ExpiredSystemsPage(
+                                  clients: expiredSystemsClients);
+                            } else {
+                              return content[
+                                  pageController.selectedIndex.value];
+                            }
+                          }()),
                     )),
                   ),
                 ],

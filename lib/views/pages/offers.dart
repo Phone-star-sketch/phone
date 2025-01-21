@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/models/client.dart';
+import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/views/client_list_view.dart';
 import 'package:phone_system_app/views/pages/all_clinets_page.dart';
@@ -101,11 +102,22 @@ class ExpiredSystemsController extends GetxController {
   final RxString searchQuery = ''.obs;
   final RxList<Client> filteredClients = <Client>[].obs;
   final RxInt totalExpiredSystems = 0.obs;
-  final List<Client> allClients;
+  List<Client>? allClients = <Client>[].obs;
 
-  ExpiredSystemsController(this.allClients) {
-    filteredClients.value = allClients;
+  Future<void> fetchClients() async {
+    filteredClients.value = await BackendServices.instance.clientRepository
+        .getAllClientsByAccount(Get.put(AccountClientInfo.to).currentAccount);
+    filteredClients.value = filteredClients
+        .where((client) => client.numbers!
+            .any((number) => number.getExpiredSystems().isNotEmpty))
+        .toList();
+    allClients = filteredClients.value;
     _updateTotalExpiredSystems();
+  }
+
+  ExpiredSystemsController() {
+    // filteredClients.value = allClients;
+    fetchClients();
   }
 
   void _updateTotalExpiredSystems() {
@@ -123,10 +135,10 @@ class ExpiredSystemsController extends GetxController {
   void updateSearch(String query) {
     searchQuery.value = query;
     if (query.isEmpty) {
-      filteredClients.value = allClients;
+      filteredClients.value = allClients!;
     } else {
       final normalized = removeSpecialArabicChars(query.toLowerCase());
-      filteredClients.value = allClients
+      filteredClients.value = allClients!
           .where((client) =>
               removeSpecialArabicChars(client.name!.toLowerCase())
                   .contains(normalized) ||
@@ -144,13 +156,14 @@ class ExpiredSystemsPage extends StatelessWidget {
   final controller;
 
   ExpiredSystemsPage({required this.clients})
-      : controller = Get.put(ExpiredSystemsController(clients));
+      : controller = Get.put(ExpiredSystemsController());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text("العروض المطلوبة"),
+        automaticallyImplyLeading: false, // Ensure no back button is shown
       ),
       body: Column(
         children: [
