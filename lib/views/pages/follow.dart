@@ -12,6 +12,9 @@ import 'package:phone_system_app/services/backend/backend_service_type.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_sheet.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
+import 'package:timezone/timezone.dart';
 
 class LogWidthUser {
   Log log;
@@ -21,18 +24,97 @@ class LogWidthUser {
     user = SupabaseAuthentication.allUser!.firstWhereOrNull(
       (element) => element.id == log.createdBy,
     );
-    client = AccountClientInfo.to.clinets.firstWhereOrNull(
-      (element) => element.id == log.clientId,
-    );
+    
+    if (log.clientId != null) {
+      client = AccountClientInfo.to.clinets.firstWhereOrNull(
+        (element) => element.id == log.clientId,
+      );
+    }
   }
 }
 
 class FollowController extends GetxController {
   RxList<LogWidthUser> logs = <LogWidthUser>[].obs;
+  RealtimeChannel? _subscription;
+  RxString connectionStatus = 'غير متصل'.obs;
+  RxString lastUpdateTime = ''.obs;
 
   @override
   void onInit() async {
-    await updateLogs();
+    super.onInit();
+    await _initializeData();
+  }
+
+  Future<void> _initializeData() async {
+    try {
+      // First ensure clients are loaded
+      await AccountClientInfo.to.fetchClients();
+      
+      // Then fetch logs
+      await updateLogs();
+      
+      // Finally setup real-time
+      _setupRealtime();
+    } catch (e) {
+      print('Error initializing data: $e');
+    }
+  }
+
+  void _setupRealtime() {
+    try {
+      final client = Supabase.instance.client;
+      
+      connectionStatus.value = 'جاري الاتصال...';
+      
+      _subscription = client
+          .channel('logs-channel')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'logs',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'account_id',
+              value: AccountClientInfo.to.currentAccount.id,
+            ),
+            callback: (payload) async {
+              print('🔴 Realtime update received: ${payload.eventType} at ${DateTime.now()}');
+              print('🔴 Changed data: ${payload.newRecord}');
+              
+              // Update timestamp
+              lastUpdateTime.value = DateFormat.jm('ar').format(DateTime.now());
+              
+              // Show update notification
+              Get.snackbar(
+                'تحديث مباشر',
+                'تم استلام تحديث جديد',
+                backgroundColor: Colors.green.withOpacity(0.1),
+                duration: Duration(seconds: 2),
+              );
+              
+              await AccountClientInfo.to.fetchClients();
+              await updateLogs();
+            },
+          )
+          .subscribe((status, error) {
+            if (error != null) {
+              connectionStatus.value = 'خطأ في الاتصال';
+              print('🔴 Realtime error: $error');
+            } else {
+              connectionStatus.value = 'متصل';
+              print('🔴 Realtime status: $status');
+            }
+          });
+    } catch (e) {
+      connectionStatus.value = 'فشل الاتصال';
+      print('🔴 Error setting up realtime: $e');
+    }
+  }
+
+  @override
+  void onClose() {
+    _subscription?.unsubscribe();
+    super.onClose();
   }
 
   Future<void> updateLogs() async {
@@ -43,7 +125,6 @@ class FollowController extends GetxController {
       final dataAdd = await BackendServices.instance.logRepository
           .getLogsByMatchMapQuery({
         Log.accountIdColumnName: AccountClientInfo.to.currentAccount.id,
-      
       }, 200);
 
       l.addAll(dataAdd);
@@ -53,10 +134,44 @@ class FollowController extends GetxController {
             (e) => LogWidthUser(log: e),
           )
           .toList();
+      print("Real-time update: Found ${logs.length} logs");
       Loaders.to.followLoading.value = false;
     } catch (e) {
+      print("Real-time update error: $e");
       Get.snackbar("مشكلة اثناء التحميل", e.toString());
       Loaders.to.followLoading.value = false;
+    }
+  }
+
+  Future<void> insertDummyLog() async {
+    try {
+      final firstClient = AccountClientInfo.to.clinets.firstWhereOrNull((c) => c.id != null);
+      
+      if (firstClient == null) {
+        Get.snackbar('خطأ', 'لا يوجد عملاء متاحين لإجراء الاختبار');
+        return;
+      }
+
+      final supabase = Supabase.instance.client;
+      
+      
+
+      
+
+      
+      
+      Get.snackbar(
+        'اختبار', 
+        'تم إضافة معاملة تجريبية',
+        backgroundColor: Colors.blue.withOpacity(0.1),
+      );
+      
+      // Refresh logs after insertion
+      await updateLogs();
+      
+    } catch (e) {
+      print('🔴 Error inserting dummy log: $e');
+      Get.snackbar('خطأ', 'فشل في إضافة البيانات التجريبية: $e');
     }
   }
 }
@@ -65,87 +180,103 @@ class Follow extends StatelessWidget {
   final controller = Get.put(FollowController());
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      () {
-        final list = controller.logs;
-
-        return Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  ElevatedButton(
-                    style:
-                        ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                    onPressed: (Loaders.to.followLoading.value)
-                        ? null
-                        : () async {
-                            controller.updateLogs();
-                          },
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.refresh_sharp,
-                          color: Colors.white,
+    return Obx(() {
+      final list = controller.logs;
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        "سجل بأخر الاحداث و التعاملات",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
-                        SizedBox(
-                          width: 10,
-                        ),
-                        Text("تحديث")
-                      ],
-                    ),
-                  ),
-                  const SizedBox(
-                    width: 20,
-                  ),
-                  Expanded(
-                    child: Text(
-                      "سجل بأخر الاحداث و التعاملات في حساب ${AccountClientInfo.to.currentAccount.name}",
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  )
-                ],
-              ),
-            ),
-            (Loaders.to.followLoading.value)
-                ? Container(
-                    height: MediaQuery.of(context).size.height * 0.6,
-                    child: Center(
-                      child: CustomIndicator(
-                        title: "",
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  )
-                : Expanded(
-                    child: ListView.separated(
-                      separatorBuilder: (context, index) => const Divider(),
-                      itemCount: list.length,
-                      itemBuilder: (context, index) {
-                        return InkWell(
-                          onTap: (list[index].client != null)
-                              ? () async {
-                                  final client = list[index].client;
-                                  final controller =
-                                      Get.put(ClientBottomSheetController());
-                                  controller.setClient(client!);
-                                  await showClientInfoSheet(context, client);
-                                  Get.delete<ClientBottomSheetController>(
-                                      force: true);
-                                }
-                              : null,
-                          child: LogWithUserCardWidget(
-                            logWidthUser: list[index],
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (SupabaseAuthentication.myUser!.role == UserRoles.admin.index)
+                          IconButton(
+                            onPressed: () => controller.insertDummyLog(),
+                            icon: Icon(Icons.add_circle, size: 20),
+                            tooltip: 'إضافة معاملة تجريبية',
+                            color: Colors.blue,
+                            padding: EdgeInsets.zero,
+                            constraints: BoxConstraints(),
                           ),
-                        );
-                      },
+                        SizedBox(width: 4),
+                        Icon(
+                          controller.connectionStatus.value == 'متصل' 
+                            ? Icons.wifi : Icons.wifi_off,
+                          color: controller.connectionStatus.value == 'متصل' 
+                            ? Colors.green : Colors.red,
+                          size: 20,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          controller.connectionStatus.value,
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                if (controller.lastUpdateTime.value.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(
+                      'آخر تحديث: ${controller.lastUpdateTime.value}',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ),
-          ],
-        );
-      },
-    );
+              ],
+            ),
+          ),
+          (Loaders.to.followLoading.value)
+              ? Container(
+                  height: MediaQuery.of(context).size.height * 0.6,
+                  child: Center(
+                    child: CustomIndicator(
+                      title: "",
+                    ),
+                  ),
+                )
+              : Expanded(
+                  child: ListView.separated(
+                    separatorBuilder: (context, index) => const Divider(),
+                    itemCount: list.length,
+                    itemBuilder: (context, index) {
+                      return InkWell(
+                        onTap: (list[index].client != null)
+                            ? () async {
+                                final client = list[index].client;
+                                final controller =
+                                    Get.put(ClientBottomSheetController());
+                                controller.setClient(client!);
+                                await showClientInfoSheet(context, client);
+                                Get.delete<ClientBottomSheetController>(
+                                    force: true);
+                              }
+                            : null,
+                        child: LogWithUserCardWidget(
+                          logWidthUser: list[index],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+        ],
+      );
+    });
   }
 }
 
@@ -163,6 +294,7 @@ class LogWithUserCardWidget extends StatelessWidget {
     final Client? currentClient = logWidthUser.client;
     final Log currentLog = logWidthUser.log;
     final AppUser? user = logWidthUser.user;
+
     return Container(
       margin: const EdgeInsets.all(10),
       padding: const EdgeInsets.all(20),
@@ -199,7 +331,9 @@ class LogWithUserCardWidget extends StatelessWidget {
               ),
               Expanded(
                 child: Text(
-                  "${(currentClient != null) ? currentClient.name : "تم حذفه"}",
+                  (currentClient != null)
+                      ? currentClient.name!
+                      : "تم حذف العميل",
                   style: const TextStyle(
                       fontSize: 15, fontWeight: FontWeight.bold),
                 ),

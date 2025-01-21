@@ -190,4 +190,17 @@ class AccountClientInfo extends GetxController {
       ));
     }
   }
+
+  Future<void> fetchClients() async {
+    try {
+      isLoading.value = true;
+      final newClients = await BackendServices.instance.clientRepository
+          .getAllClientsByAccount(currentAccount);
+      clinets.value = newClients;
+      isLoading.value = false;
+    } catch (e) {
+      print('Error fetching clients: $e');
+      isLoading.value = false;
+    }
+  }
 }
