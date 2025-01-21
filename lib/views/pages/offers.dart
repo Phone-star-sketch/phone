@@ -71,12 +71,13 @@ class OfferManagement extends StatelessWidget {
                   title: "العدد",
                   value: "${clients.length}",
                 ),
-                ElevatedButton(
+                ElevatedButton.icon(
                   onPressed: () {
                     Get.to(() =>
                         ExpiredSystemsPage(clients: expiredSystemsClients));
                   },
-                  child: Text(
+                  icon: Icon(Icons.card_giftcard_rounded, color: Colors.black), // Icon added here
+                  label: Text(
                     "العروض المطلوبة",
                     style: TextStyle(color: Colors.black),
                   ),
