@@ -156,10 +156,6 @@ class FollowController extends GetxController {
       
       
 
-      
-
-      
-      
       Get.snackbar(
         'اختبار', 
         'تم إضافة معاملة تجريبية',

@@ -13,6 +13,20 @@ import 'package:phone_system_app/utils/arabic_normalizer.dart';
 class OfferManagement extends StatelessWidget {
   final controller = Get.find<AccountClientInfo>();
 
+  void _navigateToExpiredSystems(BuildContext context, List<Client> clients) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Ensure clean navigation
+      await Get.delete<ExpiredSystemsController>(force: true);
+      
+      Get.to(
+        () => ExpiredSystemsPage(clients: clients),
+        preventDuplicates: true,
+        transition: Transition.fadeIn,
+        duration: const Duration(milliseconds: 300),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
@@ -73,8 +87,7 @@ class OfferManagement extends StatelessWidget {
                 ),
                 ElevatedButton.icon(
                   onPressed: () {
-                    Get.to(() =>
-                        ExpiredSystemsPage(clients: expiredSystemsClients));
+                    _navigateToExpiredSystems(context, expiredSystemsClients);
                   },
                   icon: Icon(Icons.card_giftcard_rounded, color: Colors.black), // Icon added here
                   label: Text(
@@ -121,6 +134,15 @@ class ExpiredSystemsController extends GetxController {
     fetchClients();
   }
 
+  void initializeWithClients(List<Client> clients) {
+    filteredClients.value = clients
+        .where((client) => client.numbers!
+            .any((number) => number.getExpiredSystems().isNotEmpty))
+        .toList();
+    allClients = filteredClients.value;
+    _updateTotalExpiredSystems();
+  }
+
   void _updateTotalExpiredSystems() {
     totalExpiredSystems.value = filteredClients.fold<int>(
       0,
@@ -154,109 +176,220 @@ class ExpiredSystemsController extends GetxController {
 
 class ExpiredSystemsPage extends StatelessWidget {
   final List<Client> clients;
-  final controller;
+  final ExpiredSystemsController controller;
 
   ExpiredSystemsPage({required this.clients})
-      : controller = Get.put(ExpiredSystemsController());
+      : controller = Get.put(ExpiredSystemsController()) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.initializeWithClients(clients);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("العروض المطلوبة"),
-        automaticallyImplyLeading: false, // Ensure no back button is shown
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
+    return Material(
+      child: WillPopScope(
+        onWillPop: () async {
+          if (Navigator.canPop(context)) {
+            await Get.delete<ExpiredSystemsController>(force: true);
+            Navigator.pop(context);
+          }
+          return false;
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text("العروض المطلوبة"),
+            leading: Navigator.canPop(context)
+                ? IconButton(
+                    icon: Icon(Icons.arrow_back),
+                    onPressed: () async {
+                      await Get.delete<ExpiredSystemsController>(force: true);
+                      Navigator.pop(context);
+                    },
+                  )
+                : null,
+          ),
+          body: RepaintBoundary(
+            child: Column(
               children: [
-                Expanded(
-                  child: TextField(
-                    onChanged: controller.updateSearch,
-                    decoration: InputDecoration(
-                      labelText: 'بحث',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 10),
-                Obx(() => Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'عدد العروض المنتهية: ${controller.totalExpiredSystems}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          onChanged: controller.updateSearch,
+                          decoration: InputDecoration(
+                            labelText: 'بحث',
+                            prefixIcon: Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
                         ),
                       ),
-                    )),
+                      SizedBox(width: 10),
+                      Obx(() => Container(
+                            padding:
+                                EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'عدد العروض المنتهية: ${controller.totalExpiredSystems}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Obx(() => AnimatedList(
+                    key: GlobalKey<AnimatedListState>(),
+                    initialItemCount: controller.filteredClients.length,
+                    itemBuilder: (context, index, animation) {
+                      final client = controller.filteredClients[index];
+                      return FadeTransition(
+                        opacity: animation,
+                        child: _buildClientCard(client),
+                      );
+                    },
+                  )),
+                ),
               ],
             ),
           ),
-          Expanded(
-            child: Obx(() => ListView.builder(
-                  itemCount: controller.filteredClients.length,
-                  itemBuilder: (context, index) {
-                    final client = controller.filteredClients[index];
-                    return Card(
-                      margin: const EdgeInsets.all(10),
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClientCard(Client client) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Card(
+        elevation: 8,
+        shadowColor: Colors.blue.withOpacity(0.2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: Colors.blue.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: ExpansionTile(
+          leading: CircleAvatar(
+            backgroundColor: Colors.blue.withOpacity(0.1),
+            radius: 25,
+            child: Icon(
+              Icons.person,
+              color: Colors.blue,
+              size: 30,
+            ),
+          ),
+          title: Text(
+            client.name!,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.black87,
+            ),
+          ),
+          subtitle: Text(
+            'عدد الأنظمة المنتهية: ${client.numbers!.fold<int>(0, (sum, number) => sum + number.getExpiredSystems().length)}',
+            style: TextStyle(color: Colors.red),
+          ),
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              margin: EdgeInsets.all(12),
+              child: Column(
+                children: client.numbers!.map((number) {
+                  final expiredSystems = number.getExpiredSystems();
+                  if (expiredSystems.isEmpty) return SizedBox.shrink();
+                  
+                  return Container(
+                    margin: EdgeInsets.all(8),
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 5,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
+                            Icon(Icons.phone_android, color: Colors.blue),
+                            SizedBox(width: 8),
                             Text(
-                              client.name!,
+                              number.phoneNumber ?? '',
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.blue,
                               ),
                             ),
-                            const SizedBox(height: 5),
-                            ...client.numbers!.map((number) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'رقم الهاتف: ${number.phoneNumber}',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.blue,
-                                    ),
-                                  ),
-                                  ...number.getExpiredSystems().map((system) {
-                                    final formattedDate =
-                                        DateFormat.yMMMMd('ar')
-                                            .format(system.endDate!);
-                                    return Text(
-                                      'النظام: ${system.name}, انتهى في: $formattedDate',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.red,
-                                      ),
-                                    );
-                                  }).toList(),
-                                ],
-                              );
-                            }).toList(),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                )),
-          ),
-        ],
+                        Divider(height: 20),
+                        ...expiredSystems.map((system) {
+                          final formattedDate = DateFormat.yMMMMd('ar').format(system.endDate!);
+                          return Container(
+                            margin: EdgeInsets.only(top: 8),
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.warning_amber_rounded, color: Colors.red),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'النظام: ${system.name}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red.shade700,
+                                        ),
+                                      ),
+                                      Text(
+                                        'تاريخ الانتهاء: $formattedDate',
+                                        style: TextStyle(color: Colors.red.shade700),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

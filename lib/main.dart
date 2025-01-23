@@ -13,10 +13,25 @@ import 'package:phone_system_app/views/print_clients_receipts.dart';
 import 'package:phone_system_app/views/stats_view.dart';
 import 'package:phone_system_app/pages/entry_page.dart'; // Add this import
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await BackendServices.instance.initialize();
+
+  // Add these configurations
+  if (GetPlatform.isAndroid) {
+    await SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+    );
+    SystemChrome.setSystemUIChangeCallback((systemOverlaysAreVisible) {
+      // Handle system UI visibility changes
+      return Future.value();
+    });
+  }
+
   runApp(MainApp());
 }
 
@@ -72,6 +87,18 @@ class MainApp extends StatelessWidget {
         splashFactory: kIsWeb ? NoSplash.splashFactory : null,
       ),
       home: WelcomePage(), // Set WelcomePage as initial route
+      defaultTransition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 200),
+      debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return ScrollConfiguration(
+          behavior: ScrollBehavior().copyWith(
+            physics: const BouncingScrollPhysics(),
+            platform: TargetPlatform.android,
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

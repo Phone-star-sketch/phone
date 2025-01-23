@@ -8,6 +8,7 @@ import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 
+import 'package:phone_system_app/controllers/account_details_controller.dart' as ctrl;
 import 'package:phone_system_app/controllers/account_details_controller.dart';
 import 'package:phone_system_app/controllers/account_profit_controller.dart';
 import 'package:phone_system_app/controllers/money_display_loading.dart';
@@ -118,7 +119,7 @@ class AccountDetails extends StatelessWidget {
         ),
         title: "المتابعة"),
   ];
-  AccountDetailsController pageController = Get.put(AccountDetailsController());
+  ctrl.AccountDetailsController pageController = Get.put(ctrl.AccountDetailsController());
   final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
 
   @override
@@ -265,29 +266,22 @@ class AccountDetails extends StatelessWidget {
         body: isMobile
             ? Obx(() {
                 final accountClientController = Get.find<AccountClientInfo>();
-                print(
-                    "TTILE IS ${pages[pageController.selectedIndex.value].title}");
-                if (pages[pageController.selectedIndex.value].title ==
-                    "العروض المطلوبة") {
-                  print("GETTING THE VERY PAGE");
+                final currentPage = pages[pageController.selectedIndex.value];
+
+                if (currentPage.title == "العروض المطلوبة") {
+                  // Instead of immediately navigating, return the ExpiredSystemsPage directly
                   final expiredSystemsClients = accountClientController
                       .clinets.value
-                      .where((client) => client.numbers!.any(
-                          (number) => number.getExpiredSystems().isNotEmpty))
+                      .where((client) => client.numbers!
+                          .any((number) => number.getExpiredSystems().isNotEmpty))
                       .toList();
-                  Get.to(
-                      () => ExpiredSystemsPage(clients: expiredSystemsClients));
-                  return Container();
-                  // return Container(
-                  //   color: colors.background,
-                  //   child: content[pageController.selectedIndex.value],
-                  // );
-                } else {
-                  return Container(
-                    color: colors.background,
-                    child: content[pageController.selectedIndex.value],
-                  );
+                  return ExpiredSystemsPage(clients: expiredSystemsClients);
                 }
+
+                return Container(
+                  color: colors.background,
+                  child: content[pageController.selectedIndex.value],
+                );
               })
             : Row(
                 children: [
