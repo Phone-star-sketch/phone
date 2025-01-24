@@ -25,7 +25,7 @@ class AccountsView extends StatelessWidget {
 
     return Obx(() {
       final data = controller.getCurrentAccounts();
-      
+
       // Determine if we should use vertical layout
       final bool useVerticalLayout = data.length == 2;
 
@@ -68,7 +68,7 @@ class AccountsView extends StatelessWidget {
           ),
         ),
         body: (controller.isLoading.value)
-            ? Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator())
             : useVerticalLayout
                 ? Center(
                     child: Column(
@@ -96,7 +96,8 @@ class AccountsView extends StatelessWidget {
                       childAspectRatio: 1.1,
                     ),
                     itemBuilder: (context, index) {
-                      double cardWidth = screenWidth / max((screenWidth ~/ minWidth != 0) ? screenWidth ~/ minWidth : 1, 2);
+                      double cardWidth = screenWidth /
+                          max((screenWidth ~/ minWidth != 0) ? screenWidth ~/ minWidth : 1, 2);
                       return Padding(
                         padding: const EdgeInsets.all(10),
                         child: AccountCard(
@@ -115,7 +116,7 @@ class AccountCard extends StatefulWidget {
   final Account account;
   final double width;
 
-  AccountCard({super.key, required this.width, required this.account});
+  const AccountCard({super.key, required this.width, required this.account});
 
   @override
   _AccountCardState createState() => _AccountCardState();
@@ -152,7 +153,7 @@ class _AccountCardState extends State<AccountCard> with TickerProviderStateMixin
     _particleTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) {
       if (_isHovered && mounted) {
         setState(() {
-          if (particles.length < 10) {
+          if (particles.length < 20) {
             particles.add(Particle(
               position: Offset(
                 Random().nextDouble() * 60 - 30, // Centered spread
@@ -162,6 +163,7 @@ class _AccountCardState extends State<AccountCard> with TickerProviderStateMixin
                 Random().nextDouble() * 2 - 1,
                 Random().nextDouble() * 2 - 1,
               ),
+              color: Colors.accents[Random().nextInt(Colors.accents.length)],
             ));
           }
         });
@@ -195,15 +197,33 @@ class _AccountCardState extends State<AccountCard> with TickerProviderStateMixin
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: _isHovered ? Colors.black45 : Colors.black38,
-              blurRadius: _isHovered ? 8 : 2,
-              blurStyle: BlurStyle.outer,
-              spreadRadius: _isHovered ? 4 : 2
-            )
-          ]
+          gradient: LinearGradient(
+            colors: _isHovered
+                ? [Colors.blue.shade400, Colors.purple.shade400]
+                : [Colors.blue.shade200, Colors.purple.shade200],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: _isHovered
+              ? [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.6),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                  BoxShadow(
+                    color: Colors.purple.withOpacity(0.6),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
         ),
         child: Stack(
           children: [
@@ -249,7 +269,7 @@ class _AccountCardState extends State<AccountCard> with TickerProviderStateMixin
                               );
                             },
                           ),
-                          
+
                           // Centered particles
                           if (_isHovered)
                             ...particles.map((particle) {
@@ -269,7 +289,7 @@ class _AccountCardState extends State<AccountCard> with TickerProviderStateMixin
                                         height: 4,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: Colors.blue.withOpacity(0.6),
+                                          color: particle.color.withOpacity(0.8),
                                         ),
                                       ),
                                     ),
@@ -291,27 +311,27 @@ class _AccountCardState extends State<AccountCard> with TickerProviderStateMixin
                 width: widget.width,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: colors.background,
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade800, Colors.purple.shade800],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(20),
                     bottomRight: Radius.circular(20),
-                  )
+                  ),
                 ),
                 child: Center(
                   child: Text(
                     widget.account.name!,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              )
-            ),
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(width: 1.5, color: Colors.black87)
-                ),
-              )
+              ),
             ),
             Positioned.fill(
               child: Material(
@@ -353,10 +373,12 @@ class _AccountCardState extends State<AccountCard> with TickerProviderStateMixin
 class Particle {
   Offset position;
   Offset velocity;
-  
+  Color color;
+
   Particle({
     required this.position,
     required this.velocity,
+    required this.color,
   });
 
   void update() {
