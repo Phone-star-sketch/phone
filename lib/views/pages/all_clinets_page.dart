@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -10,10 +11,30 @@ import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_she
 import 'package:phone_system_app/views/client_list_view.dart';
 import 'package:phone_system_app/views/print_clients_receipts.dart';
 
-class AllClientsPage extends StatelessWidget {
+class AllClientsPage extends StatefulWidget {
   AllClientsPage({super.key});
 
+  @override
+  _AllClientsPageState createState() => _AllClientsPageState();
+}
+
+class _AllClientsPageState extends State<AllClientsPage> {
   final controller = Get.find<AccountClientInfo>();
+  late RealTimeDataFetcher realTimeFetcher;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the real-time data fetcher
+    realTimeFetcher = RealTimeDataFetcher(controller);
+  }
+
+  @override
+  void dispose() {
+    // Dispose of the timer when the widget is removed
+    realTimeFetcher.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -222,20 +243,6 @@ class CutsomToolBar extends StatelessWidget {
                     color: Colors.white,
                   )),
             ),
-            Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: IconButton(
-                  style: IconButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(5)))),
-                  onPressed: controller.updateCurrnetClinets,
-                  tooltip: "تحديث البيانات",
-                  icon: const Icon(
-                    FontAwesomeIcons.rotateLeft,
-                    color: Colors.white,
-                  )),
-            ),
           ],
         )
       ],
@@ -314,5 +321,25 @@ class CustomTextField extends StatelessWidget {
           prefixIcon: const Icon(FontAwesomeIcons.searchengin),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15))),
     );
+  }
+}
+
+class RealTimeDataFetcher {
+  final AccountClientInfo controller;
+  Timer? _timer;
+
+  RealTimeDataFetcher(this.controller) {
+    // Start fetching data every 10 seconds
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      controller.updateCurrnetClinets(); // Fetch new data
+    });
+  }
+
+  void dispose() {
+    _timer?.cancel(); // Cancel the timer when not needed
   }
 }

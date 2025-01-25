@@ -42,7 +42,7 @@ class ForSaleController extends GetxController {
       BackendServices.instance.phoneRepository.delete(removed);
     } catch (e) {
       Get.snackbar(
-          "Problem happend during removing phone number ", e.toString());
+          "Problem happened during removing phone number ", e.toString());
     }
   }
 
@@ -50,7 +50,8 @@ class ForSaleController extends GetxController {
     return _query.value;
   }
 
-  Future<void> assignPhoneNumber(BuildContext context, PhoneNumber assigned) async {
+  Future<void> assignPhoneNumber(
+      BuildContext context, PhoneNumber assigned) async {
     await clientEditModelSheet(
       context,
       initialPhoneNumber: assigned.phoneNumber,
@@ -80,12 +81,13 @@ class ForSaleController extends GetxController {
 
 class ForSaleNumbers extends StatelessWidget {
   final controller = Get.put(ForSaleController());
+
   @override
   Widget build(BuildContext context) {
     final colors = Get.theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[100], // Light background for contrast
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showNewNumberModalForm(context);
@@ -111,100 +113,115 @@ class ForSaleNumbers extends StatelessWidget {
         return Column(
           children: [
             Container(
-                padding: const EdgeInsets.all(20),
-                child: TextField(
-                  inputFormatters: <TextInputFormatter>[
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))
-                  ],
-                  onChanged: controller.updateQuery,
-                  decoration: const InputDecoration(
-                      hintText: "أبحث عن رقم",
-                      hintStyle: TextStyle(color: Colors.black45),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(20)))),
-                )),
+              padding: const EdgeInsets.all(20),
+              child: TextField(
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))
+                ],
+                onChanged: controller.updateQuery,
+                decoration: InputDecoration(
+                  hintText: "أبحث عن رقم",
+                  hintStyle: const TextStyle(color: Colors.black45),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  prefixIcon: const Icon(Icons.search, color: Colors.red),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+              ),
+            ),
             (numbers.isNotEmpty)
                 ? Expanded(
                     child: ListView.separated(
                       itemCount: numbers.length,
                       itemBuilder: (context, index) {
                         final phone = numbers[index];
-
                         final price = phone.price;
                         final number = phone.phoneNumber!;
 
                         return Padding(
-                          padding: const EdgeInsets.all(10.0),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 10),
                           child: Card(
-                            color: Colors.red,
+                            elevation: 5, // Add shadow
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                             child: Container(
-                              margin: const EdgeInsets.all(10),
-                              padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: colors.primary,
-                                borderRadius:
-                                    const BorderRadius.all(Radius.circular(20)),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.red[100]!,
+                                    Colors.red[50]!,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    number,
-                                    style: const TextStyle(
-                                      fontSize: 25,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(20),
+                                leading: CircleAvatar(
+                                  backgroundColor: Colors.red[200],
+                                  child: const Icon(
+                                    Icons.phone,
+                                    color: Colors.white,
                                   ),
-
-                                  // Left Part
-
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        "$price" "جـ",
-                                        style: const TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold),
+                                ),
+                                title: Text(
+                                  number,
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  "$price جـ",
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      onPressed: () async {
+                                        await controller.assignPhoneNumber(
+                                            context, phone);
+                                      },
+                                      tooltip: "بيع الرقم",
+                                      icon: const Icon(
+                                        Icons.assignment_ind_rounded,
+                                        color: Colors.green,
+                                        size: 30,
                                       ),
-                                      Column(
-                                        children: [
-                                          IconButton(
-                                              onPressed: () async {
-                                                await controller
-                                                    .assignPhoneNumber(
-                                                        context, phone);
-                                              },
-                                              tooltip: "بيع الرقم",
-                                              icon: const Icon(
-                                                Icons.assignment_ind_rounded,
-                                                color: Colors.green,
-                                              )),
-                                          IconButton(
-                                              onPressed: () async {
-                                                controller
-                                                    .removePhoneNumber(phone);
-                                              },
-                                              tooltip: "حذف الرقم",
-                                              icon: const Icon(
-                                                Icons.delete,
-                                                color: Colors.red,
-                                              )),
-                                        ],
+                                    ),
+                                    const SizedBox(width: 10),
+                                    IconButton(
+                                      onPressed: () async {
+                                        controller.removePhoneNumber(phone);
+                                      },
+                                      tooltip: "حذف الرقم",
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                        size: 30,
                                       ),
-                                    ],
-                                  )
-                                ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         );
                       },
-                      separatorBuilder: (context, index) => const Divider(
-                        indent: 100,
-                        endIndent: 100,
+                      separatorBuilder: (context, index) => const SizedBox(
+                        height: 10,
                       ),
                     ),
                   )
@@ -215,27 +232,32 @@ class ForSaleNumbers extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(20),
                         margin: const EdgeInsets.all(20),
-                        decoration: const BoxDecoration(
-                            color: Colors.black12,
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(20))),
+                        decoration: BoxDecoration(
+                          color: Colors.red[50],
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         child: SizedBox(
                           height: 200,
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                  (query == "")
-                                      ? Icons.heart_broken
-                                      : Icons.search_off,
-                                  size: 70,
-                                  color: Colors.red),
-                              const SizedBox(
-                                height: 50,
+                                (query == "")
+                                    ? Icons.heart_broken
+                                    : Icons.search_off,
+                                size: 70,
+                                color: Colors.red,
                               ),
-                              Text((query == "")
-                                  ? "لا يوجد أرقام للبيع"
-                                  : "لا توجد نتائج لهذا البحث"),
+                              const SizedBox(height: 20),
+                              Text(
+                                (query == "")
+                                    ? "لا يوجد أرقام للبيع"
+                                    : "لا توجد نتائج لهذا البحث",
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.black54,
+                                ),
+                              ),
                             ],
                           ),
                         ),
