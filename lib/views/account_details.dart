@@ -8,7 +8,8 @@ import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 
-import 'package:phone_system_app/controllers/account_details_controller.dart' as ctrl;
+import 'package:phone_system_app/controllers/account_details_controller.dart'
+    as ctrl;
 import 'package:phone_system_app/controllers/account_details_controller.dart';
 import 'package:phone_system_app/controllers/account_profit_controller.dart';
 import 'package:phone_system_app/controllers/money_display_loading.dart';
@@ -24,6 +25,7 @@ import 'package:phone_system_app/views/pages/offers.dart';
 import 'package:phone_system_app/views/pages/profit_management_page.dart';
 import 'package:phone_system_app/views/pages/system_list.dart';
 import 'package:phone_system_app/views/pages/create_user_page.dart';
+import 'package:phone_system_app/pages/user_management_page.dart'; // Add this import
 
 class Page {
   Widget content;
@@ -118,8 +120,23 @@ class AccountDetails extends StatelessWidget {
           color: Colors.black54,
         ),
         title: "المتابعة"),
+    Page(
+      roles: [UserRoles.manager], // Only admin can access this page
+      content: Container(
+        color: Colors.white,
+        constraints: const BoxConstraints.expand(),
+        child:
+            UserManagementPage(), // Changed from Follow() to UserManagementPage()
+      ),
+      icon: const Icon(
+        Icons.supervised_user_circle_sharp,
+        color: Colors.black54,
+      ),
+      title: "إدارة المستخدمين", // Updated title
+    ),
   ];
-  ctrl.AccountDetailsController pageController = Get.put(ctrl.AccountDetailsController());
+  ctrl.AccountDetailsController pageController =
+      Get.put(ctrl.AccountDetailsController());
   final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
 
   @override
@@ -272,8 +289,8 @@ class AccountDetails extends StatelessWidget {
                   // Instead of immediately navigating, return the ExpiredSystemsPage directly
                   final expiredSystemsClients = accountClientController
                       .clinets.value
-                      .where((client) => client.numbers!
-                          .any((number) => number.getExpiredSystems().isNotEmpty))
+                      .where((client) => client.numbers!.any(
+                          (number) => number.getExpiredSystems().isNotEmpty))
                       .toList();
                   return ExpiredSystemsPage(clients: expiredSystemsClients);
                 }

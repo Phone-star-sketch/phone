@@ -44,7 +44,8 @@ class AccountClientInfo extends GetxController {
     isLoading.value = false;
     final day = DateTime.now().day;
 
-    if (day >= currentAccount.day && SupabaseAuthentication.myUser!.role == UserRoles.manager.index) {
+    if (day >= currentAccount.day &&
+        SupabaseAuthentication.myUser!.role == UserRoles.manager.index) {
       await automaticPaymentAtStartup();
     }
   }
@@ -74,14 +75,14 @@ class AccountClientInfo extends GetxController {
       return;
     }
     final normalizedQuery = normalizeArabicText(newQuery.replaceAll(' ', ''));
-    final results = clinets
-        .where((client) {
-          final normalizedClientName = normalizeArabicText(client.name?.replaceAll(' ', '') ?? '');
-          final normalizedPhoneNumber = normalizeArabicText(client.numbers?[0].phoneNumber ?? '');
-          return normalizedClientName.contains(normalizedQuery) ||
-              normalizedPhoneNumber.contains(normalizedQuery);
-        })
-        .toList();
+    final results = clinets.where((client) {
+      final normalizedClientName =
+          normalizeArabicText(client.name?.replaceAll(' ', '') ?? '');
+      final normalizedPhoneNumber =
+          normalizeArabicText(client.numbers?[0].phoneNumber ?? '');
+      return normalizedClientName.contains(normalizedQuery) ||
+          normalizedPhoneNumber.contains(normalizedQuery);
+    }).toList();
     _queryClinets.clear();
     _queryClinets.addAll(results);
   }
@@ -117,29 +118,28 @@ class AccountClientInfo extends GetxController {
   }
 
   Future<void> balanceAllClientsData() async {
-    final clients = clinets; 
-    final total = clinets.length; 
+    final clients = clinets;
+    final total = clinets.length;
 
-    print("the total number is ${clinets.length}"); 
+    print("the total number is ${clinets.length}");
 
     int count = 0;
 
-    for(final c in clients){ 
+    for (final c in clients) {
       final logs = c.logs;
-      double newBalance = 0;  
+      double newBalance = 0;
 
-      for (final l in logs!){
-        if (l.transactionType == TransactionType.transactionDone){
-          newBalance-= l.price; 
-        }
-        else {
-          newBalance += l.price; 
+      for (final l in logs!) {
+        if (l.transactionType == TransactionType.transactionDone) {
+          newBalance -= l.price;
+        } else {
+          newBalance += l.price;
         }
       }
-      c.totalCash = newBalance; 
-      BackendServices.instance.clientRepository.update(c); 
-      count += 1; 
-      print("$count of $total"); 
+      c.totalCash = newBalance;
+      BackendServices.instance.clientRepository.update(c);
+      count += 1;
+      print("$count of $total");
     }
   }
 
