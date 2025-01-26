@@ -32,36 +32,59 @@ class SupabaseAuthentication extends GetxController {
 
   Future<void> signIn(String username, String password) async {
     try {
-      await Supabase.instance.client.auth.signInWithPassword(
+      final response = await Supabase.instance.client.auth.signInWithPassword(
         email: username,
         password: password,
       );
+      
+      // Update session immediately
+      userSession.value = response.session!;
+      
+      // Get user data with secpass
+      if (userSession.value.user != null) {
+        myUser = await BackendServices.instance.userRepository
+            .getCurrentUser(userSession.value.user!.id);
+        
+        if (myUser == null || myUser!.secpass == null) {
+          await signOut();
+          throw Exception("بيانات المستخدم غير موجودة أو غير مكتملة");
+        }
+      }
+      
     } catch (e) {
-      Get.snackbar('response', e.toString());
+      await signOut();
+      throw e;
     }
   }
 
-  authstate() {
+  Future<void> authstate() async {
     Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
-      final AuthChangeEvent event = data.event;
-      print('event captured : $event');
-      userSession.value = Session(
-          accessToken: '',
-          tokenType: '',
-          user: const User(
+      try {
+        final AuthChangeEvent event = data.event;
+        print('event captured : $event');
+        
+        if (data.session != null) {
+          userSession.value = data.session!;
+          myUser = await BackendServices.instance.userRepository
+              .getCurrentUser(data.session!.user.id);
+          allUser = await BackendServices.instance.userRepository.getAllUsers();
+        } else {
+          userSession.value = Session(
+            accessToken: '',
+            tokenType: '',
+            user: const User(
               id: '',
               appMetadata: {},
               userMetadata: {},
               aud: '',
-              createdAt: ''));
-      if (data.session != null) {
-        userSession.value = data.session!;
-        myUser = await BackendServices.instance.userRepository
-            .getCurrentUser(data.session!.user.id);
-        allUser = await BackendServices.instance.userRepository.getAllUsers();
-        print(allUser!.map(
-          (e) => e.toJson(),
-        ));
+              createdAt: ''
+            ),
+          );
+          myUser = null;
+          allUser = null;
+        }
+      } catch (e) {
+        print('Auth state error: $e');
       }
     });
   }
