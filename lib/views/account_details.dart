@@ -120,19 +120,18 @@ class AccountDetails extends StatelessWidget {
           color: Colors.black54,
         ),
         title: "المتابعة"),
-    Page(
-      roles: [UserRoles.manager], // Only admin can access this page
+    if (SupabaseAuthentication.myUser?.role == 1) Page(
+      roles: [UserRoles.manager],
       content: Container(
-        color: Colors.white,
-        constraints: const BoxConstraints.expand(),
-        child:
-            UserManagementPage(), // Changed from Follow() to UserManagementPage()
+      color: Colors.white,
+      constraints: const BoxConstraints.expand(),
+      child: UserManagementPage(),
       ),
       icon: const Icon(
-        Icons.supervised_user_circle_sharp,
-        color: Colors.black54,
+      Icons.supervised_user_circle_sharp,
+      color: Colors.black54,
       ),
-      title: "إدارة المستخدمين", // Updated title
+      title: "إدارة المستخدمين",
     ),
   ];
   ctrl.AccountDetailsController pageController =
