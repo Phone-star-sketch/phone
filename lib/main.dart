@@ -18,6 +18,7 @@ import 'package:phone_system_app/pages/entry_page.dart'; // Add this import
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:phone_system_app/views/pages/auth_wrapper.dart';  // Update import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -93,7 +94,7 @@ class MainApp extends StatelessWidget {
         ),
         splashFactory: kIsWeb ? NoSplash.splashFactory : null,
       ),
-      home: WelcomePage(), // Set WelcomePage as initial route
+      home: AuthWrapper(), // Set AuthWrapper as initial route
       defaultTransition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 200),
       debugShowCheckedModeBanner: false,
