@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_profit_controller.dart';
@@ -6,6 +8,7 @@ import 'package:phone_system_app/controllers/money_display_loading.dart';
 import 'package:phone_system_app/models/account.dart';
 import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/models/log.dart';
+import 'package:phone_system_app/repositories/client/supabase_client_repository.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
@@ -33,6 +36,24 @@ class AccountClientInfo extends GetxController {
   RxInt countPaid = 0.obs;
   RxInt countNotPaid = 0.obs;
 
+  late StreamSubscription<List<Client>> _clientSubscription;
+
+  @override
+  void onInit() {
+    super.onInit();
+    setupRealtimeSubscription();
+  }
+
+  void setupRealtimeSubscription() {
+    final repository = BackendServices.instance.clientRepository as SupabaseClientRepository;
+    _clientSubscription = repository
+        .getRealtimeClients(currentAccount)
+        .listen((updatedClients) {
+      clinets.value = updatedClients;
+      searchQueryChanged(query.value);
+    });
+  }
+
   @override
   void onReady() async {
     isLoading.value = true;
@@ -48,6 +69,12 @@ class AccountClientInfo extends GetxController {
         SupabaseAuthentication.myUser!.role == UserRoles.manager.index) {
       await automaticPaymentAtStartup();
     }
+  }
+
+  @override
+  void onClose() {
+    _clientSubscription.cancel();
+    super.onClose();
   }
 
   List<Client> getCurrentClients() {

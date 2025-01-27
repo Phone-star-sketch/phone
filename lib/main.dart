@@ -94,7 +94,7 @@ class MainApp extends StatelessWidget {
         ),
         splashFactory: kIsWeb ? NoSplash.splashFactory : null,
       ),
-      home: AuthWrapper(), // Set AuthWrapper as initial route
+      home: WelcomePage(), // Changed from AuthWrapper() to EntryPage()
       defaultTransition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 200),
       debugShowCheckedModeBanner: false,

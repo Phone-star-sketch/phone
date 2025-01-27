@@ -20,21 +20,6 @@ class AllClientsPage extends StatefulWidget {
 
 class _AllClientsPageState extends State<AllClientsPage> {
   final controller = Get.find<AccountClientInfo>();
-  late RealTimeDataFetcher realTimeFetcher;
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialize the real-time data fetcher
-    realTimeFetcher = RealTimeDataFetcher(controller);
-  }
-
-  @override
-  void dispose() {
-    // Dispose of the timer when the widget is removed
-    realTimeFetcher.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +30,11 @@ class _AllClientsPageState extends State<AllClientsPage> {
       return Column(
         children: [
           CutsomToolBar(
-              controller: controller, printingClients: printingClients),
+              controller: controller, 
+              printingClients: printingClients),
           Expanded(
               child: (isLoading)
-                  ? Center(
-                      child: CustomIndicator(),
-                    )
+                  ? Center(child: CustomIndicator())
                   : (Loaders.to.paymentIsLoading.value)
                       ? PaymentLoadingWidget()
                       : ClientListView(
@@ -321,25 +305,5 @@ class CustomTextField extends StatelessWidget {
           prefixIcon: const Icon(FontAwesomeIcons.searchengin),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15))),
     );
-  }
-}
-
-class RealTimeDataFetcher {
-  final AccountClientInfo controller;
-  Timer? _timer;
-
-  RealTimeDataFetcher(this.controller) {
-    // Start fetching data every 10 seconds
-    _startTimer();
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      controller.updateCurrnetClinets(); // Fetch new data
-    });
-  }
-
-  void dispose() {
-    _timer?.cancel(); // Cancel the timer when not needed
   }
 }

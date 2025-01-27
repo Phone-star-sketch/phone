@@ -284,4 +284,13 @@ class SupabaseClientRepository extends ClientRepository
       ));
     }
   }
+
+  Stream<List<Client>> getRealtimeClients(Account account) {
+    return _clinet
+      .from(clientTableName)
+      .stream(primaryKey: ['id'])
+      .eq('account_id', account.id)
+      .order('name')
+      .map((list) => list.map((e) => Client.fromJson(e)).toList());
+  }
 }
