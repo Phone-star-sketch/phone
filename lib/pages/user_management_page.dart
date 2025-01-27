@@ -4,6 +4,7 @@ import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/models/user.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';  // Add this import
 
 class UserManagementController extends GetxController {
   final RxList<AppUser> users = <AppUser>[].obs;
@@ -20,8 +21,17 @@ class UserManagementController extends GetxController {
     try {
       isLoading.value = true;
       final response = await Supabase.instance.client.from('users').select();
-      users.value =
-          (response as List).map((user) => AppUser.fromJson(user)).toList();
+      var usersList = (response as List).map((user) => AppUser.fromJson(user)).toList();
+      
+      // Sort users: role 1 first, then by name
+      usersList.sort((a, b) {
+        if (a.role == 1 && b.role != 1) return -1;
+        if (a.role != 1 && b.role == 1) return 1;
+        // If roles are same, sort by name
+        return (a.name ?? '').compareTo(b.name ?? '');
+      });
+      
+      users.value = usersList;
     } catch (e) {
       error.value = e.toString();
     } finally {
@@ -165,74 +175,275 @@ class _BuildUserList extends StatelessWidget {
 
   _BuildUserList({required this.controller});
 
+  Widget _buildUserCard(AppUser user, BuildContext context) {
+    final isOwner = user.role == 1;
+
+    return AnimationConfiguration.staggeredList(
+      position: controller.users.indexOf(user),
+      duration: const Duration(milliseconds: 375),
+      child: SlideAnimation(
+        verticalOffset: 50.0,
+        child: FadeInAnimation(
+          child: Card(
+            elevation: isOwner ? 12 : 8,
+            margin: EdgeInsets.symmetric(
+              horizontal: isOwner ? 12 : 16,
+              vertical: isOwner ? 16 : 8,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+              side: isOwner 
+                ? BorderSide(color: Colors.red.shade300, width: 2)
+                : BorderSide.none,
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  colors: isOwner
+                    ? [
+                        Colors.red.shade50,
+                        Colors.white,
+                        Colors.red.shade50,
+                      ]
+                    : [
+                        Colors.white,
+                        Colors.red.withOpacity(0.1),
+                      ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: isOwner
+                  ? [
+                      BoxShadow(
+                        color: Colors.red.withOpacity(0.2),
+                        blurRadius: 15,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : null,
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(isOwner ? 20.0 : 16.0),
+                child: Column(
+                  children: [
+                    if (isOwner)
+                      const Chip(
+                        label: Text(
+                          "المالك",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        backgroundColor: Colors.red,
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      ),
+                    Row(
+                      children: [
+                        // Enhanced User Image
+                        Hero(
+                          tag: 'user_${user.uid}',
+                          child: Container(
+                            width: isOwner ? 100 : 80,
+                            height: isOwner ? 100 : 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isOwner ? Colors.red : Colors.red.shade200,
+                                width: isOwner ? 3 : 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (isOwner ? Colors.red : Colors.black)
+                                      .withOpacity(0.2),
+                                  blurRadius: isOwner ? 15 : 10,
+                                  spreadRadius: isOwner ? 3 : 2,
+                                ),
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: isOwner
+                                ? Stack(
+                                    children: [
+                                      Image.asset(
+                                        'assets/images/owner.png',
+                                        fit: BoxFit.cover,
+                                      ),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              Colors.transparent,
+                                              Colors.red.withOpacity(0.3),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : Container(
+                                    color: Colors.grey[200],
+                                    child: Icon(
+                                      Icons.person,
+                                      size: 40,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: isOwner ? 24 : 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.name ?? '',
+                                style: TextStyle(
+                                  fontSize: isOwner ? 24 : 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: isOwner ? Colors.red : Colors.red.shade700,
+                                  letterSpacing: isOwner ? 0.5 : 0,
+                                ),
+                              ),
+                              SizedBox(height: isOwner ? 8 : 4),
+                              Container(
+                                padding: isOwner 
+                                  ? EdgeInsets.symmetric(horizontal: 12, vertical: 6)
+                                  : null,
+                                decoration: isOwner
+                                  ? BoxDecoration(
+                                      color: Colors.red.shade50,
+                                      borderRadius: BorderRadius.circular(20),
+                                    )
+                                  : null,
+                                child: Text(
+                                  'كلمة المرور الثانية: ${user.secpass ?? 'غير محدد'}',
+                                  style: TextStyle(
+                                    fontSize: isOwner ? 18 : 16,
+                                    color: isOwner 
+                                      ? Colors.red.shade700
+                                      : Colors.grey[600],
+                                    fontWeight: isOwner 
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: isOwner ? 24 : 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton.icon(
+                          icon: Icon(
+                            isOwner ? Icons.admin_panel_settings : Icons.edit,
+                            color: Colors.white,
+                          ),
+                          label: Text(
+                            'تعديل كلمة المرور الثانية',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isOwner ? 16 : 14,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isOwner 
+                              ? Colors.red
+                              : Colors.red.shade400,
+                            padding: isOwner
+                              ? EdgeInsets.symmetric(horizontal: 24, vertical: 16)
+                              : EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(isOwner ? 16 : 12),
+                            ),
+                            elevation: isOwner ? 6 : 4,
+                          ),
+                          onPressed: () => _showEditDialog(context, user),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, AppUser user) {
+    secpassController.text = user.secpass?.toString() ?? '';
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text('تعديل كلمة المرور الثانية'),
+        content: TextField(
+          controller: secpassController,
+          decoration: InputDecoration(
+            labelText: 'كلمة المرور الثانية الجديدة',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          keyboardType: TextInputType.number,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('إلغاء'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              int? newSecpass = int.tryParse(secpassController.text);
+              if (newSecpass != null) {
+                controller.updateUserSecpass(user.uid!, newSecpass);
+                Navigator.pop(context);
+              }
+            },
+            child: Text('حفظ', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       if (controller.isLoading.value) {
-        return Center(child: CircularProgressIndicator());
+        return Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+          ),
+        );
       }
 
-      return ListView.builder(
-        itemCount: controller.users.length,
-        itemBuilder: (context, index) {
-          final user = controller.users[index];
-          return Card(
-            margin: EdgeInsets.all(8),
-            child: ListTile(
-              title: Text(user.name ?? ''),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(user.uid ?? ''),
-                  Text('كلمة المرور الثانية: ${user.secpass ?? 'غير محدد'}'),
-                ],
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.edit),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text('تغيير كلمة المرور الثانية'),
-                          content: TextField(
-                            controller: secpassController,
-                            decoration: InputDecoration(
-                              labelText: 'كلمة المرور الثانية الجديدة',
-                            ),
-                            keyboardType: TextInputType.number,
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: Text('إلغاء'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                int? newSecpass = int.tryParse(secpassController.text);
-                                if (newSecpass != null) {
-                                  controller.updateUserSecpass(
-                                    user.uid!,
-                                    newSecpass,
-                                  );
-                                  Navigator.pop(context);
-                                }
-                              },
-                              child: Text('حفظ'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                  
-                ],
-              ),
-            ),
-          );
-        },
+      return AnimationLimiter(
+        child: ListView.builder(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          itemCount: controller.users.length,
+          itemBuilder: (context, index) {
+            return _buildUserCard(controller.users[index], context);
+          },
+        ),
       );
     });
   }

@@ -57,7 +57,6 @@ flutter_launcher_icons:
     background_color: "#hexcode"
     theme_color: "#hexcode"
 
-
 flutter:
   uses-material-design: true
   fonts:
