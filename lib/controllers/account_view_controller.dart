@@ -11,6 +11,7 @@ class AccountViewController extends GetxController {
   static RxList<Account> accounts = <Account>[].obs;
 
   Rx<bool> isLoading = false.obs;
+  final showWelcome = true.obs;
 
   @override
   void onInit() async {

@@ -25,8 +25,6 @@ class AccountsView extends StatelessWidget {
 
     return Obx(() {
       final data = controller.getCurrentAccounts();
-
-      // Determine if we should use vertical layout
       final bool useVerticalLayout = data.length == 2;
 
       return Scaffold(
@@ -67,46 +65,143 @@ class AccountsView extends StatelessWidget {
             ),
           ),
         ),
-        body: (controller.isLoading.value)
-            ? const Center(child: CircularProgressIndicator())
-            : useVerticalLayout
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: data.map((account) {
-                        return SizedBox(
-                          width: screenWidth * 0.8, // 80% of screen width
-                          height: size.height * 0.35, // 35% of screen height
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+        body: Stack(
+          children: [
+            // Main content
+            (controller.isLoading.value)
+                ? const Center(child: CircularProgressIndicator())
+                : useVerticalLayout
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: data.map((account) {
+                            return SizedBox(
+                              width: screenWidth * 0.8, // 80% of screen width
+                              height: size.height * 0.35, // 35% of screen height
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                child: AccountCard(
+                                  width: screenWidth * 0.8,
+                                  account: account,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      )
+                    : GridView.builder(
+                        itemCount: data.length,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount:
+                              max((screenWidth ~/ minWidth != 0) ? screenWidth ~/ minWidth : 1, 2),
+                          childAspectRatio: 1.1,
+                        ),
+                        itemBuilder: (context, index) {
+                          double cardWidth = screenWidth /
+                              max((screenWidth ~/ minWidth != 0) ? screenWidth ~/ minWidth : 1, 2);
+                          return Padding(
+                            padding: const EdgeInsets.all(10),
                             child: AccountCard(
-                              width: screenWidth * 0.8,
-                              account: account,
+                              width: cardWidth,
+                              account: data[index],
+                            ),
+                          );
+                        },
+                      ),
+            
+            // Modified Welcome overlay
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(seconds: 2),
+              onEnd: () {
+                // After animation ends, start fade out
+                Future.delayed(const Duration(seconds: 3), () {
+                  controller.showWelcome.value = false;
+                });
+              },
+              builder: (context, value, child) {
+                return Obx(() => controller.showWelcome.value
+                    ? GestureDetector(
+                        onTapDown: (_) => controller.showWelcome.value = false,
+                        child: Container(
+                          color: Colors.white,
+                          child: Center(
+                            child: Transform.scale(
+                              scale: 0.8 + (value * 0.2),
+                              child: Opacity(
+                                opacity: value,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 150,
+                                      height: 150,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.blue,
+                                          width: 3,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.blue.withOpacity(0.3),
+                                            spreadRadius: 5,
+                                            blurRadius: 10,
+                                          ),
+                                        ],
+                                      ),
+                                      child: ClipOval(
+                                        child: Image.asset(
+                                          'assets/images/owner.png',
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    ShaderMask(
+                                      shaderCallback: (bounds) => LinearGradient(
+                                        colors: [
+                                          Colors.blue.shade400,
+                                          Colors.purple.shade400
+                                        ],
+                                      ).createShader(bounds),
+                                      child: Text(
+                                        'اهلا بك كابتن اسلام',
+                                        style: TextStyle(
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          shadows: [
+                                            Shadow(
+                                              color: Colors.blue.withOpacity(0.5),
+                                              blurRadius: 10,
+                                              offset: const Offset(2, 2),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      'نتمني لك يوما سعيدا',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        color: Colors.grey[700],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                        );
-                      }).toList(),
-                    ),
-                  )
-                : GridView.builder(
-                    itemCount: data.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount:
-                          max((screenWidth ~/ minWidth != 0) ? screenWidth ~/ minWidth : 1, 2),
-                      childAspectRatio: 1.1,
-                    ),
-                    itemBuilder: (context, index) {
-                      double cardWidth = screenWidth /
-                          max((screenWidth ~/ minWidth != 0) ? screenWidth ~/ minWidth : 1, 2);
-                      return Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: AccountCard(
-                          width: cardWidth,
-                          account: data[index],
                         ),
-                      );
-                    },
-                  ),
+                      )
+                    : const SizedBox.shrink());
+              },
+            ),
+          ],
+        ),
       );
     });
   }
