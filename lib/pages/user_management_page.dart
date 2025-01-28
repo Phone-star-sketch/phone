@@ -284,13 +284,9 @@ class _BuildUserList extends StatelessWidget {
                                       ),
                                     ],
                                   )
-                                : Container(
-                                    color: Colors.grey[200],
-                                    child: Icon(
-                                      Icons.person,
-                                      size: 40,
-                                      color: Colors.grey[400],
-                                    ),
+                                : Image.asset(
+                                    'assets/images/logo.png',
+                                    fit: BoxFit.cover,
                                   ),
                             ),
                           ),
