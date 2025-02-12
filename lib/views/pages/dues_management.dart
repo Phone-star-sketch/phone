@@ -21,13 +21,17 @@ class DuesManagement extends StatelessWidget {
           )
           .toList();
 
-      if (q != "") {
-        clients = clients
-            .where((element) =>
-                element.numbers![0].phoneNumber!.contains(q) ||
-                removeSpecialArabicChars(element.name!)
-                    .contains(removeSpecialArabicChars(q)))
-            .toList();
+      if (q.isNotEmpty) {
+        clients = clients.where((element) {
+          final hasMatchingPhone = element.numbers?.isNotEmpty == true &&
+              element.numbers![0].phoneNumber?.contains(q) == true;
+
+          final hasMatchingName = element.name != null &&
+              removeSpecialArabicChars(element.name!)
+                  .contains(removeSpecialArabicChars(q));
+
+          return hasMatchingPhone || hasMatchingName;
+        }).toList();
       }
 
       final totalCash = (clients.isNotEmpty)

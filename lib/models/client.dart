@@ -34,20 +34,26 @@ class Client extends Model {
       this.expireDate});
 
   double systemsCost() {
-    final systems = numbers![0].systems!;
-    if (systems.isNotEmpty) {
-      return systems
-          .map((e) => e.type!.price)
-          .reduce((value, element) => value! + element!)!
-          .toDouble();
-    }
-    return 0.0;
+    if (numbers?.isEmpty ?? true) return 0.0;
+    final systems = numbers![0].systems;
+    if (systems?.isEmpty ?? true) return 0.0;
+
+    return systems!
+        .map((e) => e.type?.price ?? 0.0)
+        .reduce((value, element) => value + element)
+        .toDouble();
   }
 
   String systemsFullName() {
-    final systems = numbers![0].systems!;
+    if (numbers?.isEmpty ?? true) return 'لا توجد باقات';
+    final systems = numbers![0].systems;
+    if (systems?.isEmpty ?? true) return 'لا توجد باقات';
 
-    return systems.map((e) => e.name!).toList().join(" || ");
+    return systems!
+        .map((e) => e.name ?? '')
+        .where((name) => name.isNotEmpty)
+        .toList()
+        .join(" || ");
   }
 
   Client.fromJson(super.data)
