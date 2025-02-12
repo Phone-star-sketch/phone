@@ -101,21 +101,35 @@ class ClientDataWidget extends StatelessWidget {
           },
         );
 
-      return Container(
+      // Get the phone number safely
+      final phoneNumber = client.numbers?.isNotEmpty == true
+          ? client.numbers![0].phoneNumber
+          : 'لا يوجد رقم';
+
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [colors.primary.withOpacity(0.8), colors.surface],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
           borderRadius: BorderRadius.circular(20),
         ),
         child: ListView(
           shrinkWrap: true,
           children: [
-            const Column(
+            Column(
               children: [
                 Text(
                   'بيانات العميل',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: colors.onPrimary),
                 ),
-                Divider(),
+                const Divider(thickness: 2),
               ],
             ),
             Align(
@@ -156,8 +170,7 @@ class ClientDataWidget extends StatelessWidget {
                             backgroundColor: Colors.red[900],
                             padding: const EdgeInsets.all(10)),
                         onPressed: () async {
-                          await showDangerDialog(
-                              "حذف عميل",
+                          await showDangerDialog("حذف عميل",
                               "هل أنت متأكد من أنك تريد محو بيانات العميل ${client.name}؟",
                               () async {
                             await BackendServices.instance.clientRepository
@@ -273,7 +286,7 @@ class ClientDataWidget extends StatelessWidget {
                                           Text(
                                               style:
                                                   const TextStyle(fontSize: 12),
-                                              'رقم الخط:  ${client.numbers![0].phoneNumber}'),
+                                              'رقم الخط: $phoneNumber'),
                                           const Divider(),
                                           Text(
                                               style:
@@ -792,5 +805,5 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                 )),
           ],
         ),
-       ));
+      ));
 }

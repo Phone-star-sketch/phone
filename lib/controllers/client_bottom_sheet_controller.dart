@@ -61,7 +61,7 @@ class ClientBottomSheetController extends GetxController {
           final data = payload[0];
           _client.value.totalCash = data[Client.totalCashColumns];
         } catch (e) {
-          Get.snackbar("مشكلة اثناء تحديث البيانات", e.toString());
+          print(e);
         }
       },
     );

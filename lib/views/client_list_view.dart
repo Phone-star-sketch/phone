@@ -130,6 +130,22 @@ class ClientCard extends StatelessWidget {
     final requiredCash = (clientCash >= 0) ? 0 : -clientCash;
     final colors = Theme.of(context).colorScheme;
 
+    // Get phone number safely
+    final phoneNumber = client.numbers?.isNotEmpty == true
+        ? client.numbers![0].phoneNumber ?? 'لا يوجد رقم'
+        : 'لا يوجد رقم';
+
+    // Get systems safely
+    final systemsText = client.numbers?.isNotEmpty == true &&
+            client.numbers![0].systems?.isNotEmpty == true
+        ? client.systemsFullName()
+        : 'لا توجد باقات';
+
+    final systemsCost = client.numbers?.isNotEmpty == true &&
+            client.numbers![0].systems?.isNotEmpty == true
+        ? client.systemsCost()
+        : 0.0;
+
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -173,7 +189,7 @@ class ClientCard extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    client.numbers?[0].phoneNumber ?? '',
+                    phoneNumber,
                     style: const TextStyle(fontSize: 16),
                   ),
                   Container(
