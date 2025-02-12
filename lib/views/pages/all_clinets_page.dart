@@ -30,8 +30,7 @@ class _AllClientsPageState extends State<AllClientsPage> {
       return Column(
         children: [
           CutsomToolBar(
-              controller: controller, 
-              printingClients: printingClients),
+              controller: controller, printingClients: printingClients),
           Expanded(
               child: (isLoading)
                   ? Center(child: CustomIndicator())
@@ -299,11 +298,23 @@ class CustomTextField extends StatelessWidget {
       cursorColor: Colors.red,
       onChanged: onChanged,
       controller: controller,
+      textDirection: TextDirection.rtl,
+      textAlign: TextAlign.right,
       decoration: InputDecoration(
-          hintText: "أبحث عن رقم",
-          hintStyle: const TextStyle(color: Colors.black38),
-          prefixIcon: const Icon(FontAwesomeIcons.searchengin),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15))),
+        hintText: "ابحث عن عميل (الاسم، رقم الهاتف)",
+        hintStyle: const TextStyle(color: Colors.black38),
+        prefixIcon: const Icon(FontAwesomeIcons.searchengin),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
     );
   }
 }

@@ -14,6 +14,7 @@ import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/views/pages/profit_management_page.dart';
 import 'package:phone_system_app/utils/arabic_normalizer.dart';
+import 'package:phone_system_app/utils/arabic_utils.dart';
 
 class AccountClientInfo extends GetxController {
   Account currentAccount;
@@ -45,10 +46,10 @@ class AccountClientInfo extends GetxController {
   }
 
   void setupRealtimeSubscription() {
-    final repository = BackendServices.instance.clientRepository as SupabaseClientRepository;
-    _clientSubscription = repository
-        .getRealtimeClients(currentAccount)
-        .listen((updatedClients) {
+    final repository =
+        BackendServices.instance.clientRepository as SupabaseClientRepository;
+    _clientSubscription =
+        repository.getRealtimeClients(currentAccount).listen((updatedClients) {
       clinets.value = updatedClients;
       searchQueryChanged(query.value);
     });
@@ -78,7 +79,34 @@ class AccountClientInfo extends GetxController {
   }
 
   List<Client> getCurrentClients() {
-    return _queryClinets;
+    if (query.value.isEmpty) {
+      return clinets;
+    }
+
+    final normalizedQuery = normalizeArabic(query.value);
+    return clinets.where((client) {
+      // Search in client name
+      if (normalizeArabic(client.name ?? '').contains(normalizedQuery)) {
+        return true;
+      }
+
+      // Search in phone numbers
+      if (client.numbers != null) {
+        for (var number in client.numbers!) {
+          if (number.phoneNumber?.contains(normalizedQuery) ?? false) {
+            return true;
+          }
+        }
+      }
+
+      // Search in notes if exists
+      if (client.notes?.isNotEmpty == true &&
+          normalizeArabic(client.notes!).contains(normalizedQuery)) {
+        return true;
+      }
+
+      return false;
+    }).toList();
   }
 
   void updateCurrnetClinets() async {
@@ -95,23 +123,8 @@ class AccountClientInfo extends GetxController {
     isLoading.value = false;
   }
 
-  void searchQueryChanged(String newQuery) {
-    query.value = newQuery;
-    if (newQuery == "") {
-      _queryClinets.clear();
-      return;
-    }
-    final normalizedQuery = normalizeArabicText(newQuery.replaceAll(' ', ''));
-    final results = clinets.where((client) {
-      final normalizedClientName =
-          normalizeArabicText(client.name?.replaceAll(' ', '') ?? '');
-      final normalizedPhoneNumber =
-          normalizeArabicText(client.numbers?[0].phoneNumber ?? '');
-      return normalizedClientName.contains(normalizedQuery) ||
-          normalizedPhoneNumber.contains(normalizedQuery);
-    }).toList();
-    _queryClinets.clear();
-    _queryClinets.addAll(results);
+  void searchQueryChanged(String query) {
+    this.query.value = normalizeArabic(query);
   }
 
   List<Client> getClients() {
