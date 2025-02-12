@@ -20,6 +20,7 @@ class Client extends Model {
   List<Log>? logs;
   List<PhoneNumber>? numbers;
   DateTime? expireDate;
+  String? notes;
 
   Client(
       {required super.id,
@@ -31,7 +32,8 @@ class Client extends Model {
       this.accountId,
       this.logs,
       this.numbers,
-      this.expireDate});
+      this.expireDate,
+      this.notes});
 
   double systemsCost() {
     if (numbers?.isEmpty ?? true) return 0.0;
@@ -73,6 +75,7 @@ class Client extends Model {
         logs = (data[logsTable] != null)
             ? (data[logsTable] as List).map((e) => Log.fromJson(e)).toList()
             : [],
+        notes = data['notes'] as String?,
         super.fromJson();
 
   @override
@@ -84,7 +87,8 @@ class Client extends Model {
       nameColumn: name,
       addressColumns: address,
       totalCashColumns: totalCash,
-      expireColumns: (expireDate != null) ? expireDate.toString() : null
+      expireColumns: (expireDate != null) ? expireDate.toString() : null,
+      'notes': notes,
     };
   }
 }
