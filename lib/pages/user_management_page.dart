@@ -4,7 +4,7 @@ import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/models/user.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';  // Add this import
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart'; // Add this import
 
 class UserManagementController extends GetxController {
   final RxList<AppUser> users = <AppUser>[].obs;
@@ -21,8 +21,9 @@ class UserManagementController extends GetxController {
     try {
       isLoading.value = true;
       final response = await Supabase.instance.client.from('users').select();
-      var usersList = (response as List).map((user) => AppUser.fromJson(user)).toList();
-      
+      var usersList =
+          (response as List).map((user) => AppUser.fromJson(user)).toList();
+
       // Sort users: role 1 first, then by name
       usersList.sort((a, b) {
         if (a.role == 1 && b.role != 1) return -1;
@@ -30,7 +31,7 @@ class UserManagementController extends GetxController {
         // If roles are same, sort by name
         return (a.name ?? '').compareTo(b.name ?? '');
       });
-      
+
       users.value = usersList;
     } catch (e) {
       error.value = e.toString();
@@ -116,7 +117,7 @@ class UserManagementController extends GetxController {
           'uid': userId,
           'name': name,
           'role': role,
-          'secpass': secpass,  // Add secpass here
+          'secpass': secpass, // Add secpass here
         }).select();
       }
 
@@ -145,13 +146,13 @@ class UserManagementController extends GetxController {
 
 class UserManagementPage extends StatelessWidget {
   final controller = Get.put(UserManagementController());
-  final currentUserEmail =
-      Supabase.instance.client.auth.currentUser?.email;
+  final currentUserEmail = Supabase.instance.client.auth.currentUser?.email;
 
   @override
   Widget build(BuildContext context) {
     if (currentUserEmail != 'eslam.elnini@km.com') {
       return Scaffold(
+        backgroundColor: Colors.white,
         body: Center(
           child: Text('غير مصرح لك بالدخول لهذه الصفحة',
               style: TextStyle(fontSize: 18, color: Colors.red)),
@@ -160,10 +161,17 @@ class UserManagementPage extends StatelessWidget {
     }
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('إدارة المستخدمين'),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: IconThemeData(color: Colors.black),
+        title: Text('إدارة المستخدمين', style: TextStyle(color: Colors.black)),
       ),
-      body: _BuildUserList(controller: controller),
+      body: Container(
+        color: Colors.white,
+        child: _BuildUserList(controller: controller),
+      ),
     );
   }
 }
@@ -185,6 +193,7 @@ class _BuildUserList extends StatelessWidget {
         verticalOffset: 50.0,
         child: FadeInAnimation(
           child: Card(
+            color: Colors.white,
             elevation: isOwner ? 12 : 8,
             margin: EdgeInsets.symmetric(
               horizontal: isOwner ? 12 : 16,
@@ -192,36 +201,23 @@ class _BuildUserList extends StatelessWidget {
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
-              side: isOwner 
-                ? BorderSide(color: Colors.red.shade300, width: 2)
-                : BorderSide.none,
+              side: isOwner
+                  ? BorderSide(color: Colors.red.shade300, width: 2)
+                  : BorderSide.none,
             ),
             child: Container(
               decoration: BoxDecoration(
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                gradient: LinearGradient(
-                  colors: isOwner
-                    ? [
-                        Colors.red.shade50,
-                        Colors.white,
-                        Colors.red.shade50,
-                      ]
-                    : [
-                        Colors.white,
-                        Colors.red.withOpacity(0.1),
-                      ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
                 boxShadow: isOwner
-                  ? [
-                      BoxShadow(
-                        color: Colors.red.withOpacity(0.2),
-                        blurRadius: 15,
-                        spreadRadius: 2,
-                      ),
-                    ]
-                  : null,
+                    ? [
+                        BoxShadow(
+                          color: Colors.red.withOpacity(0.1),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : null,
               ),
               child: Padding(
                 padding: EdgeInsets.all(isOwner ? 20.0 : 16.0),
@@ -237,7 +233,8 @@ class _BuildUserList extends StatelessWidget {
                           ),
                         ),
                         backgroundColor: Colors.red,
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       ),
                     Row(
                       children: [
@@ -250,7 +247,8 @@ class _BuildUserList extends StatelessWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: isOwner ? Colors.red : Colors.red.shade200,
+                                color:
+                                    isOwner ? Colors.red : Colors.red.shade200,
                                 width: isOwner ? 3 : 2,
                               ),
                               boxShadow: [
@@ -264,30 +262,30 @@ class _BuildUserList extends StatelessWidget {
                             ),
                             child: ClipOval(
                               child: isOwner
-                                ? Stack(
-                                    children: [
-                                      Image.asset(
-                                        'assets/images/owner.png',
-                                        fit: BoxFit.cover,
-                                      ),
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                              Colors.transparent,
-                                              Colors.red.withOpacity(0.3),
-                                            ],
+                                  ? Stack(
+                                      children: [
+                                        Image.asset(
+                                          'assets/images/owner.png',
+                                          fit: BoxFit.cover,
+                                        ),
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Colors.transparent,
+                                                Colors.red.withOpacity(0.3),
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  )
-                                : Image.asset(
-                                    'assets/images/logo.png',
-                                    fit: BoxFit.cover,
-                                  ),
+                                      ],
+                                    )
+                                  : Image.asset(
+                                      'assets/images/logo.png',
+                                      fit: BoxFit.cover,
+                                    ),
                             ),
                           ),
                         ),
@@ -301,31 +299,34 @@ class _BuildUserList extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: isOwner ? 24 : 20,
                                   fontWeight: FontWeight.bold,
-                                  color: isOwner ? Colors.red : Colors.red.shade700,
+                                  color: isOwner
+                                      ? Colors.red
+                                      : Colors.red.shade700,
                                   letterSpacing: isOwner ? 0.5 : 0,
                                 ),
                               ),
                               SizedBox(height: isOwner ? 8 : 4),
                               Container(
-                                padding: isOwner 
-                                  ? EdgeInsets.symmetric(horizontal: 12, vertical: 6)
-                                  : null,
+                                padding: isOwner
+                                    ? EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6)
+                                    : null,
                                 decoration: isOwner
-                                  ? BoxDecoration(
-                                      color: Colors.red.shade50,
-                                      borderRadius: BorderRadius.circular(20),
-                                    )
-                                  : null,
+                                    ? BoxDecoration(
+                                        color: Colors.red.shade50,
+                                        borderRadius: BorderRadius.circular(20),
+                                      )
+                                    : null,
                                 child: Text(
                                   'كلمة المرور الثانية: ${user.secpass ?? 'غير محدد'}',
                                   style: TextStyle(
                                     fontSize: isOwner ? 18 : 16,
-                                    color: isOwner 
-                                      ? Colors.red.shade700
-                                      : Colors.grey[600],
-                                    fontWeight: isOwner 
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
+                                    color: isOwner
+                                        ? Colors.red.shade700
+                                        : Colors.grey[600],
+                                    fontWeight: isOwner
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
                                   ),
                                 ),
                               ),
@@ -351,14 +352,16 @@ class _BuildUserList extends StatelessWidget {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isOwner 
-                              ? Colors.red
-                              : Colors.red.shade400,
+                            backgroundColor:
+                                isOwner ? Colors.red : Colors.red.shade400,
                             padding: isOwner
-                              ? EdgeInsets.symmetric(horizontal: 24, vertical: 16)
-                              : EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                ? EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 16)
+                                : EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(isOwner ? 16 : 12),
+                              borderRadius:
+                                  BorderRadius.circular(isOwner ? 16 : 12),
                             ),
                             elevation: isOwner ? 6 : 4,
                           ),
@@ -432,13 +435,16 @@ class _BuildUserList extends StatelessWidget {
         );
       }
 
-      return AnimationLimiter(
-        child: ListView.builder(
-          padding: EdgeInsets.symmetric(vertical: 16),
-          itemCount: controller.users.length,
-          itemBuilder: (context, index) {
-            return _buildUserCard(controller.users[index], context);
-          },
+      return Container(
+        color: Colors.white,
+        child: AnimationLimiter(
+          child: ListView.builder(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            itemCount: controller.users.length,
+            itemBuilder: (context, index) {
+              return _buildUserCard(controller.users[index], context);
+            },
+          ),
         ),
       );
     });
