@@ -43,8 +43,11 @@ class Page {
 }
 
 class AccountDetails extends StatelessWidget {
-  Size screenSize = Size.zero;
-  List<Page> pages = [
+  // Cache size calculation
+  final Size screenSize = Size.zero;
+
+  // Use const constructor for static pages list
+  static final List<Page> _pages = [
     Page(
       roles: [UserRoles.admin, UserRoles.manager],
       content: AllClientsPage(),
@@ -136,16 +139,28 @@ class AccountDetails extends StatelessWidget {
         title: "إدارة المستخدمين",
       ),
   ];
+
+  // Memoize filtered pages
+  late final filteredPages = _pages
+      .where((page) =>
+          (page.roles
+              .map((role) => role.index)
+              .contains(SupabaseAuthentication.myUser!.role)) ||
+          (page.title == "انشاء مستخدم" &&
+              SupabaseAuthentication.myUser!.role == UserRoles.admin.index))
+      .toList();
+
   ctrl.AccountDetailsController pageController =
       Get.put(ctrl.AccountDetailsController());
   final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
-    screenSize = MediaQuery.of(context).size;
+    // Cache MediaQuery result
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 1200;
     final colors = Get.theme.colorScheme;
-    final isMobile = MediaQuery.of(context).size.width < 1200;
-    final content = pages
+    final content = _pages
         .map(
           (e) => e.content,
         )
@@ -157,13 +172,14 @@ class AccountDetails extends StatelessWidget {
     return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA), // Modern light background
         appBar: AppBar(
-          backgroundColor: const Color(0xFF2C3E50), // Modern dark blue
+          backgroundColor: Colors.lightBlue[300], // Changed to light sky blue
           elevation: 0,
           leading: (MediaQuery.of(context).size.width < 1200)
               ? Builder(
                   builder: (BuildContext context) {
                     return IconButton(
-                      icon: const Icon(Icons.menu),
+                      icon: const Icon(Icons.menu,
+                          color: Color(0xFF2C3E50)), // Darker icon color
                       onPressed: () {
                         Scaffold.of(context).openDrawer();
                       },
@@ -175,7 +191,7 @@ class AccountDetails extends StatelessWidget {
             Text(
               "${AccountClientInfo.to.currentAccount.day}",
               style: const TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF2C3E50), // Darker text color
                   fontWeight: FontWeight.bold,
                   fontSize: 22),
             ),
@@ -201,12 +217,13 @@ class AccountDetails extends StatelessWidget {
                         .update(currentAccount);
                   }
                 },
-                icon: const Icon(Icons.calendar_today, color: Colors.white)),
+                icon: const Icon(Icons.calendar_today,
+                    color: Color(0xFF2C3E50))), // Darker icon color
             Builder(
               builder: (BuildContext context) {
                 return IconButton(
                   icon: const Icon(Icons.keyboard_arrow_left,
-                      color: Colors.white),
+                      color: Color(0xFF2C3E50)), // Darker icon color
                   onPressed: () {
                     Get.delete<AccountDetailsController>(force: true);
                     Get.delete<AccountClientInfo>(force: true);
@@ -238,7 +255,7 @@ class AccountDetails extends StatelessWidget {
                                 icon: const Icon(Icons.arrow_back)),
                             Expanded(
                                 child: SideBar(
-                              pages: pages
+                              pages: _pages
                                   .where((page) =>
                                       (page.roles
                                           .map((role) => role.index)
@@ -256,39 +273,49 @@ class AccountDetails extends StatelessWidget {
               )
             : null,
         bottomNavigationBar: isMobile
-            ? Obx(() => CurvedNavigationBar(
-                  key: _bottomNavigationKey,
-                  index: pageController.selectedIndex.value,
-                  height: 65.0,
-                  items: pages
-                      .where((page) =>
-                          (page.roles
-                              .map((role) => role.index)
-                              .contains(SupabaseAuthentication.myUser!.role)) ||
-                          (page.title == "انشاء مستخدم" &&
-                              SupabaseAuthentication.myUser!.role ==
-                                  UserRoles.admin.index))
-                      .map((page) => Icon(
-                            (page.icon as Icon).icon!,
-                            size: 33,
-                            color: Colors.black54, // Changed to black54
-                          ))
-                      .toList(),
-                  color: const Color(0xFF2C3E50), // Modern dark blue
-                  buttonBackgroundColor: const Color(0xFF3498DB), // Modern blue
-                  backgroundColor: Colors.transparent,
-                  animationCurve: Curves.easeInOut,
-                  animationDuration: const Duration(milliseconds: 600),
-                  onTap: (index) {
-                    pageController.selectedIndex.value = index;
-                  },
-                  letIndexChange: (index) => true,
-                ))
+            ? Obx(() {
+                // Cache the index
+                final currentIndex = pageController.selectedIndex.value;
+
+                return Container(
+                  // Use const for decoration
+                  decoration: const BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x33000000),
+                        blurRadius: 8,
+                        offset: Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  child: CurvedNavigationBar(
+                    key: _bottomNavigationKey,
+                    index: currentIndex,
+                    height: 65.0,
+                    items: filteredPages
+                        .map((page) => Icon(
+                              (page.icon as Icon).icon!,
+                              size: 33,
+                              color: Colors.white,
+                            ))
+                        .toList(),
+                    color: const Color(0xFF00BFFF),
+                    buttonBackgroundColor: const Color(0xFF1E90FF),
+                    backgroundColor: Colors.transparent,
+                    animationCurve: Curves.easeInOutCubic,
+                    animationDuration: const Duration(
+                        milliseconds: 300), // Slightly faster animation
+                    onTap: (index) =>
+                        pageController.selectedIndex.value = index,
+                    letIndexChange: (_) => true,
+                  ),
+                );
+              })
             : null,
         body: isMobile
             ? Obx(() {
                 final accountClientController = Get.find<AccountClientInfo>();
-                final currentPage = pages[pageController.selectedIndex.value];
+                final currentPage = _pages[pageController.selectedIndex.value];
 
                 if (currentPage.title == "العروض المطلوبة") {
                   // Instead of immediately navigating, return the ExpiredSystemsPage directly
@@ -311,7 +338,7 @@ class AccountDetails extends StatelessWidget {
                     color: colors.background,
                     width: 250,
                     child: SideBar(
-                      pages: pages
+                      pages: _pages
                           .where((page) =>
                               (page.roles.map((role) => role.index).contains(
                                   SupabaseAuthentication.myUser!.role)) ||
@@ -330,11 +357,11 @@ class AccountDetails extends StatelessWidget {
                           decoration: BoxDecoration(),
                           padding: const EdgeInsets.all(10),
                           child: () {
-                            print(pages[pageController.selectedIndex.value]
+                            print(_pages[pageController.selectedIndex.value]
                                 .title);
                             final accountClientController =
                                 Get.find<AccountClientInfo>();
-                            if (pages[pageController.selectedIndex.value]
+                            if (_pages[pageController.selectedIndex.value]
                                     .title ==
                                 "العروض المطلوبة") {
                               print("GETTING THE VERY PAGE");
@@ -384,13 +411,13 @@ class SideBar extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            const Color(0xFF2C3E50), // Modern dark blue
-            const Color(0xFF34495E), // Slightly lighter blue
+            Colors.lightBlue[300]!, // Lighter sky blue
+            Colors.lightBlue[200]!, // Even lighter sky blue
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.lightBlue.withOpacity(0.2),
             blurRadius: 15,
             offset: const Offset(5, 0),
           ),
@@ -411,7 +438,7 @@ class SideBar extends StatelessWidget {
           const Text(
             'كابتن / إسلام النني',
             style: TextStyle(
-              color: Colors.white,
+              color: Color(0xFF2C3E50), // Darker text for contrast
               fontWeight: FontWeight.bold,
               fontSize: 18,
               letterSpacing: 0.5,
@@ -420,7 +447,7 @@ class SideBar extends StatelessWidget {
           Divider(
             indent: 20,
             endIndent: 20,
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.lightBlue[700]!.withOpacity(0.2),
             thickness: 1,
           ),
           Expanded(
@@ -452,13 +479,13 @@ class SideBar extends StatelessWidget {
                                   ..scale(isSelected ? 1.02 : 1.0),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? const Color(0xFF3498DB)
+                                      ? Colors.lightBlue[400]
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(12),
                                   boxShadow: isSelected
                                       ? [
                                           BoxShadow(
-                                            color: const Color(0xFF3498DB)
+                                            color: Colors.lightBlue[300]!
                                                 .withOpacity(0.3),
                                             blurRadius: 8,
                                             offset: const Offset(0, 4),
@@ -502,8 +529,7 @@ class SideBar extends StatelessWidget {
                                                 fontWeight: FontWeight.w600,
                                                 color: isSelected
                                                     ? Colors.white
-                                                    : Colors.white
-                                                        .withOpacity(0.8),
+                                                    : const Color(0xFF2C3E50),
                                                 fontSize: isSelected
                                                     ? 15
                                                     : 14, // Slightly reduced font size

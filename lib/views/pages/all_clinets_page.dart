@@ -11,40 +11,83 @@ import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_she
 import 'package:phone_system_app/views/client_list_view.dart';
 import 'package:phone_system_app/views/print_clients_receipts.dart';
 import 'package:flutter/services.dart';
+import 'package:phone_system_app/utils/string_utils.dart';
 
 class AllClientsPage extends StatefulWidget {
-  AllClientsPage({super.key});
+  const AllClientsPage({super.key}); // Make constructor const
 
   @override
   _AllClientsPageState createState() => _AllClientsPageState();
 }
 
-class _AllClientsPageState extends State<AllClientsPage> {
+class _AllClientsPageState extends State<AllClientsPage>
+    with AutomaticKeepAliveClientMixin {
   final controller = Get.find<AccountClientInfo>();
+
+  List<Client> _getSmartFilteredClients(String query) {
+    final clients = controller.getCurrentClients();
+    if (query.isEmpty) return clients;
+
+    final normalizedQuery =
+        removeSpecialArabicChars(query.trim().toLowerCase());
+
+    return clients.where((client) {
+      if (client.name == null) return false;
+
+      // Normalize the client name for comparison
+      final normalizedName =
+          removeSpecialArabicChars(client.name!.toLowerCase());
+
+      // Check for full name match or if name starts with query
+      final nameMatch = normalizedName == normalizedQuery ||
+          normalizedName.startsWith(normalizedQuery);
+
+      // Check for exact phone number match
+      final phoneMatch = client.numbers?.isNotEmpty == true &&
+          client.numbers![0].phoneNumber?.contains(query) == true;
+
+      return nameMatch || phoneMatch;
+    }).toList();
+  }
+
+  @override
+  bool get wantKeepAlive => true; // Keep the state alive
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final data = controller.getCurrentClients();
-      final isLoading = controller.isLoading.value;
-      final printingClients = controller.clientPrintAdded.value;
-      return Column(
-        children: [
-          CutsomToolBar(
-              controller: controller, printingClients: printingClients),
-          Expanded(
-              child: (isLoading)
-                  ? Center(child: CustomIndicator())
-                  : (Loaders.to.paymentIsLoading.value)
-                      ? PaymentLoadingWidget()
-                      : ClientListView(
-                          data: data,
-                          isLoading: isLoading,
-                          query: controller.query.value,
-                        ))
-        ],
-      );
-    });
+    super.build(context); // Required by AutomaticKeepAliveClientMixin
+
+    return Container(
+      key: const PageStorageKey<String>(
+          'allClientsPage'), // Add page storage key
+      color: Colors.white, // Add this to ensure white background
+      child: Obx(() {
+        final isLoading = controller.isLoading.value;
+        final printingClients = controller.clientPrintAdded.value;
+        final filteredData = _getSmartFilteredClients(controller.query.value);
+
+        return Column(
+          children: [
+            Container(
+              color: Colors
+                  .white, // Add this to ensure white background for toolbar
+              child: CutsomToolBar(
+                  controller: controller, printingClients: printingClients),
+            ),
+            Expanded(
+                child: (isLoading)
+                    ? Center(child: CustomIndicator())
+                    : (Loaders.to.paymentIsLoading.value)
+                        ? PaymentLoadingWidget()
+                        : ClientListView(
+                            data: filteredData,
+                            isLoading: isLoading,
+                            query: controller.query.value,
+                          ))
+          ],
+        );
+      }),
+    );
   }
 }
 
@@ -72,7 +115,7 @@ class CutsomToolBar extends StatelessWidget {
                       width: 20,
                       height: 20,
                       child: IconButton(
-                          color: Colors.blue,
+                          color: Colors.lightBlue,
                           onPressed: () {
                             // call the file print.....
                             Get.find<AccountClientInfo>()
@@ -85,7 +128,7 @@ class CutsomToolBar extends StatelessWidget {
                       width: 20,
                       height: 20,
                       child: IconButton(
-                          color: Colors.red,
+                          color: Colors.lightBlue,
                           onPressed: () {
                             final controller = Get.find<AccountClientInfo>();
                             controller.enableMulipleClientPrint.value = false;
@@ -98,8 +141,8 @@ class CutsomToolBar extends StatelessWidget {
             : Padding(
                 padding: const EdgeInsets.all(10),
                 child: ElevatedButton(
-                    style:
-                        ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.lightBlue),
                     onPressed: () {
                       Get.find<AccountClientInfo>()
                           .enableMulipleClientPrint
@@ -120,7 +163,7 @@ class CutsomToolBar extends StatelessWidget {
               padding: const EdgeInsets.all(10.0),
               child: IconButton(
                   style: IconButton.styleFrom(
-                      backgroundColor: Colors.red,
+                      backgroundColor: Colors.lightBlue,
                       shape: const RoundedRectangleBorder(
                           borderRadius: BorderRadius.all(Radius.circular(5)))),
                   onPressed: () {
@@ -130,11 +173,9 @@ class CutsomToolBar extends StatelessWidget {
                         actions: [
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red),
+                                backgroundColor: Colors.lightBlue),
                             onPressed: () async {
                               if (printingClients.isNotEmpty) {
-                                print("Test length ----------->");
-                                print(printingClients.length);
                                 Get.to(
                                   PrintClientsReceipts(
                                     clients: controller.clientPrintAdded.value,
@@ -176,7 +217,7 @@ class CutsomToolBar extends StatelessWidget {
                                             padding: EdgeInsets.all(15.0),
                                             child: Icon(
                                               Icons.supervised_user_circle,
-                                              color: Colors.red,
+                                              color: Colors.lightBlue,
                                             ),
                                           ),
                                           Expanded(
@@ -293,10 +334,10 @@ class PaymentLoadingWidget extends StatelessWidget {
                   width: 200,
                   child: LinearProgressIndicator(
                     value: totalPaid.value / totalLength,
-                    color: Colors.red,
+                    color: Colors.lightBlue,
                     minHeight: 20,
                     borderRadius: BorderRadius.circular(20),
-                    backgroundColor: Colors.blue,
+                    backgroundColor: Colors.lightBlue.withOpacity(0.3),
                   ),
                 ),
               ),
@@ -311,51 +352,92 @@ class PaymentLoadingWidget extends StatelessWidget {
   }
 }
 
-class CustomTextField extends StatelessWidget {
-  TextEditingController controller;
-  Function(String)? onChanged;
+// Make CustomTextField more efficient
+class CustomTextField extends StatefulWidget {
+  const CustomTextField(
+      { // Make constructor const
+      super.key,
+      required this.controller,
+      this.onChanged});
 
-  CustomTextField({super.key, required this.controller, this.onChanged});
+  final TextEditingController controller;
+  final Function(String)? onChanged;
+
+  @override
+  State<CustomTextField> createState() => _CustomTextFieldState();
+}
+
+class _CustomTextFieldState extends State<CustomTextField> {
+  TextSelection? _selection;
+  String _selectedText = '';
+
+  void _handleSelectionChanged(TextSelection selection) {
+    setState(() {
+      _selection = selection;
+      _selectedText = widget.controller.text.substring(
+        selection.start,
+        selection.end,
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return TextSelectionTheme(
-      data: TextSelectionThemeData(
-        selectionColor: Colors.red.withOpacity(0.3),
-      ),
-      child: TextField(
-        cursorColor: Colors.red,
-        onChanged: onChanged,
-        controller: controller,
-        textDirection: TextDirection.rtl,
-        textAlign: TextAlign.right,
-        style: const TextStyle(
-          color: Colors.black,
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
+    return Column(
+      children: [
+        TextSelectionTheme(
+          data: TextSelectionThemeData(
+            selectionColor: Colors.lightBlue.withOpacity(0.3),
+          ),
+          child: TextField(
+            cursorColor: Colors.lightBlue,
+            onChanged: widget.onChanged,
+            controller: widget.controller,
+            textDirection: TextDirection.rtl,
+            textAlign: TextAlign.right,
+            onTapOutside: (event) {
+              setState(() {
+                _selection = null;
+                _selectedText = '';
+              });
+            },
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+            selectionControls: MaterialTextSelectionControls(),
+            decoration: InputDecoration(
+              hintText: "ابحث عن عميل (الاسم، رقم الهاتف)",
+              hintStyle: const TextStyle(
+                color: Colors.black38,
+                fontSize: 14,
+                fontWeight: FontWeight.normal,
+              ),
+              prefixIcon: const Icon(FontAwesomeIcons.searchengin,
+                  color: Colors.lightBlue),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+                borderSide: const BorderSide(color: Colors.lightBlue),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+                borderSide: const BorderSide(color: Colors.lightBlue),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
         ),
-        // Add these properties for better text selection visibility
-        selectionControls: MaterialTextSelectionControls(),
-        decoration: InputDecoration(
-          hintText: "ابحث عن عميل (الاسم، رقم الهاتف)",
-          hintStyle: const TextStyle(
-            color: Colors.black38,
-            fontSize: 14,
-            fontWeight: FontWeight.normal,
+        if (_selection != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'موضع المؤشر: ${_selection?.baseOffset}, النص المحدد: $_selectedText',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            textDirection: TextDirection.rtl,
           ),
-          prefixIcon: const Icon(FontAwesomeIcons.searchengin),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(color: Colors.red),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(color: Colors.red),
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
-      ),
+        ],
+      ],
     );
   }
 }
