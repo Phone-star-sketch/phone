@@ -40,7 +40,7 @@ class ClientListView extends StatelessWidget {
     // Debug logs to verify filtering
     //print("Query: $query");
     //print(
-      //  "Filtered Data: ${filteredData.map((client) => client.name).toList()}");
+    //  "Filtered Data: ${filteredData.map((client) => client.name).toList()}");
 
     return Scaffold(
       backgroundColor: Colors.white, // Ensure background color is set to white
@@ -173,157 +173,199 @@ class _ClientCardState extends State<ClientCard>
               setState(() => isHovered = false);
               _controller.reverse();
             },
-            child: Card(
-              elevation: isHovered ? 8 : 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isHovered
-                        ? [Colors.white, Colors.blue.shade50]
-                        : [Colors.white, Colors.grey.shade50],
+            child: Stack(
+              children: [
+                Card(
+                  elevation: isHovered ? 8 : 3,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () async {
-                    final controller = Get.put(ClientBottomSheetController());
-                    controller.setClient(widget.client);
-                    await showClientInfoSheet(context, widget.client);
-                    Get.delete<ClientBottomSheetController>(force: true);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: isHovered
+                            ? [Colors.white, Colors.blue.shade50]
+                            : [Colors.white, Colors.grey.shade50],
+                      ),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () async {
+                        final controller =
+                            Get.put(ClientBottomSheetController());
+                        controller.setClient(widget.client);
+                        await showClientInfoSheet(context, widget.client);
+                        Get.delete<ClientBottomSheetController>(force: true);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundColor: Colors.blue.shade100,
-                                    child: Text(
-                                      widget.client.name
-                                              ?.substring(0, 1)
-                                              .toUpperCase() ??
-                                          '',
-                                      style: const TextStyle(
-                                        color: Colors.blue,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          widget.client.name ?? '',
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        backgroundColor: Colors.blue.shade100,
+                                        child: Text(
+                                          widget.client.name
+                                                  ?.substring(0, 1)
+                                                  .toUpperCase() ??
+                                              '',
                                           style: const TextStyle(
-                                            fontSize: 18,
+                                            color: Colors.blue,
                                             fontWeight: FontWeight.bold,
                                           ),
-                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        Text(
-                                          phoneNumber,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey.shade600,
-                                          ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              widget.client.name ?? '',
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            Text(
+                                              phoneNumber,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    if (SupabaseAuthentication.myUser!.role !=
+                                        UserRoles.assistant.index)
+                                      IconButton(
+                                        icon: const Icon(Icons.edit),
+                                        color: Colors.blue,
+                                        onPressed: () async {
+                                          await clientEditModelSheet(context,
+                                              client: widget.client);
+                                        },
+                                      ),
+                                    IconButton(
+                                      icon: const Icon(Icons.copy),
+                                      color: Colors.green,
+                                      onPressed: () {
+                                        if (phoneNumber.isNotEmpty) {
+                                          Clipboard.setData(
+                                              ClipboardData(text: phoneNumber));
+                                          Get.showSnackbar(
+                                            const GetSnackBar(
+                                              message: 'تم نسخ رقم الهاتف',
+                                              duration: Duration(seconds: 1),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 16),
+                              decoration: BoxDecoration(
+                                color:
+                                    getWarningColorState(clientCash.toDouble()),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: getWarningColorState(
+                                            clientCash.toDouble())
+                                        .withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    "المطلوب:",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    "$requiredCash جنيهاً",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            Row(
-                              children: [
-                                if (SupabaseAuthentication.myUser!.role !=
-                                    UserRoles.assistant.index)
-                                  IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    color: Colors.blue,
-                                    onPressed: () async {
-                                      await clientEditModelSheet(context,
-                                          client: widget.client);
-                                    },
-                                  ),
-                                IconButton(
-                                  icon: const Icon(Icons.copy),
-                                  color: Colors.green,
-                                  onPressed: () {
-                                    if (phoneNumber.isNotEmpty) {
-                                      Clipboard.setData(
-                                          ClipboardData(text: phoneNumber));
-                                      Get.showSnackbar(
-                                        const GetSnackBar(
-                                          message: 'تم نسخ رقم الهاتف',
-                                          duration: Duration(seconds: 1),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                ),
-                              ],
-                            ),
                           ],
                         ),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: getWarningColorState(clientCash.toDouble()),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    getWarningColorState(clientCash.toDouble())
-                                        .withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                "المطلوب:",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                "$requiredCash جنيهاً",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+                Obx(() => AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      opacity:
+                          controller.enableMulipleClientPrint.value ? 1.0 : 0.0,
+                      child: Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.8),
+                          ),
+                          child: Transform.scale(
+                            scale: 1.2,
+                            child: Checkbox(
+                              value: controller.clientPrintAdded
+                                  .contains(widget.client),
+                              onChanged: (bool? value) {
+                                if (value == true) {
+                                  controller.clientPrintAdded
+                                      .add(widget.client);
+                                } else {
+                                  controller.clientPrintAdded
+                                      .remove(widget.client);
+                                }
+                              },
+                              activeColor: Colors.lightBlue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )),
+              ],
             ),
           ),
         );
