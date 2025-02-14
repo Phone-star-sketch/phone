@@ -25,28 +25,19 @@ class _AllClientsPageState extends State<AllClientsPage>
   final controller = Get.find<AccountClientInfo>();
 
   List<Client> _getSmartFilteredClients(String query) {
-    final clients = controller.getCurrentClients();
+    // Changed to use clients.value directly like dues_management
+    List<Client> clients = controller.clinets.value;
     if (query.isEmpty) return clients;
 
-    final normalizedQuery =
-        removeSpecialArabicChars(query.trim().toLowerCase());
+    return clients.where((element) {
+      final hasMatchingPhone = element.numbers?.isNotEmpty == true &&
+          element.numbers![0].phoneNumber?.contains(query) == true;
 
-    return clients.where((client) {
-      if (client.name == null) return false;
+      final hasMatchingName = element.name != null &&
+          removeSpecialArabicChars(element.name!)
+              .contains(removeSpecialArabicChars(query));
 
-      // Normalize the client name for comparison
-      final normalizedName =
-          removeSpecialArabicChars(client.name!.toLowerCase());
-
-      // Check for full name match or if name starts with query
-      final nameMatch = normalizedName == normalizedQuery ||
-          normalizedName.startsWith(normalizedQuery);
-
-      // Check for exact phone number match
-      final phoneMatch = client.numbers?.isNotEmpty == true &&
-          client.numbers![0].phoneNumber?.contains(query) == true;
-
-      return nameMatch || phoneMatch;
+      return hasMatchingPhone || hasMatchingName;
     }).toList();
   }
 
@@ -62,9 +53,12 @@ class _AllClientsPageState extends State<AllClientsPage>
           'allClientsPage'), // Add page storage key
       color: Colors.white, // Add this to ensure white background
       child: Obx(() {
+        // Cache the query result like in dues_management
+        final q = controller.query.value;
+        final filteredData = _getSmartFilteredClients(q);
+
         final isLoading = controller.isLoading.value;
         final printingClients = controller.clientPrintAdded.value;
-        final filteredData = _getSmartFilteredClients(controller.query.value);
 
         return Column(
           children: [
@@ -141,15 +135,21 @@ class CutsomToolBar extends StatelessWidget {
             : Padding(
                 padding: const EdgeInsets.all(10),
                 child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.lightBlue),
-                    onPressed: () {
-                      Get.find<AccountClientInfo>()
-                          .enableMulipleClientPrint
-                          .value = true;
-                      controller.clientPrintAdded.clear();
-                    },
-                    child: const Icon(Icons.account_tree)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.lightBlue,
+                    padding: const EdgeInsets.all(12),
+                  ),
+                  onPressed: () {
+                    controller
+                        .toggleMultiSelection(); // Use the new toggle method
+                  },
+                  child: Icon(
+                    controller.enableMulipleClientPrint.value
+                        ? Icons.cancel
+                        : Icons.account_tree,
+                    color: Colors.white,
+                  ),
+                ),
               ),
         Expanded(
           child: CustomTextField(

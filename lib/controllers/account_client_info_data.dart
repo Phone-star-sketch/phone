@@ -100,7 +100,6 @@ class AccountClientInfo extends GetxController {
       }
 
       // Search in notes if exists
-      
 
       return false;
     }).toList();
@@ -239,5 +238,15 @@ class AccountClientInfo extends GetxController {
       print('Error fetching clients: $e');
       isLoading.value = false;
     }
+  }
+
+  void toggleMultiSelection() {
+    enableMulipleClientPrint.value = !enableMulipleClientPrint.value;
+    // Clear selections when disabling
+    if (!enableMulipleClientPrint.value) {
+      clientPrintAdded.clear();
+    }
+    // Force UI update
+    update();
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/models/client.dart';
@@ -17,7 +18,7 @@ class OfferManagement extends StatelessWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Ensure clean navigation
       await Get.delete<ExpiredSystemsController>(force: true);
-      
+
       Get.to(
         () => ExpiredSystemsPage(clients: clients),
         preventDuplicates: true,
@@ -89,7 +90,8 @@ class OfferManagement extends StatelessWidget {
                   onPressed: () {
                     _navigateToExpiredSystems(context, expiredSystemsClients);
                   },
-                  icon: Icon(Icons.card_giftcard_rounded, color: Colors.black), // Icon added here
+                  icon: Icon(Icons.card_giftcard_rounded,
+                      color: Colors.black), // Icon added here
                   label: Text(
                     "العروض المطلوبة",
                     style: TextStyle(color: Colors.black),
@@ -188,6 +190,7 @@ class ExpiredSystemsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
+      color: Colors.white,
       child: WillPopScope(
         onWillPop: () async {
           if (Navigator.canPop(context)) {
@@ -197,70 +200,76 @@ class ExpiredSystemsPage extends StatelessWidget {
           return false;
         },
         child: Scaffold(
+          backgroundColor: Colors.white,
           appBar: AppBar(
-            title: Text("العروض المطلوبة"),
-            leading: Navigator.canPop(context)
-                ? IconButton(
-                    icon: Icon(Icons.arrow_back),
-                    onPressed: () async {
-                      await Get.delete<ExpiredSystemsController>(force: true);
-                      Navigator.pop(context);
-                    },
-                  )
-                : null,
+            backgroundColor: Colors.white,
+            elevation: 1,
+            iconTheme: IconThemeData(color: Colors.black),
+            title: Text(
+              "العروض المطلوبة",
+              style: TextStyle(color: Colors.black),
+            ),
           ),
-          body: RepaintBoundary(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          onChanged: controller.updateSearch,
-                          decoration: InputDecoration(
-                            labelText: 'بحث',
-                            prefixIcon: Icon(Icons.search),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 10),
-                      Obx(() => Container(
-                            padding:
-                                EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'عدد العروض المنتهية: ${controller.totalExpiredSystems}',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+          body: SafeArea(
+            child: Container(
+              color: Colors.white,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Container(
+                      color: Colors.white,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              onChanged: controller.updateSearch,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: Colors.grey[200],
+                                labelText: 'بحث',
+                                prefixIcon: Icon(Icons.search),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
-                          )),
-                    ],
+                          ),
+                          SizedBox(width: 10),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Obx(() => Text(
+                                  'عدد العروض المنتهية: ${controller.totalExpiredSystems}',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: Obx(() => AnimatedList(
-                    key: GlobalKey<AnimatedListState>(),
-                    initialItemCount: controller.filteredClients.length,
-                    itemBuilder: (context, index, animation) {
-                      final client = controller.filteredClients[index];
-                      return FadeTransition(
-                        opacity: animation,
-                        child: _buildClientCard(client),
-                      );
-                    },
-                  )),
-                ),
-              ],
+                  Expanded(
+                    child: Container(
+                      color: Colors.white,
+                      child: Obx(() => ListView.builder(
+                            itemCount: controller.filteredClients.length,
+                            itemBuilder: (context, index) {
+                              final client = controller.filteredClients[index];
+                              return _buildClientCard(client);
+                            },
+                          )),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -272,6 +281,7 @@ class ExpiredSystemsPage extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
+        color: Colors.white,
         elevation: 8,
         shadowColor: Colors.blue.withOpacity(0.2),
         shape: RoundedRectangleBorder(
@@ -282,6 +292,8 @@ class ExpiredSystemsPage extends StatelessWidget {
           ),
         ),
         child: ExpansionTile(
+          backgroundColor: Colors.white,
+          collapsedBackgroundColor: Colors.white,
           leading: CircleAvatar(
             backgroundColor: Colors.blue.withOpacity(0.1),
             radius: 25,
@@ -301,7 +313,8 @@ class ExpiredSystemsPage extends StatelessWidget {
           ),
           subtitle: Text(
             'عدد الأنظمة المنتهية: ${client.numbers!.fold<int>(0, (sum, number) => sum + number.getExpiredSystems().length)}',
-            style: TextStyle(color: Colors.red),
+            style:
+                TextStyle(color: Colors.black), // Changed from white to black
           ),
           children: [
             Container(
@@ -314,7 +327,7 @@ class ExpiredSystemsPage extends StatelessWidget {
                 children: client.numbers!.map((number) {
                   final expiredSystems = number.getExpiredSystems();
                   if (expiredSystems.isEmpty) return SizedBox.shrink();
-                  
+
                   return Container(
                     margin: EdgeInsets.all(8),
                     padding: EdgeInsets.all(12),
@@ -344,36 +357,55 @@ class ExpiredSystemsPage extends StatelessWidget {
                                 color: Colors.blue,
                               ),
                             ),
+                            Spacer(),
+                            IconButton(
+                              icon: Icon(Icons.copy, color: Colors.blue),
+                              onPressed: () {
+                                if (number.phoneNumber != null) {
+                                  Clipboard.setData(
+                                      ClipboardData(text: number.phoneNumber!));
+                                  Get.snackbar(
+                                    'تم النسخ',
+                                    'تم نسخ الرقم بنجاح',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                  );
+                                }
+                              },
+                            ),
                           ],
                         ),
                         Divider(height: 20),
                         ...expiredSystems.map((system) {
-                          final formattedDate = DateFormat.yMMMMd('ar').format(system.endDate!);
+                          final formattedDate =
+                              DateFormat.yMMMMd('ar').format(system.endDate!);
                           return Container(
                             margin: EdgeInsets.only(top: 8),
                             padding: EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
+                              color: Colors.orange.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.warning_amber_rounded, color: Colors.red),
+                                Icon(Icons.warning_amber_rounded,
+                                    color: Colors.orange),
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'النظام: ${system.name}',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.red.shade700,
+                                          color: Colors.orange.shade700,
                                         ),
                                       ),
                                       Text(
                                         'تاريخ الانتهاء: $formattedDate',
-                                        style: TextStyle(color: Colors.red.shade700),
+                                        style: TextStyle(
+                                            color: Colors.orange.shade700),
                                       ),
                                     ],
                                   ),

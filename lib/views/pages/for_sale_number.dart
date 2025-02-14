@@ -114,41 +114,22 @@ class ForSaleNumbers extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              child: TextSelectionTheme(
-                data: TextSelectionThemeData(
-                  selectionColor: Colors.red.withOpacity(0.3),
-                  cursorColor: Colors.red,
-                  selectionHandleColor: Colors.red,
-                ),
-                child: TextField(
-                  cursorWidth: 2,
-                  showCursor: true,
-                  selectionControls: MaterialTextSelectionControls(),
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+              child: TextField(
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))
+                ],
+                onChanged: controller.updateQuery,
+                decoration: InputDecoration(
+                  hintText: "أبحث عن رقم",
+                  hintStyle: const TextStyle(color: Colors.black45),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide.none,
                   ),
-                  inputFormatters: <TextInputFormatter>[
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9]'))
-                  ],
-                  onChanged: controller.updateQuery,
-                  decoration: InputDecoration(
-                    hintText: "أبحث عن رقم",
-                    hintStyle: const TextStyle(
-                      color: Colors.black45,
-                      fontSize: 14,
-                      fontWeight: FontWeight.normal,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                    prefixIcon: const Icon(Icons.search, color: Colors.red),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 15),
-                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  prefixIcon: const Icon(Icons.search, color: Colors.red),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 15),
                 ),
               ),
             ),
@@ -182,105 +163,60 @@ class ForSaleNumbers extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: ListTile(
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal:
-                                      MediaQuery.of(context).size.width < 400
-                                          ? 8
-                                          : 20,
-                                  vertical: 20,
+                                dense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 8,
                                 ),
                                 leading: CircleAvatar(
+                                  radius: 16,
                                   backgroundColor: Colors.red[200],
                                   child: const Icon(
                                     Icons.phone,
                                     color: Colors.white,
+                                    size: 16,
                                   ),
                                 ),
-                                title: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerRight,
-                                  child: Text(
-                                    number,
-                                    style: TextStyle(
-                                      fontSize:
-                                          MediaQuery.of(context).size.width <
-                                                  400
-                                              ? 18
-                                              : 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
+                                title: Text(
+                                  number,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
                                   ),
                                 ),
                                 subtitle: Text(
                                   "$price جـ",
-                                  style: TextStyle(
-                                    fontSize:
-                                        MediaQuery.of(context).size.width < 400
-                                            ? 14
-                                            : 18,
+                                  style: const TextStyle(
+                                    fontSize: 12,
                                     color: Colors.black54,
                                   ),
                                 ),
-                                trailing: Container(
-                                  width: MediaQuery.of(context).size.width < 400
-                                      ? 130
-                                      : 150,
+                                trailing: SizedBox(
+                                  width: 70,
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      IconButton(
-                                        onPressed: () {
-                                          Clipboard.setData(
-                                              ClipboardData(text: number));
-                                          Get.showSnackbar(const GetSnackBar(
-                                            message: 'تم نسخ رقم الهاتف',
-                                            duration: Duration(seconds: 2),
-                                          ));
-                                        },
-                                        tooltip: "نسخ الرقم",
-                                        icon: Icon(
-                                          Icons.copy,
-                                          color: Colors.blue,
-                                          size: MediaQuery.of(context)
-                                                      .size
-                                                      .width <
-                                                  400
-                                              ? 24
-                                              : 30,
-                                        ),
-                                      ),
-                                      IconButton(
-                                        onPressed: () async {
+                                      InkWell(
+                                        onTap: () async {
                                           await controller.assignPhoneNumber(
                                               context, phone);
                                         },
-                                        tooltip: "بيع الرقم",
-                                        icon: Icon(
+                                        child: const Icon(
                                           Icons.assignment_ind_rounded,
                                           color: Colors.green,
-                                          size: MediaQuery.of(context)
-                                                      .size
-                                                      .width <
-                                                  400
-                                              ? 24
-                                              : 30,
+                                          size: 20,
                                         ),
                                       ),
-                                      IconButton(
-                                        onPressed: () async {
+                                      const SizedBox(width: 12),
+                                      InkWell(
+                                        onTap: () async {
                                           controller.removePhoneNumber(phone);
                                         },
-                                        tooltip: "حذف الرقم",
-                                        icon: Icon(
+                                        child: const Icon(
                                           Icons.delete,
                                           color: Colors.red,
-                                          size: MediaQuery.of(context)
-                                                      .size
-                                                      .width <
-                                                  400
-                                              ? 24
-                                              : 30,
+                                          size: 20,
                                         ),
                                       ),
                                     ],
