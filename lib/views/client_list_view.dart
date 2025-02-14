@@ -30,6 +30,7 @@ class ClientListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<AccountClientInfo>();
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = screenSize.width;
 
@@ -73,9 +74,56 @@ class ClientListView extends StatelessWidget {
                             mainAxisSpacing: 16,
                           ),
                           itemCount: filteredData.length,
-                          itemBuilder: (context, index) => ClientCard(
-                            client: filteredData[index],
-                          ),
+                          itemBuilder: (context, index) {
+                            final client = filteredData[index];
+                            return Obx(() => Card(
+                                  child: InkWell(
+                                    onTap: () {
+                                      if (controller
+                                          .enableMulipleClientPrint.value) {
+                                        // Handle selection
+                                        if (controller.clientPrintAdded
+                                            .contains(client)) {
+                                          controller.clientPrintAdded
+                                              .remove(client);
+                                        } else {
+                                          controller.clientPrintAdded
+                                              .add(client);
+                                        }
+                                      } else {
+                                        showClientInfoSheet(context, client);
+                                      }
+                                    },
+                                    child: Stack(
+                                      children: [
+                                        // Original card content
+                                        ClientCard(client: client),
+
+                                        // Selection checkbox overlay
+                                        if (controller
+                                            .enableMulipleClientPrint.value)
+                                          Positioned(
+                                            right: 8,
+                                            top: 8,
+                                            child: Checkbox(
+                                              value: controller.clientPrintAdded
+                                                  .contains(client),
+                                              onChanged: (selected) {
+                                                if (selected == true) {
+                                                  controller.clientPrintAdded
+                                                      .add(client);
+                                                } else {
+                                                  controller.clientPrintAdded
+                                                      .remove(client);
+                                                }
+                                              },
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ));
+                          },
                         ),
             ),
           ],
