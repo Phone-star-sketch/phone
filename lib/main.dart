@@ -18,35 +18,30 @@ import 'package:phone_system_app/pages/entry_page.dart'; // Add this import
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:phone_system_app/views/pages/auth_wrapper.dart';  // Update import
+import 'package:phone_system_app/views/pages/auth_wrapper.dart'; // Update import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Add gesture binding configuration
-  GestureBinding.instance.resamplingEnabled = true;
-
-  await BackendServices.instance.initialize();
-
-  // Add these configurations
-  if (GetPlatform.isAndroid) {
-    await SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.manual,
-      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
-    );
-    SystemChrome.setSystemUIChangeCallback((systemOverlaysAreVisible) {
-      // Handle system UI visibility changes
-      return Future.value();
-    });
+  // Add performance optimizations
+  if (!kIsWeb) {
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+        overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom]);
   }
+
+  // Enable image caching
+  PaintingBinding.instance.imageCache.maximumSize = 100;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20; // 50 MB
+
+  // Initialize services
+  await BackendServices.instance.initialize();
 
   runApp(MainApp());
 }
 
 class MainApp extends StatelessWidget {
-  MainApp({super.key});
-
-  double value = 10;
+  const MainApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -96,12 +91,18 @@ class MainApp extends StatelessWidget {
       ),
       home: WelcomePage(), // Changed from AuthWrapper() to EntryPage()
       defaultTransition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 200),
+      transitionDuration:
+          const Duration(milliseconds: 150), // Faster transitions
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.light, // Reduce theme switches
+      popGesture: true, // Enable swipe to go back
+      enableLog: false, // Disable GetX logs
+      opaqueRoute: true, // Make routes opaque for better performance
       builder: (context, child) {
         return ScrollConfiguration(
           behavior: ScrollBehavior().copyWith(
-            physics: const BouncingScrollPhysics(),
+            physics:
+                const ClampingScrollPhysics(), // More performant than BouncingScrollPhysics
             dragDevices: {
               PointerDeviceKind.touch,
               PointerDeviceKind.mouse,

@@ -127,9 +127,9 @@ class _WelcomePageState extends State<WelcomePage>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(0xFF1E3C72),
-                      Color(0xFF2A5298),
-                      Color(0xFF2563EB),
+                      Color(0xFF87CEEB), // Light sky blue
+                      Color(0xFF00BFFF), // Deep sky blue
+                      Color(0xFF1E90FF), // Dodger blue
                     ],
                     transform: GradientRotation(
                         _backgroundController.value * 2 * math.pi),

@@ -38,9 +38,9 @@ class ClientListView extends StatelessWidget {
         ClientFilterUtils.filterClients(query ?? '', data);
 
     // Debug logs to verify filtering
-    print("Query: $query");
-    print(
-        "Filtered Data: ${filteredData.map((client) => client.name).toList()}");
+    //print("Query: $query");
+    //print(
+      //  "Filtered Data: ${filteredData.map((client) => client.name).toList()}");
 
     return Scaffold(
       backgroundColor: Colors.white, // Ensure background color is set to white
