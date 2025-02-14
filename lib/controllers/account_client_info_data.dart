@@ -249,4 +249,18 @@ class AccountClientInfo extends GetxController {
     // Force UI update
     update();
   }
+
+  void selectClient(Client client) {
+    if (!clientPrintAdded.contains(client)) {
+      clientPrintAdded.add(client);
+    }
+  }
+
+  void unselectClient(Client client) {
+    clientPrintAdded.remove(client);
+  }
+
+  void clearSelections() {
+    clientPrintAdded.clear();
+  }
 }
