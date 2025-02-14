@@ -26,6 +26,7 @@ import 'package:phone_system_app/views/pages/profit_management_page.dart';
 import 'package:phone_system_app/views/pages/system_list.dart';
 import 'package:phone_system_app/views/pages/create_user_page.dart';
 import 'package:phone_system_app/pages/user_management_page.dart'; // Add this import
+import 'animated_profile_avatar.dart';
 
 class Page {
   Widget content;
@@ -120,19 +121,20 @@ class AccountDetails extends StatelessWidget {
           color: Colors.black54,
         ),
         title: "المتابعة"),
-    if (SupabaseAuthentication.myUser?.role == 1) Page(
-      roles: [UserRoles.manager],
-      content: Container(
-      color: Colors.white,
-      constraints: const BoxConstraints.expand(),
-      child: UserManagementPage(),
+    if (SupabaseAuthentication.myUser?.role == 1)
+      Page(
+        roles: [UserRoles.manager],
+        content: Container(
+          color: Colors.white,
+          constraints: const BoxConstraints.expand(),
+          child: UserManagementPage(),
+        ),
+        icon: const Icon(
+          Icons.supervised_user_circle_sharp,
+          color: Colors.black54,
+        ),
+        title: "إدارة المستخدمين",
       ),
-      icon: const Icon(
-      Icons.supervised_user_circle_sharp,
-      color: Colors.black54,
-      ),
-      title: "إدارة المستخدمين",
-    ),
   ];
   ctrl.AccountDetailsController pageController =
       Get.put(ctrl.AccountDetailsController());
@@ -149,10 +151,14 @@ class AccountDetails extends StatelessWidget {
         )
         .toList();
 
+    // Move controller initialization to the beginning of build method
+    final accountDetailsController = Get.put(AccountDetailsController());
+
     return Scaffold(
-        backgroundColor: Colors.white, // Changed background color to white
+        backgroundColor: const Color(0xFFF8F9FA), // Modern light background
         appBar: AppBar(
-          backgroundColor: colors.background,
+          backgroundColor: const Color(0xFF2C3E50), // Modern dark blue
+          elevation: 0,
           leading: (MediaQuery.of(context).size.width < 1200)
               ? Builder(
                   builder: (BuildContext context) {
@@ -268,9 +274,9 @@ class AccountDetails extends StatelessWidget {
                             color: Colors.black54, // Changed to black54
                           ))
                       .toList(),
-                  color: Colors.white,
-                  buttonBackgroundColor: Colors.white,
-                  backgroundColor: colors.background,
+                  color: const Color(0xFF2C3E50), // Modern dark blue
+                  buttonBackgroundColor: const Color(0xFF3498DB), // Modern blue
+                  backgroundColor: Colors.transparent,
                   animationCurve: Curves.easeInOut,
                   animationDuration: const Duration(milliseconds: 600),
                   onTap: (index) {
@@ -324,7 +330,6 @@ class AccountDetails extends StatelessWidget {
                           decoration: BoxDecoration(),
                           padding: const EdgeInsets.all(10),
                           child: () {
-                            print("A7a");
                             print(pages[pageController.selectedIndex.value]
                                 .title);
                             final accountClientController =
@@ -357,11 +362,14 @@ class AccountDetails extends StatelessWidget {
 
 class SideBar extends StatelessWidget {
   List<Page> pages;
+  // Add controller instance
+  final AccountDetailsController controller;
 
   SideBar({
     super.key,
     required this.pages,
-  });
+  }) : controller =
+            Get.find<AccountDetailsController>(); // Initialize in constructor
 
   @override
   Widget build(BuildContext context) {
@@ -370,93 +378,188 @@ class SideBar extends StatelessWidget {
     List<String> titles = pages.map((e) => e.title).toList();
     List<Widget> icons = pages.map((e) => e.icon).toList();
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(100),
-            child: Container(
-                width: 100,
-                height: 100,
-                color: const Color.fromARGB(255, 112, 124, 181),
-                child: Image.asset('assets/images/owner.png')),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFF2C3E50), // Modern dark blue
+            const Color(0xFF34495E), // Slightly lighter blue
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 15,
+            offset: const Offset(5, 0),
           ),
-        ),
-        //Text(SupabaseAuthentication.myUser!.name ?? "غير متوفر"),
-        const Text(
-          'كابتن / إسلام النني',
-          style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        const Divider(
-          indent: 10,
-          endIndent: 10,
-        ),
-        Expanded(
-          child: ListView.builder(
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: 200, // Increased height
+            alignment: Alignment.center, // Center alignment
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: const AnimatedProfileAvatar(
+              imagePath: 'assets/images/owner.png',
+              size: 120,
+            ),
+          ),
+          const SizedBox(height: 15),
+          const Text(
+            'كابتن / إسلام النني',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              letterSpacing: 0.5,
+            ),
+          ),
+          Divider(
+            indent: 20,
+            endIndent: 20,
+            color: Colors.white.withOpacity(0.2),
+            thickness: 1,
+          ),
+          Expanded(
+            child: ListView.builder(
               itemCount: titles.length,
               itemBuilder: (context, index) {
-                return SizedBox(
-                    height: 50,
-                    child: Obx(() => AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          margin: const EdgeInsets.only(right: 10, left: 0),
-                          decoration: BoxDecoration(
-                            color: Get.find<AccountDetailsController>()
-                                        .selectedIndex
-                                        .value ==
-                                    index
-                                ? Colors.white
-                                : Colors.transparent,
-                            borderRadius: const BorderRadius.only(
-                              topRight: Radius.circular(20),
-                              bottomRight: Radius.circular(20),
-                            ),
-                            boxShadow: Get.find<AccountDetailsController>()
-                                        .selectedIndex
-                                        .value ==
-                                    index
-                                ? [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      spreadRadius: 2,
-                                      blurRadius: 5,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ]
-                                : [],
+                return TweenAnimationBuilder(
+                  tween: Tween<double>(begin: 0, end: 1),
+                  duration: Duration(milliseconds: 400 + (index * 100)),
+                  builder: (context, double value, child) {
+                    return Transform.translate(
+                      offset: Offset(50 * (1 - value), 0),
+                      child: Opacity(
+                        opacity: value,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 8, // Reduced horizontal padding
                           ),
-                          child: Center(
-                            child: ListTile(
-                              leading: icons[index],
-                              title: Text(
-                                titles[index],
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Get.find<AccountDetailsController>()
-                                              .selectedIndex
-                                              .value ==
-                                          index
-                                      ? Colors.black
-                                      : Colors.white,
+                          child: Obx(() {
+                            final isSelected =
+                                controller.selectedIndex.value == index;
+                            return MouseRegion(
+                              onEnter: (_) {},
+                              onExit: (_) {},
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                transform: Matrix4.identity()
+                                  ..scale(isSelected ? 1.02 : 1.0),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? const Color(0xFF3498DB)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(0xFF3498DB)
+                                                .withOpacity(0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          )
+                                        ]
+                                      : null,
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () {
+                                      controller.selectedIndex.value = index;
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                        horizontal:
+                                            12, // Reduced horizontal padding
+                                      ),
+                                      child: Row(
+                                        mainAxisSize:
+                                            MainAxisSize.min, // Added this
+                                        children: [
+                                          SizedBox(
+                                            width: 24, // Fixed width for icon
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                  milliseconds: 300),
+                                              transform: Matrix4.identity()
+                                                ..scale(isSelected ? 1.2 : 1.0),
+                                              child: icons[index],
+                                            ),
+                                          ),
+                                          const SizedBox(
+                                              width: 8), // Reduced spacing
+                                          Expanded(
+                                            child: Text(
+                                              titles[index],
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : Colors.white
+                                                        .withOpacity(0.8),
+                                                fontSize: isSelected
+                                                    ? 15
+                                                    : 14, // Slightly reduced font size
+                                              ),
+                                              overflow: TextOverflow
+                                                  .ellipsis, // Added this
+                                            ),
+                                          ),
+                                          if (isSelected)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  left: 4),
+                                              child: Icon(
+                                                Icons.chevron_right,
+                                                color: Colors.white,
+                                                size: 20, // Reduced icon size
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                              onTap: () {
-                                Get.find<AccountDetailsController>()
-                                    .selectedIndex
-                                    .value = index;
-                              },
-                              selected: Get.find<AccountDetailsController>()
-                                      .selectedIndex
-                                      .value ==
-                                  index,
-                            ),
-                          ),
-                        )));
-              }),
-        ),
-      ],
+                            );
+                          }),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Add this extension method at the end of the file
+extension HoverExtensions on Widget {
+  Widget get addHover {
+    return StatefulBuilder(
+      builder: (context, setState) {
+        bool isHovered = false;
+        return MouseRegion(
+          onEnter: (_) => setState(() => isHovered = true),
+          onExit: (_) => setState(() => isHovered = false),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            transform: Matrix4.identity()..scale(isHovered ? 1.05 : 1.0),
+            child: this,
+          ),
+        );
+      },
     );
   }
 }

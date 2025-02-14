@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
@@ -107,136 +108,226 @@ class ClientListHeader extends StatelessWidget {
   }
 }
 
-class ClientCard extends StatelessWidget {
+class ClientCard extends StatefulWidget {
   final Client client;
-
   ClientCard({Key? key, required this.client}) : super(key: key);
 
+  @override
+  State<ClientCard> createState() => _ClientCardState();
+}
+
+class _ClientCardState extends State<ClientCard>
+    with SingleTickerProviderStateMixin {
   final AccountClientInfo controller = Get.find<AccountClientInfo>();
+  bool isHovered = false;
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1, end: 1.02).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   Color getWarningColorState(double required) {
     if (required >= 0 && required < 10) {
-      return Colors.yellow;
+      return const Color(0xFFFFB74D); // Orange
     } else if (required > 10) {
-      return Colors.green;
+      return const Color(0xFF66BB6A); // Green
     } else {
-      return Colors.red;
+      return const Color(0xFFEF5350); // Red
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final clientCash = client.totalCash;
+    final clientCash = widget.client.totalCash;
     final requiredCash = (clientCash >= 0) ? 0 : -clientCash;
-    final colors = Theme.of(context).colorScheme;
-
-    // Get phone number safely
-    final phoneNumber = client.numbers?.isNotEmpty == true
-        ? client.numbers![0].phoneNumber ?? 'لا يوجد رقم'
+    final phoneNumber = widget.client.numbers?.isNotEmpty == true
+        ? widget.client.numbers![0].phoneNumber ?? 'لا يوجد رقم'
         : 'لا يوجد رقم';
 
-    // Get systems safely
-    final systemsText = client.numbers?.isNotEmpty == true &&
-            client.numbers![0].systems?.isNotEmpty == true
-        ? client.systemsFullName()
-        : 'لا توجد باقات';
-
-    final systemsCost = client.numbers?.isNotEmpty == true &&
-            client.numbers![0].systems?.isNotEmpty == true
-        ? client.systemsCost()
-        : 0.0;
-
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () async {
-          final controller = Get.put(ClientBottomSheetController());
-          controller.setClient(client);
-          await showClientInfoSheet(context, client);
-          Get.delete<ClientBottomSheetController>(force: true);
-        },
-        child: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          client.name ?? '',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: MouseRegion(
+            onEnter: (_) {
+              setState(() => isHovered = true);
+              _controller.forward();
+            },
+            onExit: (_) {
+              setState(() => isHovered = false);
+              _controller.reverse();
+            },
+            child: Card(
+              elevation: isHovered ? 8 : 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isHovered
+                        ? [Colors.white, Colors.blue.shade50]
+                        : [Colors.white, Colors.grey.shade50],
+                  ),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () async {
+                    final controller = Get.put(ClientBottomSheetController());
+                    controller.setClient(widget.client);
+                    await showClientInfoSheet(context, widget.client);
+                    Get.delete<ClientBottomSheetController>(force: true);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: Colors.blue.shade100,
+                                    child: Text(
+                                      widget.client.name
+                                              ?.substring(0, 1)
+                                              .toUpperCase() ??
+                                          '',
+                                      style: const TextStyle(
+                                        color: Colors.blue,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          widget.client.name ?? '',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          phoneNumber,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                if (SupabaseAuthentication.myUser!.role !=
+                                    UserRoles.assistant.index)
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    color: Colors.blue,
+                                    onPressed: () async {
+                                      await clientEditModelSheet(context,
+                                          client: widget.client);
+                                    },
+                                  ),
+                                IconButton(
+                                  icon: const Icon(Icons.copy),
+                                  color: Colors.green,
+                                  onPressed: () {
+                                    if (phoneNumber.isNotEmpty) {
+                                      Clipboard.setData(
+                                          ClipboardData(text: phoneNumber));
+                                      Get.showSnackbar(
+                                        const GetSnackBar(
+                                          message: 'تم نسخ رقم الهاتف',
+                                          duration: Duration(seconds: 1),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: getWarningColorState(clientCash.toDouble()),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    getWarningColorState(clientCash.toDouble())
+                                        .withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
                           ),
-                          overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                "المطلوب:",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                "$requiredCash جنيهاً",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      if (SupabaseAuthentication.myUser!.role !=
-                          UserRoles.assistant.index)
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.red),
-                          onPressed: () async {
-                            await clientEditModelSheet(context, client: client);
-                          },
-                        ),
-                    ],
-                  ),
-                  Text(
-                    phoneNumber,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: getWarningColorState(clientCash.toDouble()),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      "$requiredCash جنيهاً",
-                      style: const TextStyle(color: Colors.white),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
-            Obx(() => controller.enableMulipleClientPrint.value
-                ? Positioned(
-                    right: 8,
-                    bottom: 8,
-                    child: IconButton(
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        shape: const CircleBorder(),
-                      ),
-                      icon: const Icon(Icons.add_card_rounded,
-                          color: Colors.white),
-                      onPressed: () {
-                        if (controller.clientPrintAdded.firstWhereOrNull(
-                                (row) => row.id == client.id) ==
-                            null) {
-                          controller.clientPrintAdded.add(client);
-                          Get.showSnackbar(GetSnackBar(
-                            backgroundColor: Colors.blue,
-                            duration: const Duration(seconds: 1),
-                            title: "رسالة تأكيد",
-                            message: 'تم إضافة العميل ${client.name}',
-                          ));
-                        }
-                      },
-                    ),
-                  )
-                : const SizedBox()),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

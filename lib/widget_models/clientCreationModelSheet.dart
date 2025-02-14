@@ -45,7 +45,8 @@ Future clientEditModelSheet(
           accountId: accountController.currentAccount.id,
         );
 
-        final clientId = await BackendServices.instance.clientRepository.create(newClient);
+        final clientId =
+            await BackendServices.instance.clientRepository.create(newClient);
 
         // Add phone number to the client
         final phone = PhoneNumber(
@@ -79,33 +80,31 @@ Future clientEditModelSheet(
 
         print('Finished updating existing client');
       }
-      
+
       if (onSuccess != null) {
         await onSuccess();
       }
-      
+
       AccountClientInfo.to.updateCurrnetClinets();
       Get.back();
       Fluttertoast.showToast(
-        msg: "تمت معالجة البيانات بنجاح",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        backgroundColor: Colors.green,
-        textColor: Colors.white,
-        fontSize: 16.0
-      );
+          msg: "تمت معالجة البيانات بنجاح",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+          fontSize: 16.0);
     } catch (e) {
       print('Error saving client data: $e');
       Fluttertoast.showToast(
-        msg: "حدث خطأ أثناء معالجة البيانات",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0
-      );
+          msg: "حدث خطأ أثناء معالجة البيانات",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0);
     }
   }
 
@@ -136,120 +135,166 @@ Future clientEditModelSheet(
         child: SingleChildScrollView(
           child: Form(
             key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'بيانات العميل',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: nameField,
-                  validator: (value) => value?.isEmpty ?? true ? 'مطلوب' : null,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.person_4_outlined, color: Colors.blue),
-                    labelText: 'إسم العميل',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+            child: TextSelectionTheme(
+              data: TextSelectionThemeData(
+                selectionColor: Colors.blue.withOpacity(0.3),
+                cursorColor: Colors.blue,
+                selectionHandleColor: Colors.blue,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'بيانات العميل',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
-                    filled: true,
-                    fillColor: Colors.white,
                   ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: phoneNumberField,
-                  validator: (value) => value?.isEmpty ?? true ? 'رقم الهاتف مطلوب' : null,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.phone, color: Colors.blue),
-                    labelText: 'رقم الهاتف',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: nameField,
+                    cursorWidth: 2,
+                    showCursor: true,
+                    selectionControls: MaterialTextSelectionControls(),
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: nationalIdField,
-                  validator: (value) => value?.isEmpty ?? true ? 'مطلوب' : null,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.badge, color: Colors.blue),
-                    labelText: 'الرقم القومي',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: addressField,
-                  validator: (value) => value?.isEmpty ?? true ? 'مطلوب' : null,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.home_work, color: Colors.blue),
-                    labelText: 'العنوان',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
+                    validator: (value) =>
+                        value?.isEmpty ?? true ? 'مطلوب' : null,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.person_4_outlined,
+                          color: Colors.blue),
+                      labelText: 'إسم العميل',
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: 2,
-                    ),
-                    onPressed: loaders.clientCreationIsLoading.value
-                        ? null
-                        : () async {
-                            if (formKey.currentState!.validate()) {
-                              loaders.clientCreationIsLoading.value = true;
-                              await saveClientData();
-                              loaders.clientCreationIsLoading.value = false;
-                            }
-                          },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          'تأكيد',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        if (loaders.clientCreationIsLoading.value) ...[
-                          const SizedBox(width: 12),
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          ),
-                        ],
-                      ],
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-              ],
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: phoneNumberField,
+                    cursorWidth: 2,
+                    showCursor: true,
+                    selectionControls: MaterialTextSelectionControls(),
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    validator: (value) =>
+                        value?.isEmpty ?? true ? 'رقم الهاتف مطلوب' : null,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.phone, color: Colors.blue),
+                      labelText: 'رقم الهاتف',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: nationalIdField,
+                    cursorWidth: 2,
+                    showCursor: true,
+                    selectionControls: MaterialTextSelectionControls(),
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    validator: (value) =>
+                        value?.isEmpty ?? true ? 'مطلوب' : null,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.badge, color: Colors.blue),
+                      labelText: 'الرقم القومي',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: addressField,
+                    cursorWidth: 2,
+                    showCursor: true,
+                    selectionControls: MaterialTextSelectionControls(),
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    validator: (value) =>
+                        value?.isEmpty ?? true ? 'مطلوب' : null,
+                    decoration: InputDecoration(
+                      prefixIcon:
+                          const Icon(Icons.home_work, color: Colors.blue),
+                      labelText: 'العنوان',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      onPressed: loaders.clientCreationIsLoading.value
+                          ? null
+                          : () async {
+                              if (formKey.currentState!.validate()) {
+                                loaders.clientCreationIsLoading.value = true;
+                                await saveClientData();
+                                loaders.clientCreationIsLoading.value = false;
+                              }
+                            },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'تأكيد',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          if (loaders.clientCreationIsLoading.value) ...[
+                            const SizedBox(width: 12),
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
           ),
         ),

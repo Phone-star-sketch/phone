@@ -10,6 +10,7 @@ import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_sheet.dart';
 import 'package:phone_system_app/views/client_list_view.dart';
 import 'package:phone_system_app/views/print_clients_receipts.dart';
+import 'package:flutter/services.dart';
 
 class AllClientsPage extends StatefulWidget {
   AllClientsPage({super.key});
@@ -191,11 +192,35 @@ class CutsomToolBar extends StatelessWidget {
                                                       fontSize: 15,
                                                       color: Colors.black),
                                                 ),
-                                                Text(
-                                                  client
-                                                      .numbers![0].phoneNumber!,
-                                                  style: const TextStyle(
-                                                      color: Colors.black54),
+                                                Row(
+                                                  children: [
+                                                    Text(
+                                                      client.numbers![0]
+                                                          .phoneNumber!,
+                                                      style: const TextStyle(
+                                                          color:
+                                                              Colors.black54),
+                                                    ),
+                                                    IconButton(
+                                                      icon: const Icon(
+                                                          Icons.copy,
+                                                          size: 16),
+                                                      onPressed: () {
+                                                        Clipboard.setData(
+                                                            ClipboardData(
+                                                                text: client
+                                                                    .numbers![0]
+                                                                    .phoneNumber!));
+                                                        Get.showSnackbar(
+                                                            const GetSnackBar(
+                                                          message:
+                                                              'تم نسخ رقم الهاتف',
+                                                          duration: Duration(
+                                                              seconds: 2),
+                                                        ));
+                                                      },
+                                                    ),
+                                                  ],
                                                 ),
                                               ],
                                             ),
@@ -294,26 +319,42 @@ class CustomTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      cursorColor: Colors.red,
-      onChanged: onChanged,
-      controller: controller,
-      textDirection: TextDirection.rtl,
-      textAlign: TextAlign.right,
-      decoration: InputDecoration(
-        hintText: "ابحث عن عميل (الاسم، رقم الهاتف)",
-        hintStyle: const TextStyle(color: Colors.black38),
-        prefixIcon: const Icon(FontAwesomeIcons.searchengin),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: const BorderSide(color: Colors.red),
+    return TextSelectionTheme(
+      data: TextSelectionThemeData(
+        selectionColor: Colors.red.withOpacity(0.3),
+      ),
+      child: TextField(
+        cursorColor: Colors.red,
+        onChanged: onChanged,
+        controller: controller,
+        textDirection: TextDirection.rtl,
+        textAlign: TextAlign.right,
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: const BorderSide(color: Colors.red),
+        // Add these properties for better text selection visibility
+        selectionControls: MaterialTextSelectionControls(),
+        decoration: InputDecoration(
+          hintText: "ابحث عن عميل (الاسم، رقم الهاتف)",
+          hintStyle: const TextStyle(
+            color: Colors.black38,
+            fontSize: 14,
+            fontWeight: FontWeight.normal,
+          ),
+          prefixIcon: const Icon(FontAwesomeIcons.searchengin),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: const BorderSide(color: Colors.red),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: const BorderSide(color: Colors.red),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
