@@ -100,10 +100,7 @@ class AccountClientInfo extends GetxController {
       }
 
       // Search in notes if exists
-      if (client.notes?.isNotEmpty == true &&
-          normalizeArabic(client.notes!).contains(normalizedQuery)) {
-        return true;
-      }
+      
 
       return false;
     }).toList();
