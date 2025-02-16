@@ -14,13 +14,16 @@ class PdfService {
     final now = DateTime.now();
     final collectionDay = AccountClientInfo.to.currentAccount.day;
 
-    // If we're past the collection day, use next month's name
-    if (now.day > collectionDay) {
-      final nextMonth = DateTime(now.year, now.month + 1);
-      return _getArabicMonthName(nextMonth.month);
+    // If we're before collection day, use previous month
+    if (now.day < collectionDay) {
+      // If it's January, go to previous year's December
+      if (now.month == 1) {
+        return _getArabicMonthName(12);
+      }
+      return _getArabicMonthName(now.month - 1);
     }
 
-    // Otherwise use current month's name
+    // If we're on or after collection day, use current month
     return _getArabicMonthName(now.month);
   }
 
