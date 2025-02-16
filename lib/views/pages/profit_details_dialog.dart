@@ -5,6 +5,7 @@ import 'package:phone_system_app/models/profit.dart';
 import 'package:lottie/lottie.dart';
 import 'package:phone_system_app/services/pdf_service.dart';
 import 'package:phone_system_app/controllers/account_profit_controller.dart';
+import 'package:phone_system_app/controllers/account_client_info_data.dart';
 
 class ProfitDetailsDialog extends StatelessWidget {
   final MonthlyProfit profit;
@@ -17,13 +18,44 @@ class ProfitDetailsDialog extends StatelessWidget {
     required this.monthName,
   }) : super(key: key);
 
+  String _getAppropriateMonthName() {
+    final now = DateTime.now();
+    final collectionDay = AccountClientInfo.to.currentAccount.day;
+
+    if (now.day > collectionDay) {
+      final nextMonth = DateTime(now.year, now.month + 1);
+      return _getArabicMonthName(nextMonth.month);
+    }
+    return _getArabicMonthName(now.month);
+  }
+
+  String _getArabicMonthName(int month) {
+    final months = [
+      'يناير',
+      'فبراير',
+      'مارس',
+      'إبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر'
+    ];
+    return months[month - 1];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final calculatedMonthName = _getAppropriateMonthName();
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
-        width:
-            MediaQuery.of(context).size.width * 0.9, // Changed from fixed 500
+        width: MediaQuery.of(context).size.width *
+            0.95, // Changed from 0.9 to 0.95
         height: MediaQuery.of(context).size.height * 0.8, // Changed from 0.7
         decoration: BoxDecoration(
           color: Colors.white,
@@ -77,7 +109,7 @@ class ProfitDetailsDialog extends StatelessWidget {
                           ),
                         ).animate().fadeIn().scale(),
                         Text(
-                          "لشهر $monthName",
+                          "لشهر $calculatedMonthName",
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 18,

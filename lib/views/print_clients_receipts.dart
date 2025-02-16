@@ -18,10 +18,39 @@ class PrintClientsReceipts extends StatelessWidget {
   PrintClientsReceipts({super.key, required this.clients});
   final controller = Get.find<AccountClientInfo>();
 
+  String _getAppropriateMonthName() {
+    final now = DateTime.now();
+    final collectionDay = AccountClientInfo.to.currentAccount.day;
+
+    if (now.day > collectionDay) {
+      final nextMonth = DateTime(now.year, now.month + 1);
+      return _getArabicMonthName(nextMonth.month);
+    }
+    return _getArabicMonthName(now.month);
+  }
+
+  String _getArabicMonthName(int month) {
+    final months = [
+      'يناير',
+      'فبراير',
+      'مارس',
+      'إبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر'
+    ];
+    return months[month - 1];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currentMonth = DateTime.now().month;
-    final monthName = ProfitController.to.months[currentMonth];
+    final calculatedMonthName = _getAppropriateMonthName();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("عرض سجل الفواتير"),
@@ -41,7 +70,7 @@ class PrintClientsReceipts extends StatelessWidget {
         ),
       ),
       body: PdfPreview(
-        pdfFileName: "فاتورة شهر $monthName" ".pdf",
+        pdfFileName: "فاتورة شهر $calculatedMonthName.pdf",
         build: _createPdf,
         loadingWidget: CustomIndicator(),
         onError: (context, error) {

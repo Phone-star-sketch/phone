@@ -7,10 +7,46 @@ import 'package:flutter/services.dart';
 import 'package:universal_html/html.dart' as html;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/profit.dart';
+import 'package:phone_system_app/controllers/account_client_info_data.dart';
 
 class PdfService {
+  static String _getAppropriateMonthName() {
+    final now = DateTime.now();
+    final collectionDay = AccountClientInfo.to.currentAccount.day;
+
+    // If we're past the collection day, use next month's name
+    if (now.day > collectionDay) {
+      final nextMonth = DateTime(now.year, now.month + 1);
+      return _getArabicMonthName(nextMonth.month);
+    }
+
+    // Otherwise use current month's name
+    return _getArabicMonthName(now.month);
+  }
+
+  static String _getArabicMonthName(int month) {
+    final months = [
+      'يناير',
+      'فبراير',
+      'مارس',
+      'إبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر'
+    ];
+    return months[month - 1];
+  }
+
   static Future<void> generateProfitReport(
-      MonthlyProfit profit, String monthName) async {
+      MonthlyProfit profit, String _) async {
+    // Use the calculated month name instead of the passed parameter
+    final monthName = _getAppropriateMonthName();
+
     // Load and register Arabic fonts
     final arabicFont =
         await rootBundle.load("assets/fonts/cairo/Cairo-Regular.ttf");
