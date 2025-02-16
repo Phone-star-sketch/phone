@@ -101,35 +101,21 @@ class ClientDataWidget extends StatelessWidget {
           },
         );
 
-      // Get the phone number safely
-      final phoneNumber = client.numbers?.isNotEmpty == true
-          ? client.numbers![0].phoneNumber
-          : 'لا يوجد رقم';
-
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+      return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [colors.primary.withOpacity(0.8), colors.surface],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
           borderRadius: BorderRadius.circular(20),
         ),
         child: ListView(
           shrinkWrap: true,
           children: [
-            Column(
+            const Column(
               children: [
                 Text(
                   'بيانات العميل',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: colors.onPrimary),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
-                const Divider(thickness: 2),
+                Divider(),
               ],
             ),
             Align(
@@ -286,7 +272,7 @@ class ClientDataWidget extends StatelessWidget {
                                           Text(
                                               style:
                                                   const TextStyle(fontSize: 12),
-                                              'رقم الخط: $phoneNumber'),
+                                              'رقم الخط:  ${client.numbers![0].phoneNumber}'),
                                           const Divider(),
                                           Text(
                                               style:
@@ -434,8 +420,7 @@ class ClientDataWidget extends StatelessWidget {
                                       child: SizedBox(
                                         height: height * 0.5,
                                         child: GridView.builder(
-                                          itemCount:
-                                              systems.length, //systems.length,
+                                          itemCount: systems.length,
                                           gridDelegate:
                                               SliverGridDelegateWithFixedCrossAxisCount(
                                             childAspectRatio: 1.2,
@@ -444,6 +429,34 @@ class ClientDataWidget extends StatelessWidget {
                                             mainAxisSpacing: 10,
                                           ),
                                           itemBuilder: (context, index) {
+                                            final system = systems[index];
+                                            // Don't show expired other services but keep their price in total
+                                            if (system.type!.category ==
+                                                SystemCategory.mobileInternet) {
+                                              if (system.createdAt != null) {
+                                                final collectionDay =
+                                                    AccountClientInfo
+                                                        .to.currentAccount.day;
+                                                final nextCollection = DateTime(
+                                                  system.createdAt!.month == 12
+                                                      ? system.createdAt!.year +
+                                                          1
+                                                      : system.createdAt!.year,
+                                                  system.createdAt!.month == 12
+                                                      ? 1
+                                                      : system.createdAt!
+                                                              .month +
+                                                          1,
+                                                  collectionDay,
+                                                );
+                                                if (DateTime.now()
+                                                    .isAfter(nextCollection)) {
+                                                  return const SizedBox
+                                                      .shrink();
+                                                }
+                                              }
+                                            }
+
                                             return Stack(
                                               children: [
                                                 Positioned.fill(
