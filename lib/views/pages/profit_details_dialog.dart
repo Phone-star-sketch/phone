@@ -54,9 +54,8 @@ class ProfitDetailsDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
-        width: MediaQuery.of(context).size.width *
-            0.95, // Changed from 0.9 to 0.95
-        height: MediaQuery.of(context).size.height * 0.8, // Changed from 0.7
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.7, // Reduced height
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -72,7 +71,7 @@ class ProfitDetailsDialog extends StatelessWidget {
           children: [
             // Header
             Container(
-              height: 120,
+              height: 100, // Reduced height
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Colors.blue[700]!, Colors.blue[500]!],
@@ -88,8 +87,8 @@ class ProfitDetailsDialog extends StatelessWidget {
                     right: -20,
                     top: -20,
                     child: Container(
-                      width: 100,
-                      height: 100,
+                      width: 80, // Reduced size
+                      height: 80, // Reduced size
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.1),
                         shape: BoxShape.circle,
@@ -104,7 +103,7 @@ class ProfitDetailsDialog extends StatelessWidget {
                           "حسابات الربح",
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 24,
+                            fontSize: 20, // Reduced font size
                             fontWeight: FontWeight.bold,
                           ),
                         ).animate().fadeIn().scale(),
@@ -112,7 +111,7 @@ class ProfitDetailsDialog extends StatelessWidget {
                           "لشهر $calculatedMonthName",
                           style: const TextStyle(
                             color: Colors.white70,
-                            fontSize: 18,
+                            fontSize: 16, // Reduced font size
                           ),
                         ).animate().fadeIn().moveY(begin: 10, delay: 200.ms),
                       ],
@@ -125,7 +124,7 @@ class ProfitDetailsDialog extends StatelessWidget {
             // Content
             Expanded(
               child: Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16), // Reduced padding
                 child: ListView(
                   children: [
                     _buildProfitCard(
@@ -165,7 +164,7 @@ class ProfitDetailsDialog extends StatelessWidget {
 
             // Footer
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(12), // Reduced padding
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -173,7 +172,7 @@ class ProfitDetailsDialog extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green[700],
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 16),
+                          horizontal: 24, vertical: 12), // Reduced padding
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
@@ -183,15 +182,15 @@ class ProfitDetailsDialog extends StatelessWidget {
                     icon: const Icon(Icons.picture_as_pdf),
                     label: const Text(
                       "تصدير PDF",
-                      style: TextStyle(fontSize: 18),
+                      style: TextStyle(fontSize: 16), // Reduced font size
                     ),
                   ).animate().fadeIn().scale(delay: 800.ms),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12), // Reduced spacing
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue[700],
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 16),
+                          horizontal: 24, vertical: 12), // Reduced padding
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
@@ -199,7 +198,7 @@ class ProfitDetailsDialog extends StatelessWidget {
                     onPressed: () => Get.back(),
                     child: const Text(
                       "تم",
-                      style: TextStyle(fontSize: 18),
+                      style: TextStyle(fontSize: 16), // Reduced font size
                     ),
                   ).animate().fadeIn().scale(delay: 800.ms),
                 ],
@@ -214,13 +213,13 @@ class ProfitDetailsDialog extends StatelessWidget {
   Widget _buildProfitCard(
       String title, double value, IconData icon, Color color, int delay) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12), // Reduced margin
       child: Card(
         elevation: 4,
         shadowColor: color.withOpacity(0.3),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12), // Reduced padding
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(15),
             gradient: LinearGradient(
@@ -235,14 +234,14 @@ class ProfitDetailsDialog extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10), // Reduced padding
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: color, size: 28),
+                child: Icon(icon, color: color, size: 24), // Reduced icon size
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12), // Reduced spacing
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,7 +249,7 @@ class ProfitDetailsDialog extends StatelessWidget {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 14, // Reduced font size
                         fontWeight: FontWeight.w500,
                         color: Colors.black87,
                       ),
@@ -259,7 +258,7 @@ class ProfitDetailsDialog extends StatelessWidget {
                     Text(
                       "${value.toStringAsFixed(2)} ج.م",
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 18, // Reduced font size
                         fontWeight: FontWeight.bold,
                         color: color,
                       ),
