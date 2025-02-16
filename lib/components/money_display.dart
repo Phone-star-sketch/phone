@@ -22,7 +22,12 @@ class MoneyDisplay extends StatelessWidget {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   Future<void> _playSound() async {
-    await _audioPlayer.play(AssetSource('sounds/new-notification-7-210334.mp3')); // Corrected the path
+    await _audioPlayer.play(AssetSource(
+        'sounds/new-notification-7-210334.mp3')); // Corrected the path
+  }
+
+  Future<void> _playPaymentSound() async {
+    await _audioPlayer.play(AssetSource('sounds/payment.mp3'));
   }
 
   @override
@@ -115,7 +120,7 @@ class MoneyDisplay extends StatelessWidget {
             children: [
               IconButton(
                   onPressed: () async {
-                    await _playSound();
+                    await _playPaymentSound();
                     if (onAdd != null) {
                       onAdd!();
                     }
