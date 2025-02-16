@@ -33,6 +33,8 @@ class ProfitController extends GetxController {
   final totalIncomeController = TextEditingController();
   final discountController = TextEditingController();
 
+  final calculatedAmountAfterDiscount = RxDouble(0.0);
+
   List<MonthlyProfit> profits = <MonthlyProfit>[].obs;
 
   @override
@@ -206,46 +208,47 @@ class ProfitController extends GetxController {
     }
   }
 
+  double calculateTotalDues() {
+    final clientController = Get.find<AccountClientInfo>();
+    final clients = clientController.clinets.value;
+    final dueClients = clients.where((client) => client.totalCash < 0);
+    if (dueClients.isEmpty) return 0;
+    return dueClients
+        .map((e) => e.totalCash)
+        .reduce((value, element) => value + element)
+        .abs();
+  }
+
   Future<MonthlyProfit?> calculateTotalProfit(int month, int year) async {
-    final logs =
-        await BackendServices.instance.logRepository.getLogsByMatchMapQuery({
-      'month': month,
-      'year': year,
-      'account_id': AccountClientInfo.to.currentAccount.id
-    });
+    final totalDues = calculateTotalDues();
+    final totalIncome = double.tryParse(totalIncomeController.text) ?? 0.0;
+    final discount = double.tryParse(discountController.text) ?? 0.0;
 
-    MonthlyProfit? profit = getProfitByYearAndMonth(month, year);
+    return MonthlyProfit(
+      id: -1, // Temporary ID for new profit calculations
+      createdAt: DateTime.now(),
+      accountId: AccountClientInfo.to.currentAccount.id,
+      month: month,
+      year: year,
+      totalIncome: totalIncome,
+      expectedToBeCollected: totalDues,
+      totalCollected: 0, // Initial value for new calculations
+      totalReminder: totalDues, // Initially same as expectedToBeCollected
+      discount: discount / 100,
+    );
+  }
 
-    if (profit != null) {
-      profit.totalCollected = (logs.isNotEmpty)
-          ? logs
-              .map(
-                (e) => e.paid,
-              )
-              .reduce(
-                (value, element) => value! + element!,
-              )!
-          : 0;
-      profit.totalReminder = (logs.isNotEmpty)
-          ? logs
-              .map(
-                (e) => e.reminder,
-              )
-              .reduce(
-                (value, element) => value! + element!,
-              )!
-          : 0;
-      profit.expectedToBeCollected = (logs.isNotEmpty)
-          ? logs
-              .map(
-                (e) => e.price,
-              )
-              .reduce(
-                (value, element) => value + element,
-              )
-          : 0;
-      await BackendServices.instance.profitRepository.update(profit);
+  void calculateDiscount() {
+    try {
+      final totalIncome = double.tryParse(totalIncomeController.text) ?? 0.0;
+      final discountPercentage =
+          double.tryParse(discountController.text) ?? 0.0;
+
+      // Calculate discount amount
+      final discountAmount = totalIncome * (discountPercentage / 100);
+      calculatedAmountAfterDiscount.value = totalIncome - discountAmount;
+    } catch (e) {
+      calculatedAmountAfterDiscount.value = 0.0;
     }
-    return profit;
   }
 }

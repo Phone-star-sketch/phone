@@ -34,20 +34,20 @@ class SystemList extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                color: Colors.red,
+                color:const Color(0xFF00BFFF),
                 child: const TabBar(
                   tabs: [
                     Tab(
                       icon: Icon(Icons.phone),
-                      child: Text('فليكسات'),
+                      child: Text('أنظمة الفليكسات'),
                     ),
                     Tab(
                       icon: Icon(Icons.wifi),
-                      child: Text('إنترنت أرضي'),
+                      child: Text(' انترنت ارضي و موبيل'),
                     ),
                     Tab(
                       icon: Icon(Icons.phone_android),
-                      child: Text('إنترنت موبايل'),
+                      child: Text('خدمات أخري'),
                     ),
                   ],
                 ),
@@ -105,7 +105,7 @@ class SystemListTab extends StatelessWidget {
       int editedCard = controller.editedCardIndex.value;
       return Scaffold(
         floatingActionButton: FloatingActionButton(
-          backgroundColor: Colors.red,
+            backgroundColor: const Color(0xFF00BFFF),
           child: const Icon(Icons.add, color: Colors.white),
           onPressed: () {
             allSystems.add(SystemType(id: -1, category: systemCategory));
