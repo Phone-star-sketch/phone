@@ -48,48 +48,53 @@ class AccountDetails extends StatelessWidget {
 
   // Use const constructor for static pages list
   static final List<Page> _pages = [
-    Page(
-      roles: [UserRoles.admin, UserRoles.manager],
-      content: AllClientsPage(),
-      title: "بيانات العملاء",
-      icon: const Icon(
-        Icons.supervised_user_circle,
-        color: Colors.black54,
+    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+      Page(
+        roles: [UserRoles.manager],
+        content: AllClientsPage(),
+        title: "بيانات العملاء",
+        icon: const Icon(
+          Icons.supervised_user_circle,
+          color: Colors.black54,
+        ),
       ),
-    ),
-    Page(
-      roles: [UserRoles.admin, UserRoles.manager, UserRoles.assistant],
-      content: DuesManagement(),
-      title: "المستحقات",
-      icon: const Icon(
-        Icons.payment,
-        color: Colors.black54,
+    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+      Page(
+        roles: [UserRoles.manager],
+        content: DuesManagement(),
+        title: "المستحقات",
+        icon: const Icon(
+          Icons.payment,
+          color: Colors.black54,
+        ),
       ),
-    ),
-    Page(
-      roles: [UserRoles.admin, UserRoles.manager],
-      content: OfferManagement(),
-      title: "العروض المطلوبة",
-      icon: const Icon(
-        Icons.card_giftcard_rounded,
-        color: Colors.black54,
+    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+      Page(
+        roles: [UserRoles.manager],
+        content: OfferManagement(),
+        title: "العروض المطلوبة",
+        icon: const Icon(
+          Icons.card_giftcard_rounded,
+          color: Colors.black54,
+        ),
       ),
-    ),
-    Page(
-      roles: [UserRoles.admin, UserRoles.manager],
-      content: Container(
-        height: double.infinity,
-        color: Colors.white,
-        child: SystemList(),
+    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+      Page(
+        roles: [UserRoles.manager],
+        content: Container(
+          height: double.infinity,
+          color: Colors.white,
+          child: SystemList(),
+        ),
+        icon: const Icon(
+          Icons.play_lesson,
+          color: Colors.black54,
+        ),
+        title: "الباقات المتاحة",
       ),
-      icon: const Icon(
-        Icons.play_lesson,
-        color: Colors.black54,
-      ),
-      title: "الباقات المتاحة",
-    ),
-    Page(
-        roles: [UserRoles.admin, UserRoles.manager],
+    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+      Page(
+        roles: [UserRoles.manager],
         content: Container(
           color: Colors.white,
           constraints: const BoxConstraints.expand(),
@@ -99,32 +104,35 @@ class AccountDetails extends StatelessWidget {
           Icons.account_balance_wallet,
           color: Colors.black54,
         ),
-        title: "الربح و الاحصاء"),
+        title: "الربح و الاحصاء",
+      ),
     Page(
-        roles: [UserRoles.admin, UserRoles.manager],
-        content: Container(
-          color: Colors.white,
-          constraints: const BoxConstraints.expand(),
-          child: ForSaleNumbers(),
-        ),
-        icon: const Icon(
-          Icons.phone_android,
-          color: Colors.black54,
-        ),
-        title: "أرقام للبيع"),
+      roles: [UserRoles.manager, UserRoles.assistant],
+      content: Container(
+        color: Colors.white,
+        constraints: const BoxConstraints.expand(),
+        child: ForSaleNumbers(),
+      ),
+      icon: const Icon(
+        Icons.phone_android,
+        color: Colors.black54,
+      ),
+      title: "أرقام للبيع",
+    ),
     Page(
-        roles: [UserRoles.admin, UserRoles.manager],
-        content: Container(
-          color: Colors.white,
-          constraints: const BoxConstraints.expand(),
-          child: Follow(),
-        ),
-        icon: const Icon(
-          Icons.toc_rounded,
-          color: Colors.black54,
-        ),
-        title: "المتابعة"),
-    if (SupabaseAuthentication.myUser?.role == 1)
+      roles: [UserRoles.manager, UserRoles.assistant],
+      content: Container(
+        color: Colors.white,
+        constraints: const BoxConstraints.expand(),
+        child: Follow(),
+      ),
+      icon: const Icon(
+        Icons.toc_rounded,
+        color: Colors.black54,
+      ),
+      title: "المتابعة",
+    ),
+    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
       Page(
         roles: [UserRoles.manager],
         content: Container(
