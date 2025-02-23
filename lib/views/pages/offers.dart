@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/models/client.dart';
+import 'package:phone_system_app/models/system_type.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/views/client_list_view.dart';
@@ -311,10 +312,18 @@ class ExpiredSystemsPage extends StatelessWidget {
               color: Colors.black87,
             ),
           ),
-          subtitle: Text(
-            'عدد الأنظمة المنتهية: ${client.numbers!.fold<int>(0, (sum, number) => sum + number.getExpiredSystems().length)}',
-            style:
-                TextStyle(color: Colors.black), // Changed from white to black
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'عدد الأنظمة المنتهية: ${client.numbers!.fold<int>(0, (sum, number) => sum + number.getExpiredSystems().length)}',
+                style: TextStyle(color: Colors.black),
+              ),
+              Text(
+                'تاريخ انتهاء العرض: ${(client.expireDate != null) ? fullExpressionArabicDate(client.expireDate!) : "لا يوجد"}',
+                style: TextStyle(color: Colors.black),
+              ),
+            ],
           ),
           children: [
             Container(
@@ -325,8 +334,8 @@ class ExpiredSystemsPage extends StatelessWidget {
               margin: EdgeInsets.all(12),
               child: Column(
                 children: client.numbers!.map((number) {
-                  final expiredSystems = number.getExpiredSystems();
-                  if (expiredSystems.isEmpty) return SizedBox.shrink();
+                  final systems = number.systems ?? [];
+                  if (systems.isEmpty) return SizedBox.shrink();
 
                   return Container(
                     margin: EdgeInsets.all(8),
@@ -375,45 +384,49 @@ class ExpiredSystemsPage extends StatelessWidget {
                           ],
                         ),
                         Divider(height: 20),
-                        ...expiredSystems.map((system) {
-                          final formattedDate =
-                              DateFormat.yMMMMd('ar').format(system.endDate!);
-                          return Container(
-                            margin: EdgeInsets.only(top: 8),
-                            padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.warning_amber_rounded,
-                                    color: Colors.orange),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'النظام: ${system.name}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.orange.shade700,
-                                        ),
-                                      ),
-                                      Text(
-                                        'تاريخ الانتهاء: $formattedDate',
-                                        style: TextStyle(
-                                            color: Colors.orange.shade700),
-                                      ),
-                                    ],
-                                  ),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: systems.map((system) {
+                            if (system.type!.category ==
+                                SystemCategory.mobileInternet) {
+                              if (system.createdAt != null) {
+                                final collectionDay =
+                                    AccountClientInfo.to.currentAccount.day;
+                                final nextCollection = DateTime(
+                                  system.createdAt!.month == 12
+                                      ? system.createdAt!.year + 1
+                                      : system.createdAt!.year,
+                                  system.createdAt!.month == 12
+                                      ? 1
+                                      : system.createdAt!.month + 1,
+                                  collectionDay,
+                                );
+                                if (DateTime.now().isAfter(nextCollection)) {
+                                  return const SizedBox.shrink();
+                                }
+                              }
+                            }
+
+                            return Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Text(
+                                system.type!.name!,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black87,
                                 ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       ],
                     ),
                   );
