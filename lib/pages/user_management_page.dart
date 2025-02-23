@@ -1,5 +1,8 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:phone_system_app/models/account.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/models/user.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -7,8 +10,16 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart'; // Add this import
 import 'package:flutter/cupertino.dart';
 import 'package:uuid/uuid.dart'; // Add this import at the top
+import 'package:flutter/services.dart';
+import 'package:phone_system_app/controllers/account_client_info_data.dart';
+
+const Color mainColor = Color(0xFF00BFFF);
+const Color mainColorLight = Color(0x4000BFFF); // 40% opacity
+const Color mainColorLighter = Color(0x1000BFFF); // 10% opacity
 
 class UserManagementController extends GetxController {
+  final accountInfo =
+      Get.put(AccountClientInfo(currentAccount: Account.empty()));
   final RxList<AppUser> users = <AppUser>[].obs;
   final RxBool isLoading = false.obs;
   final RxString error = ''.obs;
@@ -23,8 +34,16 @@ class UserManagementController extends GetxController {
     try {
       isLoading.value = true;
       final response = await Supabase.instance.client.from('users').select();
-      var usersList =
-          (response as List).map((user) => AppUser.fromJson(user)).toList();
+
+      if (response == null) {
+        error.value = 'No data returned from server';
+        return;
+      }
+
+      var usersList = (response as List)
+          .where((user) => user != null)
+          .map((user) => AppUser.fromJson(user))
+          .toList();
 
       // Sort users: role 1 first, then by name
       usersList.sort((a, b) {
@@ -36,6 +55,7 @@ class UserManagementController extends GetxController {
 
       users.value = usersList;
     } catch (e) {
+      print('Error fetching users: $e');
       error.value = e.toString();
     } finally {
       isLoading.value = false;
@@ -151,14 +171,61 @@ class UserManagementController extends GetxController {
       isLoading.value = false;
     }
   }
+
+  Future<void> deleteUser(String uid) async {
+    try {
+      isLoading.value = true;
+
+      // Delete from users table first
+      final deleteResponse = await Supabase.instance.client
+          .from('users')
+          .delete()
+          .eq('uid', uid)
+          .select('uid');
+
+      if (deleteResponse == null || (deleteResponse as List).isEmpty) {
+        throw Exception('Failed to delete user from database');
+      }
+
+      // Update the local list by removing the deleted user
+      users.removeWhere((user) => user.uid == uid);
+
+      Fluttertoast.showToast(
+        msg: "تم حذف المستخدم بنجاح",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+      );
+    } catch (e) {
+      print('Error deleting user: $e');
+      error.value = e.toString();
+      Fluttertoast.showToast(
+        msg: "حدث خطأ أثناء حذف المستخدم",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      rethrow;
+    } finally {
+      isLoading.value = false;
+    }
+  }
 }
 
 class UserManagementPage extends StatelessWidget {
   final controller = Get.put(UserManagementController());
+  final accountInfo = Get.find<AccountClientInfo>();
   final currentUserEmail = Supabase.instance.client.auth.currentUser?.email;
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: mainColorLight,
+      statusBarIconBrightness: Brightness.dark,
+    ));
+
     if (currentUserEmail != 'eslam.elnini@km.com') {
       return Scaffold(
         backgroundColor: Colors.white,
@@ -172,18 +239,23 @@ class UserManagementPage extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: mainColorLighter,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: mainColorLight,
           elevation: 0,
-          iconTheme: IconThemeData(color: Colors.black),
-          title: Text('إدارة المستخدمين',
-              style:
-                  TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          iconTheme: IconThemeData(color: mainColor),
+          title: Text(
+            'إدارة المستخدمين',
+            style: TextStyle(
+              color: mainColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+            ),
+          ),
           bottom: TabBar(
-            indicatorColor: Colors.red,
-            labelColor: Colors.red,
-            unselectedLabelColor: Colors.grey,
+            indicatorColor: mainColor,
+            labelColor: mainColor,
+            unselectedLabelColor: mainColor.withOpacity(0.5),
             indicatorWeight: 3,
             tabs: [
               Tab(
@@ -223,169 +295,23 @@ class _CreateUserTabState extends State<CreateUserTab> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _secpassController = TextEditingController();
-  int _selectedRole = 2; // Change initial value to 2 (regular user)
+  int _selectedRole = 2;
+  bool _showPassword = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _secpassController.dispose();
+    super.dispose();
+  }
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'البريد الإلكتروني مطلوب';
     }
     return null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: AnimationLimiter(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: AnimationConfiguration.toStaggeredList(
-                duration: const Duration(milliseconds: 375),
-                childAnimationBuilder: (widget) => SlideAnimation(
-                  horizontalOffset: 50.0,
-                  child: FadeInAnimation(
-                    child: widget,
-                  ),
-                ),
-                children: [
-                  // Header Section
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.red.shade400, Colors.red.shade600],
-                      ),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_add, color: Colors.white, size: 32),
-                        SizedBox(width: 16),
-                        Text(
-                          'إضافة مستخدم جديد',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 30),
-
-                  // Form Fields
-                  _buildAnimatedTextField(
-                    controller: _nameController,
-                    label: 'اسم المستخدم',
-                    icon: Icons.person,
-                    validator: (value) => value?.isEmpty ?? true
-                        ? 'يرجى إدخال اسم المستخدم'
-                        : null,
-                  ),
-                  SizedBox(height: 20),
-
-                  _buildAnimatedTextField(
-                    controller: _emailController,
-                    label: 'البريد الإلكتروني',
-                    icon: Icons.email,
-                    validator: _validateEmail,
-                    helperText: 'مثال: username@km.com',
-                  ),
-                  SizedBox(height: 20),
-
-                  _buildAnimatedTextField(
-                    controller: _passwordController,
-                    label: 'كلمة المرور',
-                    icon: Icons.lock,
-                    isPassword: true,
-                    validator: (value) =>
-                        value!.length < 6 ? 'كلمة المرور قصيرة جداً' : null,
-                  ),
-                  SizedBox(height: 20),
-
-                  _buildAnimatedTextField(
-                    controller: _secpassController,
-                    label: 'كلمة المرور الثانية',
-                    icon: Icons.security,
-                    keyboardType: TextInputType.number,
-                    validator: (value) => int.tryParse(value ?? '') == null
-                        ? 'أدخل رقماً صحيحاً'
-                        : null,
-                  ),
-                  SizedBox(height: 20),
-
-                  // Role Selection
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'نوع المستخدم',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        CupertinoSlidingSegmentedControl<int>(
-                          backgroundColor: Colors.white,
-                          thumbColor: Colors.red.shade400,
-                          groupValue: _selectedRole,
-                          children: {
-                            2: _buildSegmentChild(
-                                'مستخدم عادي', _selectedRole == 2),
-                            1: _buildSegmentChild('مشرف', _selectedRole == 1),
-                          },
-                          onValueChanged: (int? value) {
-                            if (value != null) {
-                              setState(() => _selectedRole = value);
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 30),
-
-                  // Submit Button
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade400,
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    onPressed: _submitForm,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.add_circle, color: Colors.white),
-                        SizedBox(width: 8),
-                        Text(
-                          'إنشاء المستخدم',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildAnimatedTextField({
@@ -396,40 +322,188 @@ class _CreateUserTabState extends State<CreateUserTab> {
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     String? helperText,
+    Widget? suffixIcon,
   }) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: Offset(0, 2),
+      margin: EdgeInsets.symmetric(vertical: 8),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          textSelectionTheme: TextSelectionThemeData(
+            selectionColor: mainColorLight.withOpacity(0.3),
+            cursorColor: mainColor,
+            selectionHandleColor: mainColor,
           ),
-        ],
+        ),
+        child: TextFormField(
+          controller: controller,
+          obscureText: isPassword ? !_showPassword : false,
+          keyboardType: keyboardType,
+          validator: validator,
+          textDirection: TextDirection.rtl,
+          textAlign: TextAlign.right,
+          cursorColor: mainColor,
+          style: TextStyle(color: Colors.black),
+          decoration: InputDecoration(
+            labelText: label,
+            helperText: helperText,
+            labelStyle: TextStyle(color: mainColor),
+            prefixIcon: Icon(icon, color: mainColor),
+            suffixIcon: suffixIcon,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide(color: mainColorLight),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide(color: mainColorLight),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide(color: mainColor, width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            focusColor: mainColor,
+            hoverColor: mainColorLight.withOpacity(0.1),
+          ),
+        ),
       ),
-      child: TextFormField(
-        controller: controller,
-        obscureText: isPassword,
-        keyboardType: keyboardType,
-        validator: validator,
-        decoration: InputDecoration(
-          labelText: label,
-          helperText: helperText,
-          prefixIcon: Icon(icon, color: Colors.red.shade400),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.red.shade400),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: mainColor,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.person_add, color: Colors.white, size: 32),
+                    SizedBox(width: 16),
+                    Text(
+                      'إضافة مستخدم جديد',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 20),
+
+              // Form Fields
+              _buildAnimatedTextField(
+                controller: _nameController,
+                label: 'اسم المستخدم',
+                icon: Icons.person,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'يرجى إدخال اسم المستخدم' : null,
+              ),
+
+              _buildAnimatedTextField(
+                controller: _emailController,
+                label: 'البريد الإلكتروني',
+                icon: Icons.email,
+                validator: _validateEmail,
+                helperText: 'مثال: username@km.com',
+              ),
+
+              _buildAnimatedTextField(
+                controller: _passwordController,
+                label: 'كلمة المرور',
+                icon: Icons.lock,
+                isPassword: true,
+                validator: (value) =>
+                    value!.length < 6 ? 'كلمة المرور قصيرة جداً' : null,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _showPassword ? Icons.visibility : Icons.visibility_off,
+                    color: mainColor,
+                  ),
+                  onPressed: () =>
+                      setState(() => _showPassword = !_showPassword),
+                ),
+              ),
+
+              _buildAnimatedTextField(
+                controller: _secpassController,
+                label: 'كلمة المرور الثانية',
+                icon: Icons.security,
+                keyboardType: TextInputType.number,
+                validator: (value) => int.tryParse(value ?? '') == null
+                    ? 'أدخل رقماً صحيحاً'
+                    : null,
+              ),
+
+              // Role Selection
+              Container(
+                margin: EdgeInsets.symmetric(vertical: 20),
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: mainColorLight),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('نوع المستخدم',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 10),
+                    CupertinoSlidingSegmentedControl<int>(
+                      backgroundColor: Colors.grey.shade200,
+                      thumbColor: mainColor,
+                      groupValue: _selectedRole,
+                      children: {
+                        2: _buildSegmentChild('مساعد', _selectedRole == 2),
+                        1: _buildSegmentChild('مشرف', _selectedRole == 1),
+                      },
+                      onValueChanged: (value) {
+                        if (value != null)
+                          setState(() => _selectedRole = value);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // Submit Button
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: mainColor,
+                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30)),
+                ),
+                onPressed: _submitForm,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_circle, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('إنشاء المستخدم',
+                        style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -438,50 +512,32 @@ class _CreateUserTabState extends State<CreateUserTab> {
 
   Widget _buildSegmentChild(String text, bool isSelected) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Text(
         text,
         style: TextStyle(
-          color: isSelected ? Colors.white : Colors.black,
+          color: isSelected ? Colors.white : mainColor,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
     );
   }
 
-  Future<void> _submitForm() async {
+  void _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      final currentUser = Supabase.instance.client.auth.currentUser;
-
-      // Check if the current user is authorized
-      if (currentUser?.email != 'eslam.elnini@km.com') {
-        Fluttertoast.showToast(
-          msg: "غير مصرح لك بإضافة مستخدمين",
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
-        return;
-      }
-
       try {
         await widget.controller.createUser(
-          _emailController.text.trim(),
+          _emailController.text,
           _passwordController.text,
-          _nameController.text.trim(),
+          _nameController.text,
           _selectedRole,
           int.parse(_secpassController.text),
         );
-
-        // Clear form and refresh only if successful
         _nameController.clear();
         _emailController.clear();
         _passwordController.clear();
         _secpassController.clear();
-        setState(() => _selectedRole = 2);
       } catch (e) {
-        print('Error creating user: $e');
         // Error is already handled in the controller
       }
     }
@@ -500,188 +556,206 @@ class _BuildUserList extends StatelessWidget {
 
     return AnimationConfiguration.staggeredList(
       position: controller.users.indexOf(user),
-      duration: const Duration(milliseconds: 375),
+      duration: const Duration(milliseconds: 500),
       child: SlideAnimation(
         verticalOffset: 50.0,
         child: FadeInAnimation(
-          child: Card(
-            color: Colors.white,
-            elevation: isOwner ? 12 : 8,
+          child: Container(
             margin: EdgeInsets.symmetric(
               horizontal: isOwner ? 12 : 16,
               vertical: isOwner ? 16 : 8,
             ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-              side: isOwner
-                  ? BorderSide(color: Colors.red.shade300, width: 2)
-                  : BorderSide.none,
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
+            child: Card(
+              color: Colors.white,
+              elevation: isOwner ? 12 : 8,
+              shadowColor: mainColor.withOpacity(0.3),
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: isOwner
-                    ? [
-                        BoxShadow(
-                          color: Colors.red.withOpacity(0.1),
-                          blurRadius: 15,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : null,
+                side: isOwner
+                    ? BorderSide(color: mainColor, width: 2)
+                    : BorderSide.none,
               ),
-              child: Padding(
-                padding: EdgeInsets.all(isOwner ? 20.0 : 16.0),
-                child: Column(
-                  children: [
-                    if (isOwner)
-                      const Chip(
-                        label: Text(
-                          "المالك",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: isOwner
+                      ? [
+                          BoxShadow(
+                            color: Colors.red.withOpacity(0.1),
+                            blurRadius: 15,
+                            spreadRadius: 2,
                           ),
-                        ),
-                        backgroundColor: Colors.red,
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        ]
+                      : null,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(isOwner ? 20.0 : 16.0),
+                  child: Column(
+                    children: [
+                      // Add this Row for the delete button
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (!isOwner) // Don't show delete button for owner
+                            IconButton(
+                              icon: Icon(Icons.delete, color: Colors.red),
+                              onPressed: () =>
+                                  _showDeleteConfirmation(context, user),
+                            ),
+                        ],
                       ),
-                    Row(
-                      children: [
-                        // Enhanced User Image
-                        Hero(
-                          tag: 'user_${user.uid}',
-                          child: Container(
-                            width: isOwner ? 100 : 80,
-                            height: isOwner ? 100 : 80,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color:
-                                    isOwner ? Colors.red : Colors.red.shade200,
-                                width: isOwner ? 3 : 2,
+                      if (isOwner)
+                        const Chip(
+                          label: Text(
+                            "المالك",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          backgroundColor: const Color(0xFF00BFFF),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        ),
+                      Row(
+                        children: [
+                          // Enhanced User Image
+                          Hero(
+                            tag: 'user_${user.uid}',
+                            child: Container(
+                              width: isOwner ? 100 : 80,
+                              height: isOwner ? 100 : 80,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isOwner
+                                      ? Colors.red
+                                      : Colors.red.shade200,
+                                  width: isOwner ? 3 : 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (isOwner ? Colors.red : Colors.black)
+                                        .withOpacity(0.2),
+                                    blurRadius: isOwner ? 15 : 10,
+                                    spreadRadius: isOwner ? 3 : 2,
+                                  ),
+                                ],
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (isOwner ? Colors.red : Colors.black)
-                                      .withOpacity(0.2),
-                                  blurRadius: isOwner ? 15 : 10,
-                                  spreadRadius: isOwner ? 3 : 2,
+                              child: ClipOval(
+                                child: isOwner
+                                    ? Stack(
+                                        children: [
+                                          Image.asset(
+                                            'assets/images/owner.png',
+                                            fit: BoxFit.cover,
+                                          ),
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  Colors.transparent,
+                                                  Colors.red.withOpacity(0.3),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : Image.asset(
+                                        'assets/images/logo.png',
+                                        fit: BoxFit.cover,
+                                      ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: isOwner ? 24 : 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  user.name ?? '',
+                                  style: TextStyle(
+                                    fontSize: isOwner ? 24 : 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: isOwner
+                                        ? Colors.red
+                                        : Colors.red.shade700,
+                                    letterSpacing: isOwner ? 0.5 : 0,
+                                  ),
+                                ),
+                                SizedBox(height: isOwner ? 8 : 4),
+                                Container(
+                                  padding: isOwner
+                                      ? EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6)
+                                      : null,
+                                  decoration: isOwner
+                                      ? BoxDecoration(
+                                          color: Colors.red.shade50,
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        )
+                                      : null,
+                                  child: Text(
+                                    'كلمة المرور الثانية: ${user.secpass ?? 'غير محدد'}',
+                                    style: TextStyle(
+                                      fontSize: isOwner ? 18 : 16,
+                                      color: isOwner
+                                          ? Colors.red.shade700
+                                          : Colors.grey[600],
+                                      fontWeight: isOwner
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                            child: ClipOval(
-                              child: isOwner
-                                  ? Stack(
-                                      children: [
-                                        Image.asset(
-                                          'assets/images/owner.png',
-                                          fit: BoxFit.cover,
-                                        ),
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                              colors: [
-                                                Colors.transparent,
-                                                Colors.red.withOpacity(0.3),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : Image.asset(
-                                      'assets/images/logo.png',
-                                      fit: BoxFit.cover,
-                                    ),
-                            ),
                           ),
-                        ),
-                        SizedBox(width: isOwner ? 24 : 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user.name ?? '',
-                                style: TextStyle(
-                                  fontSize: isOwner ? 24 : 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: isOwner
-                                      ? Colors.red
-                                      : Colors.red.shade700,
-                                  letterSpacing: isOwner ? 0.5 : 0,
-                                ),
-                              ),
-                              SizedBox(height: isOwner ? 8 : 4),
-                              Container(
-                                padding: isOwner
-                                    ? EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6)
-                                    : null,
-                                decoration: isOwner
-                                    ? BoxDecoration(
-                                        color: Colors.red.shade50,
-                                        borderRadius: BorderRadius.circular(20),
-                                      )
-                                    : null,
-                                child: Text(
-                                  'كلمة المرور الثانية: ${user.secpass ?? 'غير محدد'}',
-                                  style: TextStyle(
-                                    fontSize: isOwner ? 18 : 16,
-                                    color: isOwner
-                                        ? Colors.red.shade700
-                                        : Colors.grey[600],
-                                    fontWeight: isOwner
-                                        ? FontWeight.w600
-                                        : FontWeight.normal,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: isOwner ? 24 : 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        ElevatedButton.icon(
-                          icon: Icon(
-                            isOwner ? Icons.admin_panel_settings : Icons.edit,
-                            color: Colors.white,
-                          ),
-                          label: Text(
-                            'تعديل كلمة المرور الثانية',
-                            style: TextStyle(
+                        ],
+                      ),
+                      SizedBox(height: isOwner ? 24 : 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton.icon(
+                            icon: Icon(
+                              isOwner ? Icons.admin_panel_settings : Icons.edit,
                               color: Colors.white,
-                              fontSize: isOwner ? 16 : 14,
                             ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                isOwner ? Colors.red : Colors.red.shade400,
-                            padding: isOwner
-                                ? EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 16)
-                                : EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(isOwner ? 16 : 12),
+                            label: Text(
+                              'تعديل كلمة المرور الثانية',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: isOwner ? 16 : 14,
+                              ),
                             ),
-                            elevation: isOwner ? 6 : 4,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isOwner
+                                  ? Color(0xFF00BFFF)
+                                  : Color(0xFF00BFFF),
+                              padding: isOwner
+                                  ? EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 16)
+                                  : EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(isOwner ? 16 : 12),
+                              ),
+                              elevation: isOwner ? 6 : 4,
+                            ),
+                            onPressed: () => _showEditDialog(context, user),
                           ),
-                          onPressed: () => _showEditDialog(context, user),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -736,13 +810,50 @@ class _BuildUserList extends StatelessWidget {
     );
   }
 
+  void _showDeleteConfirmation(BuildContext context, AppUser user) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text('تأكيد الحذف'),
+        content: Text('هل أنت متأكد من حذف المستخدم ${user.name}؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('إلغاء'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () async {
+              try {
+                Navigator.pop(context); // Close dialog first
+                await controller.deleteUser(user.uid!);
+                // No need to call setState or refresh as we're using Obx
+              } catch (e) {
+                print('Error in delete confirmation: $e');
+              }
+            },
+            child: Text('حذف', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       if (controller.isLoading.value) {
         return Center(
           child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+            valueColor: AlwaysStoppedAnimation<Color>(mainColor),
           ),
         );
       }
