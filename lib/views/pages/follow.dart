@@ -78,7 +78,8 @@ class FollowController extends GetxController {
               value: AccountClientInfo.to.currentAccount.id,
             ),
             callback: (payload) async {
-              print('🔴 Realtime update received: ${payload.eventType} at ${DateTime.now()}');
+              print(
+                  '🔴 Realtime update received: ${payload.eventType} at ${DateTime.now()}');
               print('🔴 Changed data: ${payload.newRecord}');
 
               // Update timestamp
@@ -97,14 +98,14 @@ class FollowController extends GetxController {
             },
           )
           .subscribe((status, error) {
-            if (error != null) {
-              connectionStatus.value = 'خطأ في الاتصال';
-              print('🔴 Realtime error: $error');
-            } else {
-              connectionStatus.value = 'متصل';
-              print('🔴 Realtime status: $status');
-            }
-          });
+        if (error != null) {
+          connectionStatus.value = 'خطأ في الاتصال';
+          print('🔴 Realtime error: $error');
+        } else {
+          connectionStatus.value = 'متصل';
+          print('🔴 Realtime status: $status');
+        }
+      });
     } catch (e) {
       connectionStatus.value = 'فشل الاتصال';
       print('🔴 Error setting up realtime: $e');
@@ -122,8 +123,8 @@ class FollowController extends GetxController {
 
     try {
       final l = <Log>[];
-      final dataAdd = await BackendServices.instance.logRepository
-          .getLogsByMatchMapQuery({
+      final dataAdd =
+          await BackendServices.instance.logRepository.getLogsByMatchMapQuery({
         Log.accountIdColumnName: AccountClientInfo.to.currentAccount.id,
       }, 200);
 
@@ -145,7 +146,8 @@ class FollowController extends GetxController {
 
   Future<void> insertDummyLog() async {
     try {
-      final firstClient = AccountClientInfo.to.clinets.firstWhereOrNull((c) => c.id != null);
+      final firstClient =
+          AccountClientInfo.to.clinets.firstWhereOrNull((c) => c.id != null);
 
       if (firstClient == null) {
         Get.snackbar('خطأ', 'لا يوجد عملاء متاحين لإجراء الاختبار');
@@ -174,115 +176,177 @@ class Follow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final list = controller.logs;
-      return Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        "سجل بأخر الاحداث و التعاملات",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+    return DefaultTabController(
+      length: 2,
+      child: Obx(() {
+        final list = controller.logs;
+        return Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          "سجل بأخر الاحداث و التعاملات",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (SupabaseAuthentication.myUser!.role ==
+                              UserRoles.admin.index)
+                            IconButton(
+                              onPressed: () => controller.insertDummyLog(),
+                              icon: Icon(Icons.add_circle, size: 20),
+                              tooltip: 'إضافة معاملة تجريبية',
+                              color: Colors.blue,
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints(),
+                            ),
+                          SizedBox(width: 4),
+                          Icon(
+                            controller.connectionStatus.value == 'متصل'
+                                ? Icons.wifi
+                                : Icons.wifi_off,
+                            color: controller.connectionStatus.value == 'متصل'
+                                ? Colors.green
+                                : Colors.red,
+                            size: 20,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            controller.connectionStatus.value,
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  if (controller.lastUpdateTime.value.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(
+                        'آخر تحديث: ${controller.lastUpdateTime.value}',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+                ],
+              ),
+            ),
+            TabBar(
+              tabs: [
+                Tab(text: 'المدير'),
+                Tab(text: 'المساعد'),
+              ],
+              labelColor: Colors.blue,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Colors.blue,
+            ),
+            (Loaders.to.followLoading.value)
+                ? Container(
+                    height: MediaQuery.of(context).size.height * 0.6,
+                    child: Center(
+                      child: CustomIndicator(
+                        title: "",
+                      ),
+                    ),
+                  )
+                : Expanded(
+                    child: TabBarView(
                       children: [
-                        if (SupabaseAuthentication.myUser!.role == UserRoles.admin.index)
-                          IconButton(
-                            onPressed: () => controller.insertDummyLog(),
-                            icon: Icon(Icons.add_circle, size: 20),
-                            tooltip: 'إضافة معاملة تجريبية',
-                            color: Colors.blue,
-                            padding: EdgeInsets.zero,
-                            constraints: BoxConstraints(),
-                          ),
-                        SizedBox(width: 4),
-                        Icon(
-                          controller.connectionStatus.value == 'متصل'
-                              ? Icons.wifi
-                              : Icons.wifi_off,
-                          color: controller.connectionStatus.value == 'متصل'
-                              ? Colors.green
-                              : Colors.red,
-                          size: 20,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          controller.connectionStatus.value,
-                          style: TextStyle(fontSize: 12, color: Colors.black87),
-                        ),
+                        // Manager View
+                        _buildManagerView(list, context),
+                        // Assistant View
+                        _buildAssistantView(list, context),
                       ],
                     ),
-                  ],
-                ),
-                if (controller.lastUpdateTime.value.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Text(
-                      'آخر تحديث: ${controller.lastUpdateTime.value}',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
                   ),
-              ],
-            ),
+          ],
+        );
+      }),
+    );
+  }
+
+  Widget _buildManagerView(List<LogWidthUser> list, BuildContext context) {
+    // Filter logs for manager (كابتن/اسلام النني)
+    final managerLogs = list.where((logWithUser) {
+      final userName = logWithUser.user?.name?.toLowerCase() ?? '';
+      return userName.contains('كابتن') || userName.contains('اسلام النني');
+    }).toList();
+
+    return ListView.separated(
+      separatorBuilder: (context, index) => const Divider(),
+      itemCount: managerLogs.length,
+      itemBuilder: (context, index) {
+        return InkWell(
+          onTap: (managerLogs[index].client != null)
+              ? () async {
+                  final client = managerLogs[index].client;
+                  final controller = Get.put(ClientBottomSheetController());
+                  controller.setClient(client!);
+                  await showClientInfoSheet(context, client);
+                  Get.delete<ClientBottomSheetController>(force: true);
+                }
+              : null,
+          child: LogWithUserCardWidget(
+            logWidthUser: managerLogs[index],
+            showAdminControls: true,
           ),
-          (Loaders.to.followLoading.value)
-              ? Container(
-                  height: MediaQuery.of(context).size.height * 0.6,
-                  child: Center(
-                    child: CustomIndicator(
-                      title: "",
-                    ),
-                  ),
-                )
-              : Expanded(
-                  child: ListView.separated(
-                    separatorBuilder: (context, index) => const Divider(),
-                    itemCount: list.length,
-                    itemBuilder: (context, index) {
-                      return InkWell(
-                        onTap: (list[index].client != null)
-                            ? () async {
-                                final client = list[index].client;
-                                final controller =
-                                    Get.put(ClientBottomSheetController());
-                                controller.setClient(client!);
-                                await showClientInfoSheet(context, client);
-                                Get.delete<ClientBottomSheetController>(
-                                    force: true);
-                              }
-                            : null,
-                        child: LogWithUserCardWidget(
-                          logWidthUser: list[index],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-        ],
-      );
-    });
+        );
+      },
+    );
+  }
+
+  Widget _buildAssistantView(List<LogWidthUser> list, BuildContext context) {
+    // Filter logs for assistant (المساعد)
+    final assistantLogs = list.where((logWithUser) {
+      final userName = logWithUser.user?.name?.toLowerCase() ?? '';
+      return userName.contains('المساعد');
+    }).toList();
+
+    return ListView.separated(
+      separatorBuilder: (context, index) => const Divider(),
+      itemCount: assistantLogs.length,
+      itemBuilder: (context, index) {
+        return InkWell(
+          onTap: (assistantLogs[index].client != null)
+              ? () async {
+                  final client = assistantLogs[index].client;
+                  final controller = Get.put(ClientBottomSheetController());
+                  controller.setClient(client!);
+                  await showClientInfoSheet(context, client);
+                  Get.delete<ClientBottomSheetController>(force: true);
+                }
+              : null,
+          child: LogWithUserCardWidget(
+            logWidthUser: assistantLogs[index],
+            showAdminControls: false,
+          ),
+        );
+      },
+    );
   }
 }
 
 class LogWithUserCardWidget extends StatefulWidget {
   final LogWidthUser logWidthUser;
+  final bool showAdminControls;
 
   const LogWithUserCardWidget({
     Key? key,
     required this.logWidthUser,
+    this.showAdminControls = true,
   }) : super(key: key);
 
   @override
@@ -448,7 +512,8 @@ class _LogWithUserCardWidgetState extends State<LogWithUserCardWidget>
                                 const VerticalDivider(),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         currentLog.transactionType.name(),
@@ -486,17 +551,18 @@ class _LogWithUserCardWidgetState extends State<LogWithUserCardWidget>
                                   ),
                                   Text(
                                     "${currentLog.price} جنيه",
-                                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                    style: const TextStyle(
+                                        fontSize: 12, color: Colors.black54),
                                   ),
                                 ],
                               ),
                               const SizedBox(width: 10),
                               Visibility(
-                                visible:
-                                    SupabaseAuthentication.myUser!.role ==
+                                visible: widget.showAdminControls &&
+                                    (SupabaseAuthentication.myUser!.role ==
                                             UserRoles.admin.index ||
                                         SupabaseAuthentication.myUser!.role ==
-                                            UserRoles.manager.index,
+                                            UserRoles.manager.index),
                                 child: Column(
                                   children: [
                                     IconButton(
@@ -504,8 +570,8 @@ class _LogWithUserCardWidgetState extends State<LogWithUserCardWidget>
                                           ? () async {
                                               await BackendServices
                                                   .instance.logRepository
-                                                  .reverseLog(
-                                                      currentLog, currentClient);
+                                                  .reverseLog(currentLog,
+                                                      currentClient);
 
                                               await Get.find<FollowController>()
                                                   .updateLogs();
@@ -519,8 +585,7 @@ class _LogWithUserCardWidgetState extends State<LogWithUserCardWidget>
                                     ),
                                     IconButton(
                                       onPressed: () async {
-                                        showDangerDialog(
-                                            "حذف معاملة",
+                                        showDangerDialog("حذف معاملة",
                                             "تحذير : حذف المعاملة قد يؤدي الي جعل بعض الاموال مجهولة المصدر عليك التأكد انك فعلا تريد حذف تلك المعاملة بدلا من عكسها",
                                             () async {
                                           await BackendServices
