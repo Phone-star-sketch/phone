@@ -350,7 +350,7 @@ class _ClientCardState extends State<ClientCard>
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text(
-                                "المطلوب:",
+                                "المبلغ المطلوب:",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
