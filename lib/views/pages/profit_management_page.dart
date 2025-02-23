@@ -186,24 +186,23 @@ class _ProfitManagementState extends State<ProfitManagement>
                                           ),
                                           child: Column(
                                             children: [
-                                              const Text(
+                                                const Text(
                                                 "المبلغ المتوقع جمعه",
                                                 style: TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w600,
                                                   color: Color(0xFF424874),
                                                 ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Obx(() => Text(
-                                                    "${_calculateTotalDues()} ج.م",
-                                                    style: const TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Colors.red,
-                                                    ),
-                                                  )),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                CustomInputField(
+                                                title: "",
+                                                controller: profitController.expectedMoneyController,
+                                                suffix: "ج.م",
+                                                onChanged: (value) {
+                                                  profitController.calculateDiscount();
+                                                },
+                                                ),
                                             ],
                                           ),
                                         );

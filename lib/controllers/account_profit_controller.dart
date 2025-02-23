@@ -32,6 +32,7 @@ class ProfitController extends GetxController {
   final monthController = TextEditingController();
   final totalIncomeController = TextEditingController();
   final discountController = TextEditingController();
+  late TextEditingController expectedMoneyController;
 
   final calculatedAmountAfterDiscount = RxDouble(0.0);
 
@@ -47,6 +48,13 @@ class ProfitController extends GetxController {
 
     yearController.text = currentYear.toString();
     monthController.text = months[currentMonth].toString();
+    expectedMoneyController = TextEditingController();
+  }
+
+  @override
+  void onClose() {
+    expectedMoneyController.dispose();
+    super.onClose();
   }
 
   Future<void> updateTheProfitByAccount(Account account) async {
@@ -209,14 +217,8 @@ class ProfitController extends GetxController {
   }
 
   double calculateTotalDues() {
-    final clientController = Get.find<AccountClientInfo>();
-    final clients = clientController.clinets.value;
-    final dueClients = clients.where((client) => client.totalCash < 0);
-    if (dueClients.isEmpty) return 0;
-    return dueClients
-        .map((e) => e.totalCash)
-        .reduce((value, element) => value + element)
-        .abs();
+    // Use the value from expectedMoneyController instead of calculating from clients
+    return double.tryParse(expectedMoneyController.text) ?? 0.0;
   }
 
   Future<MonthlyProfit?> calculateTotalProfit(int month, int year) async {
@@ -225,15 +227,16 @@ class ProfitController extends GetxController {
     final discount = double.tryParse(discountController.text) ?? 0.0;
 
     return MonthlyProfit(
-      id: -1, // Temporary ID for new profit calculations
+      id: -1,
       createdAt: DateTime.now(),
       accountId: AccountClientInfo.to.currentAccount.id,
       month: month,
       year: year,
       totalIncome: totalIncome,
-      expectedToBeCollected: totalDues,
-      totalCollected: 0, // Initial value for new calculations
-      totalReminder: totalDues, // Initially same as expectedToBeCollected
+      expectedToBeCollected:
+          totalDues, // This will now use the expectedMoneyController value
+      totalCollected: 0,
+      totalReminder: totalDues,
       discount: discount / 100,
     );
   }
