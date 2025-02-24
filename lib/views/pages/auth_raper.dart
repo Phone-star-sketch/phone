@@ -17,7 +17,7 @@ class _AuthRaperState extends State<AuthRaper> {
     if (!_hasShownWelcome && SupabaseAuthentication.myUser?.role == 1) {
       _hasShownWelcome = true;
       Get.snackbar(
-        'مرحبا بك كابتن اسلام',
+        ' مرحبا بك كابتن اسلام',
         'نتمنى لك يوما سعيدا',
         backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.9),
         colorText: Get.theme.colorScheme.onPrimary,
