@@ -16,6 +16,8 @@ class _WelcomePageState extends State<WelcomePage>
   late AnimationController _backgroundController;
   late AnimationController _floatingController;
   late AnimationController _supermanController;
+  late AnimationController _crescentController;
+  late AnimationController _lanternController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
@@ -23,6 +25,7 @@ class _WelcomePageState extends State<WelcomePage>
   late Animation<double> _supermanScaleAnimation;
   final AudioPlayer _audioPlayer = AudioPlayer();
   final List<Particle> _particles = [];
+  final List<Lantern> _lanterns = [];
   bool _showSuperman = false;
 
   @override
@@ -30,15 +33,16 @@ class _WelcomePageState extends State<WelcomePage>
     super.initState();
     _initializeAnimations();
     _generateParticles();
+    _generateLanterns();
   }
 
   void _initializeAnimations() {
     _controller = AnimationController(
         duration: Duration(milliseconds: 1500), vsync: this);
 
-    _backgroundController =
-        AnimationController(duration: Duration(seconds: 10), vsync: this)
-          ..repeat();
+    _backgroundController = AnimationController(
+        duration: Duration(seconds: 15), vsync: this) // Slower rotation
+      ..repeat();
 
     _floatingController =
         AnimationController(duration: Duration(seconds: 2), vsync: this)
@@ -48,6 +52,16 @@ class _WelcomePageState extends State<WelcomePage>
       duration: Duration(milliseconds: 1500),
       vsync: this,
     );
+
+    _crescentController = AnimationController(
+      duration: Duration(seconds: 3),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _lanternController = AnimationController(
+      duration: Duration(seconds: 6), // Slower lantern movement
+      vsync: this,
+    )..repeat(reverse: true);
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
@@ -86,8 +100,17 @@ class _WelcomePageState extends State<WelcomePage>
 
   void _generateParticles() {
     final random = math.Random();
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 50; i++) {
+      // Increased number of particles
       _particles.add(Particle(random));
+    }
+  }
+
+  void _generateLanterns() {
+    final random = math.Random();
+    for (int i = 0; i < 8; i++) {
+      // Increased number of lanterns
+      _lanterns.add(Lantern(random));
     }
   }
 
@@ -103,6 +126,8 @@ class _WelcomePageState extends State<WelcomePage>
     _backgroundController.dispose();
     _floatingController.dispose();
     _supermanController.dispose();
+    _crescentController.dispose();
+    _lanternController.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -127,9 +152,9 @@ class _WelcomePageState extends State<WelcomePage>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(0xFF87CEEB), // Light sky blue
-                      Color(0xFF00BFFF), // Deep sky blue
-                      Color(0xFF1E90FF), // Dodger blue
+                      Color(0xFF0D1F3C), // Deeper Islamic blue
+                      Color(0xFF1A237E), // Deep royal blue
+                      Color(0xFF311B92), // Deep purple
                     ],
                     transform: GradientRotation(
                         _backgroundController.value * 2 * math.pi),
@@ -151,12 +176,37 @@ class _WelcomePageState extends State<WelcomePage>
                               width: particle.size,
                               height: particle.size,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.amber.withOpacity(0.8),
                                 shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.amber.withOpacity(0.3),
+                                    blurRadius: 5,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ),
+                      );
+                    }).toList(),
+                    ..._lanterns.map((lantern) {
+                      return AnimatedBuilder(
+                        animation: _lanternController,
+                        builder: (context, child) {
+                          return Positioned(
+                            left: lantern.x * MediaQuery.of(context).size.width,
+                            top: (lantern.y + _lanternController.value * 0.1) *
+                                MediaQuery.of(context).size.height,
+                            child: Transform.rotate(
+                              angle:
+                                  math.sin(_lanternController.value * math.pi) *
+                                      0.05,
+                              child: _buildLantern(),
+                            ),
+                          );
+                        },
                       );
                     }).toList(),
                   ],
@@ -169,38 +219,41 @@ class _WelcomePageState extends State<WelcomePage>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       AnimatedBuilder(
-                        animation: _floatingController,
+                        animation: _crescentController,
                         builder: (context, child) {
-                          return Transform.translate(
-                            offset: Offset(
-                                0,
-                                10 *
-                                    math.sin(
-                                        _floatingController.value * math.pi)),
-                            child: ScaleTransition(
-                              scale: _scaleAnimation,
-                              child: Container(
-                                height: 150,
-                                width: 150,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                      color: Colors.white.withOpacity(0.5)),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.white.withOpacity(0.2),
-                                      blurRadius: 20,
-                                      spreadRadius: 5,
+                          return Container(
+                            height: 180,
+                            width: 180,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Transform.scale(
+                                  scale: 1.0 + _crescentController.value * 0.1,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.amber.shade300,
+                                          Colors.amber.shade600,
+                                        ],
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.amber.withOpacity(0.3),
+                                          blurRadius: 20,
+                                          spreadRadius: 5,
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
-                                child: Icon(
+                                Icon(
                                   Icons.phone_android,
                                   size: 80,
                                   color: Colors.white,
                                 ),
-                              ),
+                              ],
                             ),
                           );
                         },
@@ -213,16 +266,21 @@ class _WelcomePageState extends State<WelcomePage>
                           child: Column(
                             children: [
                               Text(
-                                'مرحباً بك',
+                                'رمضان مبارك',
                                 style: TextStyle(
-                                  fontSize: 42,
+                                  fontSize: 52,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  color: Colors.amber.shade300,
                                   shadows: [
                                     Shadow(
-                                      color: Colors.black26,
-                                      blurRadius: 10,
+                                      color: Colors.amber.withOpacity(0.8),
+                                      blurRadius: 15,
                                       offset: Offset(0, 5),
+                                    ),
+                                    Shadow(
+                                      color: Colors.amber.withOpacity(0.4),
+                                      blurRadius: 25,
+                                      offset: Offset(0, 8),
                                     ),
                                   ],
                                 ),
@@ -369,6 +427,49 @@ class _WelcomePageState extends State<WelcomePage>
       ),
     );
   }
+
+  Widget _buildLantern() {
+    return Container(
+      width: 45,
+      height: 70,
+      decoration: BoxDecoration(
+        color: Colors.amber.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.amber.withOpacity(0.4),
+            blurRadius: 15,
+            spreadRadius: 8,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: 12,
+            decoration: BoxDecoration(
+              color: Colors.amber.shade800,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.amber.shade400,
+                    Colors.amber.shade600,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class Particle {
@@ -382,4 +483,13 @@ class Particle {
         y = random.nextDouble(),
         size = random.nextDouble() * 4 + 2,
         offset = random.nextDouble();
+}
+
+class Lantern {
+  final double x;
+  final double y;
+
+  Lantern(math.Random random)
+      : x = random.nextDouble(),
+        y = random.nextDouble() * 0.5;
 }
