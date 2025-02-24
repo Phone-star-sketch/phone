@@ -34,7 +34,7 @@ class SystemList extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                color:const Color(0xFF00BFFF),
+                color: const Color(0xFF00BFFF),
                 child: const TabBar(
                   tabs: [
                     Tab(
@@ -105,7 +105,7 @@ class SystemListTab extends StatelessWidget {
       int editedCard = controller.editedCardIndex.value;
       return Scaffold(
         floatingActionButton: FloatingActionButton(
-            backgroundColor: const Color(0xFF00BFFF),
+          backgroundColor: const Color(0xFF00BFFF),
           child: const Icon(Icons.add, color: Colors.white),
           onPressed: () {
             allSystems.add(SystemType(id: -1, category: systemCategory));
@@ -181,6 +181,32 @@ class SystemListTab extends StatelessWidget {
                                           ? Image.network(
                                               currentSystem.image!,
                                               fit: BoxFit.contain,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                return Image.asset(
+                                                  currentSystem.category!
+                                                      .icon(),
+                                                  fit: BoxFit.contain,
+                                                );
+                                              },
+                                              loadingBuilder: (context, child,
+                                                  loadingProgress) {
+                                                if (loadingProgress == null)
+                                                  return child;
+                                                return Center(
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    value: loadingProgress
+                                                                .expectedTotalBytes !=
+                                                            null
+                                                        ? loadingProgress
+                                                                .cumulativeBytesLoaded /
+                                                            loadingProgress
+                                                                .expectedTotalBytes!
+                                                        : null,
+                                                  ),
+                                                );
+                                              },
                                             )
                                           : Image.asset(
                                               currentSystem.category!.icon(),
@@ -384,55 +410,76 @@ class SystemListTab extends StatelessWidget {
                                   try {
                                     ImagePicker imagePicker = ImagePicker();
                                     final image = await imagePicker.pickImage(
-                                        source: ImageSource.gallery);
+                                        source: ImageSource.gallery,
+                                        maxWidth: 1200, // Add max dimensions
+                                        maxHeight: 1200,
+                                        imageQuality: 85 // Compress image
+                                        );
                                     if (image == null) return;
 
                                     final imageBytes =
                                         await image.readAsBytes();
+                                    if (imageBytes.length > 10 * 1024 * 1024) {
+                                      // 10MB limit
+                                      Get.snackbar(
+                                        'Error',
+                                        'Image size too large. Please select a smaller image.',
+                                        backgroundColor: Colors.red,
+                                        colorText: Colors.white,
+                                      );
+                                      return;
+                                    }
+
                                     final timestamp =
                                         DateTime.now().millisecondsSinceEpoch;
                                     final fileName =
                                         '${timestamp}_${image.name}';
 
-                                    // Upload image with correct path format
-                                    await supabase.storage
-                                        .from('system_images')
-                                        .uploadBinary(
-                                          fileName, // Remove the 'systems/' prefix
-                                          imageBytes,
-                                          fileOptions: const FileOptions(
-                                              contentType: 'image/jpeg',
-                                              upsert:
-                                                  true // Add this to allow overwriting existing files
-                                              ),
-                                        );
-
-                                    // Get public URL
-                                    final imageUrl = supabase.storage
-                                        .from('system_images')
-                                        .getPublicUrl(fileName);
-
-                                    // Update system type with new image URL
-                                    currentSystem.image = imageUrl;
-                                    await BackendServices
-                                        .instance.systemTypeRepository
-                                        .update(currentSystem);
-
-                                    // Force UI refresh
-                                    controller.update();
-
-                                    Get.snackbar(
-                                      'Success',
-                                      'تم رفع الصورة بنجاح',
-                                      backgroundColor: Colors.green,
-                                      colorText: Colors.white,
+                                    // Show loading indicator
+                                    Get.dialog(
+                                      const Center(
+                                          child: CircularProgressIndicator()),
+                                      barrierDismissible: false,
                                     );
+
+                                    try {
+                                      await supabase.storage
+                                          .from('system_images')
+                                          .uploadBinary(
+                                            fileName,
+                                            imageBytes,
+                                            fileOptions: const FileOptions(
+                                                contentType: 'image/jpeg',
+                                                upsert: true),
+                                          );
+
+                                      final imageUrl = supabase.storage
+                                          .from('system_images')
+                                          .getPublicUrl(fileName);
+
+                                      currentSystem.image = imageUrl;
+                                      await BackendServices
+                                          .instance.systemTypeRepository
+                                          .update(currentSystem);
+
+                                      controller.update();
+                                      Get.back(); // Close loading dialog
+
+                                      Get.snackbar(
+                                        'Success',
+                                        'تم رفع الصورة بنجاح',
+                                        backgroundColor: Colors.green,
+                                        colorText: Colors.white,
+                                      );
+                                    } catch (uploadError) {
+                                      Get.back(); // Close loading dialog
+                                      throw uploadError;
+                                    }
                                   } catch (e) {
-                                    print(
-                                        'Error uploading image: $e'); // For debugging
+                                    print('Error uploading image: $e');
                                     Get.snackbar(
                                       'Error',
-                                      'Failed to upload image: ${e.toString()}',
+                                      'Failed to upload image. Please try again.',
                                       backgroundColor: Colors.red,
                                       colorText: Colors.white,
                                       duration: const Duration(seconds: 5),
