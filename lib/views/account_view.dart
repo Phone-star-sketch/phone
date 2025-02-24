@@ -166,7 +166,7 @@ class AccountsView extends StatelessWidget {
                                         ],
                                       ).createShader(bounds),
                                       child: Text(
-                                        'اهلا بك كابتن اسلام',
+                                        'اهلا بك كابتن اسلام النني',
                                         style: TextStyle(
                                           fontSize: 28,
                                           fontWeight: FontWeight.bold,

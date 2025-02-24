@@ -90,7 +90,7 @@ class _WelcomeOverlayState extends State<WelcomeOverlay>
                       ),
                       SizedBox(height: 20),
                       Text(
-                        'مرحباً بك كابتن إسلام',
+                        ' النني مرحباً بك كابتن إسلام',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,

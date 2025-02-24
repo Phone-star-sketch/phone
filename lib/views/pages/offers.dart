@@ -35,11 +35,11 @@ class OfferManagement extends StatelessWidget {
       final q = controller.query.value;
 
       final printingClients = controller.clientPrintAdded.value;
+      // Only show offers that have already expired
       List<Client> clients = controller.clinets.value
           .where((element) =>
               element.expireDate != null &&
-              element.expireDate!
-                  .isBefore(DateTime.now().add(const Duration(days: 7))) &&
+              element.expireDate!.isBefore(DateTime.now()) && // Only past dates
               element.expireDate!
                   .isAfter(DateTime.now().subtract(const Duration(days: 10))))
           .toList();
@@ -64,10 +64,14 @@ class OfferManagement extends StatelessWidget {
           : 0;
 
       final expiredSystemsClients = controller.clinets.value
-          .where((client) => client.numbers!
-              .any((number) => number.getExpiredSystems().isNotEmpty))
+          .where((client) =>
+              client.expireDate != null &&
+              client.expireDate!.isBefore(DateTime.now()) && // Only past dates
+              client.numbers!
+                  .any((number) => number.getExpiredSystems().isNotEmpty))
           .toList();
 
+      // Update the explanatory text
       return Column(
         children: [
           Container(
@@ -77,8 +81,7 @@ class OfferManagement extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    "سوف تنتهي عروض العملاء المدرج اسمائهم \n${fullExpressionArabicDate(DateTime.now().add(const Duration(days: 7)))}"
-                    "\n أو أنتهت عروضهم منذ 10 ايام من تاريخ اليوم",
+                    "العملاء الذين انتهت عروضهم خلال العشرة أيام الماضية فقط",
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 15),
                   ),
@@ -122,12 +125,18 @@ class ExpiredSystemsController extends GetxController {
   List<Client>? allClients = <Client>[].obs;
 
   Future<void> fetchClients() async {
-    filteredClients.value = await BackendServices.instance.clientRepository
+    var clients = await BackendServices.instance.clientRepository
         .getAllClientsByAccount(Get.put(AccountClientInfo.to).currentAccount);
-    filteredClients.value = filteredClients
-        .where((client) => client.numbers!
-            .any((number) => number.getExpiredSystems().isNotEmpty))
+
+    // Filter expired clients
+    filteredClients.value = clients
+        .where((client) =>
+            client.expireDate != null &&
+            client.expireDate!.isBefore(DateTime.now()) &&
+            client.numbers!
+                .any((number) => number.getExpiredSystems().isNotEmpty))
         .toList();
+
     allClients = filteredClients.value;
     _updateTotalExpiredSystems();
   }
@@ -138,11 +147,17 @@ class ExpiredSystemsController extends GetxController {
   }
 
   void initializeWithClients(List<Client> clients) {
-    filteredClients.value = clients
-        .where((client) => client.numbers!
-            .any((number) => number.getExpiredSystems().isNotEmpty))
+    // Filter expired clients once and store in allClients
+    allClients = clients
+        .where((client) =>
+            client.expireDate != null &&
+            client.expireDate!.isBefore(DateTime.now()) &&
+            client.numbers!
+                .any((number) => number.getExpiredSystems().isNotEmpty))
         .toList();
-    allClients = filteredClients.value;
+
+    // Set initial filtered clients
+    filteredClients.value = allClients!;
     _updateTotalExpiredSystems();
   }
 
@@ -320,7 +335,7 @@ class ExpiredSystemsPage extends StatelessWidget {
                 style: TextStyle(color: Colors.black),
               ),
               Text(
-                'تاريخ انتهاء العرض: ${(client.expireDate != null) ? fullExpressionArabicDate(client.expireDate!) : "لا يوجد"}',
+                'تاريخ انتهاء العرض: ${(client.expireDate != null && client.expireDate!.isBefore(DateTime.now())) ? fullExpressionArabicDate(client.expireDate!) : "لا يوجد"}',
                 style: TextStyle(color: Colors.black),
               ),
             ],
