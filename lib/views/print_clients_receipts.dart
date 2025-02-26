@@ -158,7 +158,7 @@ class PrintClientsReceipts extends StatelessWidget {
       ),
       child: pw.Column(
         children: [
-          // Header
+          // Header with reversed layout
           pw.Container(
             padding: const pw.EdgeInsets.all(20),
             decoration: pw.BoxDecoration(
@@ -171,26 +171,23 @@ class PrintClientsReceipts extends StatelessWidget {
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Row(
-                  children: [
-                    pw.ClipRRect(
-                      horizontalRadius: 8,
-                      verticalRadius: 8,
-                      child: pw.Image(
-                        pw.MemoryImage(logo),
-                        width: 60,
-                        height: 60,
-                        fit: pw.BoxFit.cover,
-                      ),
-                    ),
-                    pw.SizedBox(width: 15),
-                    makeText(
-                      "فاتورة تحصيل شهر ${_getAppropriateMonthName()}",
-                      cairoBold,
-                      24.0,
-                      PdfColors.white,
-                    ),
-                  ],
+                // Logo on left
+                pw.ClipRRect(
+                  horizontalRadius: 8,
+                  verticalRadius: 8,
+                  child: pw.Image(
+                    pw.MemoryImage(logo),
+                    width: 60,
+                    height: 60,
+                    fit: pw.BoxFit.cover,
+                  ),
+                ),
+                // Title on right
+                makeText(
+                  "فاتورة تحصيل شهر ${_getAppropriateMonthName()}",
+                  cairoBold,
+                  24.0,
+                  PdfColors.white,
                 ),
               ],
             ),
