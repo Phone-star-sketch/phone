@@ -40,17 +40,38 @@ class PrintClientsReceipts extends StatelessWidget {
       'يناير',
       'فبراير',
       'مارس',
-      'إبريل',
+      'إبريل',
       'مايو',
       'يونيو',
       'يوليو',
-      'أغسطس',
+      'أغسطس',
       'سبتمبر',
-      'أكتوبر',
+      'أكتوبر',
       'نوفمبر',
       'ديسمبر'
     ];
     return months[month - 1];
+  }
+
+  (int month, int year) getPreviousMonthAndYear() {
+    final now = DateTime.now();
+    final collectionDay = AccountClientInfo.to.currentAccount.day;
+
+    if (now.day < collectionDay) {
+      if (now.month == 1) {
+        return (12, now.year - 1);
+      }
+      return (now.month - 1, now.year);
+    }
+    return (now.month, now.year);
+  }
+
+  bool hasPaymentForMonth(Client client, int month, int year) {
+    return client.logs!.any((log) =>
+        log.createdAt!.year == year &&
+        log.createdAt!.month == month &&
+        log.systemType == "تسديد" &&
+        log.price > 0);
   }
 
   @override
@@ -90,215 +111,200 @@ class PrintClientsReceipts extends StatelessWidget {
     );
   }
 
+  pw.Widget buildBackground(Uint8List backgroundImage) {
+    return pw.Stack(
+      children: [
+        pw.Positioned.fill(
+          child: pw.Opacity(
+            opacity: 0.1, // Adjust opacity as needed
+            child: pw.Image(
+              pw.MemoryImage(backgroundImage),
+              fit: pw.BoxFit.cover,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<Uint8List> _createPdf(PdfPageFormat format) async {
-    final documnet = pw.Document();
+    final pageFormat = format.copyWith(
+      marginTop: 40,
+      marginBottom: 40,
+      marginLeft: 40,
+      marginRight: 40,
+    );
+
+    final document = pw.Document();
 
     try {
       final logo = await getImage("assets/images/rece_bg.jpg");
-      final nbLogo = await getImage("assets/images/rece_bg.jpg");
-
+      final backgroundImage =
+          await getImage("assets/images/rece_bg.jpg"); // Changed this line
       final vCashIcon = await getImage("assets/images/v_cash_icon.png");
       final instaPayIcon = await getImage("assets/images/instapay_icon.png");
 
       final cairoRegular = await PdfGoogleFonts.cairoRegular();
       final cairoBold = await PdfGoogleFonts.cairoBold();
       final cairoExtraBold = await PdfGoogleFonts.cairoExtraBold();
-      final dateFormater = DateFormat("dd/MM/yyyy");
 
-      double totalPrice = 0.0;
-      final count = clients.length;
+      // Create first page with header and total stats
+      document.addPage(
+        pw.Page(
+          pageFormat: pageFormat,
+          build: (context) {
+            return pw.Stack(
+              children: [
+                buildBackground(backgroundImage), // Changed this line
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                  children: [
+                    buildHeader(
+                      logo,
+                      cairoBold,
+                      isFirstPage: true,
+                      extraBoldFont: cairoExtraBold,
+                    ),
+                    pw.SizedBox(height: 20),
+                    pw.Divider(color: PdfColors.red),
+                    buildFooter(vCashIcon, instaPayIcon, cairoBold),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      );
 
-      for (final c in clients) {
-        totalPrice += (c.totalCash < 0.0) ? -c.totalCash : 0.0;
-      }
+      // Create subsequent pages for each client
+      final (month, year) = getPreviousMonthAndYear();
+      int pageNumber = 0;
 
-      // Add these helper functions for date handling
-      (int month, int year) getPreviousMonthAndYear() {
-        final now = DateTime.now();
-        final collectionDay = AccountClientInfo.to.currentAccount.day;
-
-        if (now.day < collectionDay) {
-          if (now.month == 1) {
-            return (12, now.year - 1);
-          }
-          return (now.month - 1, now.year);
-        }
-        return (now.month, now.year);
-      }
-
-      bool hasPaymentForMonth(Client client, int month, int year) {
-        return client.logs!.any((log) =>
-            log.createdAt!.year == year &&
-            log.createdAt!.month == month &&
-            log.systemType == "تسديد" &&
-            log.price > 0);
-      }
-
-      addClientData(Client client) {
-        final (month, year) = getPreviousMonthAndYear();
-
-        // Only proceed if client hasn't paid for the previous month
-        if (!hasPaymentForMonth(client, month, year)) {
-          final logs = client.logs!
+      for (Client c in clients) {
+        if (!hasPaymentForMonth(c, month, year) && c.totalCash < 0) {
+          final logs = c.logs!
               .where((log) =>
-                  log.createdAt!.year == year && log.createdAt!.month == month)
+                  log.createdAt!.year == year &&
+                  log.createdAt!.month == month &&
+                  log.systemType != "تسديد" &&
+                  log.transactionType != TransactionType.moneyAdded)
               .toList();
 
           if (logs.isNotEmpty) {
-            return [
-              pw.Row(
-                children: [
-                  makeText("سجل المعاملات المالية الخاصة بالسيد  /  ",
-                      cairoRegular, 10.0),
-                  makeText(client.name!, cairoBold, 12.0)
-                ],
-              ),
-              pw.Divider(endIndent: 50, indent: 50),
-              pw.SizedBox(height: 20),
-              ...buildTable(
-                  "المعاملات",
-                  client,
-                  logs,
-                  [
-                    "الوقت",
-                    "التاريخ",
-                    "المبلغ",
-                    "نوع التعامل",
-                  ],
-                  cairoBold,
-                  cairoBold,
-                  cairoRegular),
-            ];
-          }
-        }
-        return <pw
-            .Widget>[]; // Return empty list if client has paid or no transactions
-      }
-
-      for (Client c in clients) {
-        documnet.addPage(pw.MultiPage(
-          build: (context) {
-            return [
-              ...[
-                ...addClientData(c),
-                pw.SizedBox(height: 60),
-                pw.Divider(indent: 0, endIndent: 0)
-              ],
-            ];
-          },
-          pageTheme: pw.PageTheme(
-            textDirection: pw.TextDirection.rtl,
-            pageFormat: PdfPageFormat.a4,
-            buildBackground: (context) {
-              return pw.Container(
-                  margin: const pw.EdgeInsets.all(-35),
-                  padding: const pw.EdgeInsets.all(10),
-                  decoration: const pw.BoxDecoration(),
-                  child: pw.Stack(overflow: pw.Overflow.visible, children: [
-                    pw.Positioned.fill(
-                        child: pw.Container(
-                      child: pw.Center(
-                        child: pw.Opacity(
-                          opacity: 0.1,
-                          child: pw.Image(pw.MemoryImage(nbLogo), width: 800),
-                        ),
-                      ),
-                    )),
-                    (context.pageNumber == 1)
-                        ? pw.Positioned(
-                            left: -35,
-                            top: -35,
-                            child: pw.Opacity(
-                                opacity: 0.5,
-                                child: pw.Image(
-                                  pw.MemoryImage(logo),
-                                  width: 150,
-                                )))
-                        : pw.SizedBox()
-                  ]));
-            },
-          ),
-          footer: (context) {
-            return pw.Container(
-              margin: const pw.EdgeInsets.only(top: 20),
-              decoration: pw.BoxDecoration(
-                color: PdfColors.grey50,
-                borderRadius: pw.BorderRadius.circular(8),
-                border: pw.Border.all(color: PdfColors.blue200),
-              ),
-              padding: const pw.EdgeInsets.all(15),
-              child: pw.Column(
-                children: [
-                  makeText("وسائل الدفع المتاحة", cairoBold, 14.0,
-                      PdfColors.blue900),
-                  pw.SizedBox(height: 10),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+            pageNumber++;
+            document.addPage(
+              pw.Page(
+                pageFormat: pageFormat,
+                build: (context) {
+                  return pw.Stack(
                     children: [
-                      pw.Row(
+                      buildBackground(backgroundImage), // Changed this line
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                         children: [
-                          pw.Image(pw.MemoryImage(vCashIcon), width: 50),
-                          pw.SizedBox(width: 10),
-                          makeText(
-                              "01022690901", cairoBold, 14.0, PdfColors.red900),
-                        ],
-                      ),
-                      pw.Container(
-                        width: 1,
-                        height: 40,
-                        color: PdfColors.grey300,
-                      ),
-                      pw.Row(
-                        children: [
-                          pw.Image(pw.MemoryImage(instaPayIcon), width: 50),
-                          pw.SizedBox(width: 10),
-                          makeText("01017174149", cairoBold, 14.0,
-                              PdfColors.purple900),
+                          buildHeader(logo, cairoBold,
+                              extraBoldFont: cairoExtraBold),
+                          pw.SizedBox(height: 20),
+                          pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.center,
+                            children: [
+                              makeText(c.name!, cairoBold, 16.0),
+                              makeText(
+                                  "  سجل المعاملات المالية الخاصة بالسيد/ ",
+                                  cairoRegular,
+                                  14.0),
+                            ],
+                          ),
+                          pw.SizedBox(height: 20),
+                          ...buildTableWithFlexibleHeight(
+                            c,
+                            logs,
+                            cairoBold,
+                            cairoRegular,
+                          ),
+                          buildFooter(vCashIcon, instaPayIcon, cairoBold),
                         ],
                       ),
                     ],
-                  ),
-                ],
+                  );
+                },
               ),
             );
-          },
-          header: (context) {
-            return (context.pageNumber == 1)
-                ? pw.Column(
-                    children: [
-                      pw.Container(
-                        child: pw.Row(
-                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                          children: [
-                            makeText("سجل المعاملات المالية", cairoBold, 18.0),
-                          ],
-                        ),
-                      ),
-                      pw.SizedBox(height: 25),
-                      pw.Divider(color: PdfColors.red),
-                      ...buildTableTitle(
-                        "الحساب الكلي",
-                        cairoExtraBold,
-                        cairoBold,
-                        cairoRegular,
-                        "عدد العملاء",
-                        "المطلوب سداده",
-                        totalPrice.toDouble(),
-                        count.toString(),
-                      ),
-                    ],
-                  )
-                : pw.SizedBox();
-          },
-        ));
+          }
+        }
       }
     } catch (e) {
       Get.showSnackbar(GetSnackBar(
-        title: 'Hello',
+        title: 'Error',
         message: e.toString(),
       ));
     }
-    return documnet.save();
+
+    return document.save();
+  }
+
+  List<pw.Widget> buildTableWithFlexibleHeight(
+    Client client,
+    List<Log> items,
+    pw.Font boldFont,
+    pw.Font regularFont,
+  ) {
+    final filteredItems = items
+        .where((item) =>
+            item.systemType != "تسديد" &&
+            item.transactionType != TransactionType.moneyAdded)
+        .toList();
+
+    double totalPrice = (client.totalCash < 0) ? -client.totalCash : 0;
+    String number = client.numbers![0].phoneNumber!;
+
+    // Calculate flexible row height based on number of items
+    final double rowHeight = 25.0; // Base height for each row
+
+    return [
+      // Table title and info
+      ...buildTableTitle(
+        "المعاملات",
+        boldFont,
+        boldFont,
+        regularFont,
+        'رقم المحمول',
+        'المطلوب سداده',
+        totalPrice,
+        number,
+      ),
+
+      // Flexible table
+      pw.Container(
+        child: pw.Table(
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+          border: pw.TableBorder.all(width: 1, color: PdfColors.black),
+          columnWidths: {
+            0: const pw.FlexColumnWidth(2), // Time
+            1: const pw.FlexColumnWidth(2), // Date
+            2: const pw.FlexColumnWidth(1.5), // Amount
+            3: const pw.FlexColumnWidth(2), // Type
+          },
+          children: [
+            buildTableHead(
+              ["الوقت", "التاريخ", "المبلغ", "نوع التعامل"],
+              boldFont,
+              12,
+            ),
+            ...filteredItems.map((item) => buildRow(
+                  [
+                    formatTimeToString(item.createdAt!, "ar"),
+                    formatDateToString(item.createdAt!),
+                    item.price.toString(),
+                    item.systemType,
+                  ],
+                  regularFont,
+                  11.0,
+                )),
+          ],
+        ),
+      ),
+    ];
   }
 
   static pw.Widget makeText(String text, pw.Font font, double fontSize,
@@ -363,23 +369,25 @@ class PrintClientsReceipts extends StatelessWidget {
       return pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColors.grey400),
+            border: pw.Border.all(color: PdfColors.blue200, width: 1.5),
             borderRadius: pw.BorderRadius.circular(8),
             color: PdfColors.grey100,
           ),
           child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                makeText(field, fieldFont, 14, PdfColors.blue900),
-                pw.SizedBox(height: 5),
-                makeText(value, font, 13, PdfColors.red900),
+                makeText(field, fieldFont, 16,
+                    PdfColors.blue900), // Increased font size
+                pw.SizedBox(height: 8),
+                makeText(value, fieldFont, 15,
+                    PdfColors.red900), // Changed to fieldFont for bold
               ]));
     }
 
     return [
       pw.Align(
         alignment: pw.Alignment.center,
-        child: makeText(tableTitle, titleFont, 16),
+        child: makeText(tableTitle, titleFont, 18), // Increased font size
       ),
       pw.SizedBox(height: 15),
       pw.Row(
@@ -423,10 +431,16 @@ class PrintClientsReceipts extends StatelessWidget {
     List<List<String>> rows = [];
 
     double totalPrice = (client.totalCash < 0) ? -client.totalCash : 0;
-
     String number = client.numbers![0].phoneNumber!;
 
-    for (final item in items) {
+    // Filter out تسديد transactions and only show financial transactions
+    final filteredItems = items
+        .where((item) =>
+            item.systemType != "تسديد" &&
+            item.transactionType != TransactionType.moneyAdded)
+        .toList();
+
+    for (final item in filteredItems) {
       rows.add([
         formatTimeToString(item.createdAt!),
         formatDateToString(item.createdAt!),
@@ -440,14 +454,164 @@ class PrintClientsReceipts extends StatelessWidget {
           valueFont, 'رقم المحمول', 'المطلوب سداده', totalPrice, number))
         w,
       pw.Align(
-          alignment: pw.Alignment.center,
-          child: pw.Table(
-              border: pw.TableBorder.all(width: 1, color: PdfColors.black),
-              children: [
-                for (int i = 0; i < header.length && (i < 1); i++)
-                  buildTableHead(header, fieldFont, 12),
-                for (final row in rows) buildRow(row, valueFont, 10.0)
-              ])),
+        alignment: pw.Alignment.center,
+        child: pw.Table(
+          border: pw.TableBorder.all(width: 1, color: PdfColors.black),
+          children: [
+            buildTableHead(header, fieldFont, 14), // Increased font size
+            ...rows.map(
+                (row) => buildRow(row, valueFont, 12.0)), // Increased font size
+          ],
+        ),
+      ),
     ];
+  }
+
+  pw.Widget _buildStatBox(String label, String value, pw.Font font) {
+    return pw.Column(
+      mainAxisSize: pw.MainAxisSize.min,
+      children: [
+        makeText(label, font, 16.0, PdfColors.blue900),
+        pw.SizedBox(height: 8),
+        makeText(value, font, 15.0, PdfColors.red900),
+      ],
+    );
+  }
+
+  (int clientCount, double totalAmount) calculateStats() {
+    final (month, year) = getPreviousMonthAndYear();
+    int count = 0;
+    double total = 0.0;
+
+    for (var client in clients) {
+      if (!hasPaymentForMonth(client, month, year) && client.totalCash < 0) {
+        count++;
+        total += -client.totalCash;
+      }
+    }
+    return (count, total);
+  }
+
+  pw.Widget buildHeader(Uint8List logo, pw.Font font,
+      {bool isFirstPage = false, required pw.Font extraBoldFont}) {
+    final monthName = _getAppropriateMonthName();
+    final (clientCount, totalAmount) = calculateStats();
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(10),
+      child: pw.Column(
+        children: [
+          pw.Container(
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.blue200),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Image(pw.MemoryImage(logo), width: 100),
+                pw.Column(
+                  children: [
+                    makeText("فاتورة تحصيل", font, 24.0),
+                    pw.SizedBox(height: 8),
+                    makeText("شهر $monthName", font, 18.0, PdfColors.blue900),
+                  ],
+                ),
+                pw.SizedBox(width: 100),
+              ],
+            ),
+          ),
+          if (isFirstPage) ...[
+            pw.SizedBox(height: 25),
+            pw.Divider(color: PdfColors.red),
+            pw.SizedBox(height: 15),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(vertical: 10),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.grey100,
+                borderRadius: pw.BorderRadius.circular(8),
+                border: pw.Border.all(color: PdfColors.blue200),
+              ),
+              child: pw.Column(
+                children: [
+                  makeText("الحساب الكلي", extraBoldFont, 18.0),
+                  pw.SizedBox(height: 15),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+                    children: [
+                      pw.Column(
+                        children: [
+                          makeText("عدد العملاء", extraBoldFont, 18.0,
+                              PdfColors.blue900),
+                          makeText("$clientCount", extraBoldFont, 22.0,
+                              PdfColors.red900),
+                        ],
+                      ),
+                      pw.Container(
+                        height: 40,
+                        width: 1,
+                        color: PdfColors.blue200,
+                      ),
+                      pw.Column(
+                        children: [
+                          makeText("المبلغ المطلوب", extraBoldFont, 18.0,
+                              PdfColors.blue900),
+                          makeText("${totalAmount.toStringAsFixed(2)} جنيه",
+                              extraBoldFont, 22.0, PdfColors.red900),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  pw.Widget buildFooter(
+      Uint8List vCashIcon, Uint8List instaPayIcon, pw.Font font) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(10),
+      margin: const pw.EdgeInsets.only(top: 20),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey50,
+        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: PdfColors.blue200),
+      ),
+      child: pw.Column(
+        children: [
+          makeText("وسائل الدفع المتاحة", font, 14.0, PdfColors.blue900),
+          pw.SizedBox(height: 10),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+            children: [
+              pw.Row(
+                children: [
+                  pw.Image(pw.MemoryImage(vCashIcon), width: 50),
+                  pw.SizedBox(width: 10),
+                  makeText("01022690901", font, 14.0, PdfColors.red900),
+                ],
+              ),
+              pw.Container(
+                width: 1,
+                height: 40,
+                color: PdfColors.grey300,
+              ),
+              pw.Row(
+                children: [
+                  pw.Image(pw.MemoryImage(instaPayIcon), width: 50),
+                  pw.SizedBox(width: 10),
+                  makeText("01017174149", font, 14.0, PdfColors.purple900),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
