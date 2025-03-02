@@ -207,12 +207,33 @@ Future clientEditModelSheet(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
-                    validator: (value) =>
-                        value?.isEmpty ?? true ? 'رقم الهاتف مطلوب' : null,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'رقم الهاتف مطلوب';
+                      }
+                      if (!value.startsWith('010')) {
+                        return 'يجب أن يبدأ الرقم بـ 010';
+                      }
+                      if (value.length != 11) {
+                        return 'يجب أن يتكون الرقم من 11 رقم';
+                      }
+                      return null;
+                    },
                     keyboardType: TextInputType.phone,
+                    maxLength: 11,
+                    onChanged: (value) {
+                      if (value.isEmpty) {
+                        phoneNumberField.text = '010';
+                        phoneNumberField.selection = TextSelection.fromPosition(
+                          const TextPosition(offset: 3),
+                        );
+                      }
+                    },
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.phone, color: Colors.blue),
                       labelText: 'رقم الهاتف',
+                      hintText: '010XXXXXXXX',
+                      counterText: '', // Hides the character counter
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
