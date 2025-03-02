@@ -115,11 +115,27 @@ class PrintClientsReceipts extends StatelessWidget {
     return pw.Stack(
       children: [
         pw.Positioned.fill(
+          child: pw.Center(
+            child: pw.Opacity(
+              opacity: 0.06,
+              child: pw.Image(
+                pw.MemoryImage(backgroundImage),
+                fit: pw.BoxFit.contain,
+                width: 600,
+                height: 600,
+              ),
+            ),
+          ),
+        ),
+        pw.Positioned(
+          bottom: 30,
+          right: 30,
           child: pw.Opacity(
-            opacity: 0.1, // Adjust opacity as needed
+            opacity: 0.08,
             child: pw.Image(
               pw.MemoryImage(backgroundImage),
-              fit: pw.BoxFit.cover,
+              width: 150,
+              height: 150,
             ),
           ),
         ),
@@ -167,6 +183,8 @@ class PrintClientsReceipts extends StatelessWidget {
                     ),
                     pw.SizedBox(height: 20),
                     pw.Divider(color: PdfColors.red),
+                    pw.Expanded(
+                        child: pw.Container()), // Add this to push footer down
                     buildFooter(vCashIcon, instaPayIcon, cairoBold),
                   ],
                 ),
@@ -222,6 +240,9 @@ class PrintClientsReceipts extends StatelessWidget {
                             cairoBold,
                             cairoRegular,
                           ),
+                          pw.Expanded(
+                              child: pw
+                                  .Container()), // Add this to push footer down
                           buildFooter(vCashIcon, instaPayIcon, cairoBold),
                         ],
                       ),
@@ -503,10 +524,6 @@ class PrintClientsReceipts extends StatelessWidget {
         children: [
           pw.Container(
             padding: const pw.EdgeInsets.all(10),
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.blue200),
-              borderRadius: pw.BorderRadius.circular(8),
-            ),
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
@@ -576,7 +593,7 @@ class PrintClientsReceipts extends StatelessWidget {
       Uint8List vCashIcon, Uint8List instaPayIcon, pw.Font font) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(10),
-      margin: const pw.EdgeInsets.only(top: 20),
+      margin: const pw.EdgeInsets.only(top: 60),
       decoration: pw.BoxDecoration(
         color: PdfColors.grey50,
         borderRadius: pw.BorderRadius.circular(8),
@@ -584,7 +601,7 @@ class PrintClientsReceipts extends StatelessWidget {
       ),
       child: pw.Column(
         children: [
-          makeText("وسائل الدفع المتاحة", font, 14.0, PdfColors.blue900),
+          makeText("وسائل الدفع المتاحة", font, 14.0, PdfColors.blue900),
           pw.SizedBox(height: 10),
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
