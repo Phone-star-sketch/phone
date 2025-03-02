@@ -465,18 +465,21 @@ class ClientDataWidget extends StatelessWidget {
                                                         const EdgeInsets.all(0),
                                                     child: Container(
                                                       decoration: BoxDecoration(
-                                                          image:
-                                                              DecorationImage(
-                                                                  opacity: 0.1,
-                                                                  image:
-                                                                      AssetImage(
-                                                                    systems[index]
-                                                                        .type!
-                                                                        .category!
-                                                                        .icon(),
-                                                                  ),
-                                                                  fit: BoxFit
-                                                                      .contain)),
+                                                          image: DecorationImage(
+                                                              opacity: 0.1,
+                                                              image: systems[index].type!.image != null
+                                                                  ? NetworkImage(
+                                                                      systems[index]
+                                                                          .type!
+                                                                          .image!,
+                                                                    ) as ImageProvider
+                                                                  : AssetImage(
+                                                                      systems[index]
+                                                                          .type!
+                                                                          .category!
+                                                                          .icon(),
+                                                                    ),
+                                                              fit: BoxFit.contain)),
                                                       width: 150,
                                                       child: Center(
                                                           child: Column(
