@@ -212,6 +212,8 @@ class CutsomToolBar extends StatelessWidget {
                                   child: Stack(
                                     children: [
                                       Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           const Padding(
                                             padding: EdgeInsets.all(15.0),
@@ -221,63 +223,83 @@ class CutsomToolBar extends StatelessWidget {
                                             ),
                                           ),
                                           Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  client.name!,
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 15,
-                                                      color: Colors.black),
-                                                ),
-                                                Row(
-                                                  children: [
-                                                    Text(
-                                                      client.numbers![0]
-                                                          .phoneNumber!,
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(
+                                                  left:
+                                                      40.0), // Add padding for remove button
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            top: 8.0,
+                                                            right: 8.0),
+                                                    child: Text(
+                                                      client.name!,
                                                       style: const TextStyle(
-                                                          color:
-                                                              Colors.black54),
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 15,
+                                                        color: Colors.black,
+                                                      ),
+                                                      softWrap: true,
+                                                      overflow:
+                                                          TextOverflow.visible,
                                                     ),
-                                                    IconButton(
-                                                      icon: const Icon(
-                                                          Icons.copy,
-                                                          size: 16),
-                                                      onPressed: () {
-                                                        Clipboard.setData(
-                                                            ClipboardData(
-                                                                text: client
-                                                                    .numbers![0]
-                                                                    .phoneNumber!));
-                                                        Get.showSnackbar(
-                                                            const GetSnackBar(
-                                                          message:
-                                                              'تم نسخ رقم الهاتف',
-                                                          duration: Duration(
-                                                              seconds: 2),
-                                                        ));
-                                                      },
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      Flexible(
+                                                        child: Text(
+                                                          client.numbers![0]
+                                                              .phoneNumber!,
+                                                          style:
+                                                              const TextStyle(
+                                                                  color: Colors
+                                                                      .black54),
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        icon: const Icon(
+                                                            Icons.copy,
+                                                            size: 16),
+                                                        onPressed: () {
+                                                          Clipboard.setData(
+                                                              ClipboardData(
+                                                                  text: client
+                                                                      .numbers![
+                                                                          0]
+                                                                      .phoneNumber!));
+                                                          Get.showSnackbar(
+                                                              const GetSnackBar(
+                                                            message:
+                                                                'تم نسخ رقم الهاتف',
+                                                            duration: Duration(
+                                                                seconds: 2),
+                                                          ));
+                                                        },
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           )
                                         ],
                                       ),
                                       Positioned(
-                                          left: 5,
-                                          top: 5,
-                                          child: IconButton(
-                                            onPressed: () {
-                                              controller.clientPrintAdded
-                                                  .remove(client);
-                                            },
-                                            icon: const Icon(Icons.remove),
-                                          ))
+                                        left: 5,
+                                        top: 5,
+                                        child: IconButton(
+                                          onPressed: () {
+                                            controller.clientPrintAdded
+                                                .remove(client);
+                                          },
+                                          icon: const Icon(Icons.remove),
+                                        ),
+                                      )
                                     ],
                                   ),
                                 );
