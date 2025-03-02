@@ -357,7 +357,9 @@ class _ClientCardState extends State<ClientCard>
                                 ),
                               ),
                               Text(
-                                "$requiredCash جنيهاً",
+                                requiredCash == 0
+                                    ? "لا يوجد مستحقات"
+                                    : "$requiredCash جنيهاً",
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,

@@ -61,7 +61,8 @@ Future clientEditModelSheet(
 
         print('Finished creating new client');
       } else {
-        await BackendServices.instance.clientRepository.update(Client(
+        // First update the client basic info
+        final updatedClient = Client(
           id: client.id,
           createdAt: client.createdAt,
           totalCash: client.totalCash,
@@ -69,16 +70,35 @@ Future clientEditModelSheet(
           nationalId: nationalIdField.text,
           address: addressField.text,
           accountId: client.accountId,
-        ));
+        );
+        await BackendServices.instance.clientRepository.update(updatedClient);
 
-        // Update phone number if it exists
-        if (client.numbers != null && client.numbers!.isNotEmpty) {
-          final phone = client.numbers![0];
-          phone.phoneNumber = phoneNumberField.text;
-          await BackendServices.instance.phoneRepository.update(phone);
+        // Then handle phone number update
+        final hasExistingPhone = client.numbers?.isNotEmpty ?? false;
+
+        if (hasExistingPhone) {
+          final existingPhone = client.numbers![0];
+          final updatedPhone = PhoneNumber(
+            id: existingPhone.id,
+            createdAt: existingPhone.createdAt,
+            phoneNumber: phoneNumberField.text,
+            clientId: client.id,
+            systems: existingPhone.systems ?? [],
+          );
+
+          // Update the existing phone number
+          await BackendServices.instance.phoneRepository.update(updatedPhone);
+        } else {
+          // Create a new phone number if none exists
+          final newPhone = PhoneNumber(
+            id: -1,
+            createdAt: DateTime.now(),
+            phoneNumber: phoneNumberField.text,
+            clientId: client.id,
+            systems: [],
+          );
+          await BackendServices.instance.phoneRepository.create(newPhone);
         }
-
-        print('Finished updating existing client');
       }
 
       if (onSuccess != null) {
