@@ -19,9 +19,18 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/views/pages/auth_wrapper.dart'; // Update import
+import 'package:phone_system_app/theme/welcome_theme_selector.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize theme controller
+  await Get.putAsync<WelcomeThemeController>(() async {
+    final controller = WelcomeThemeController();
+    await controller.loadSavedTheme();
+    return controller;
+  });
 
   // Add performance optimizations
   if (!kIsWeb) {
@@ -89,7 +98,23 @@ class MainApp extends StatelessWidget {
         ),
         splashFactory: kIsWeb ? NoSplash.splashFactory : null,
       ),
-      home: WelcomePage(), // Changed from AuthWrapper() to EntryPage()
+      home: Stack(
+        children: [
+          GetX<WelcomeThemeController>(
+            builder: (controller) => controller.getCurrentWelcomePage(),
+          ),
+          Positioned(
+            top: 40,
+            right: 16,
+            child: Builder(
+              builder: (context) => IconButton(
+                icon: Icon(Icons.palette_outlined, color: Colors.white),
+                onPressed: () => _showThemeSelector(context),
+              ),
+            ),
+          ),
+        ],
+      ),
       defaultTransition: Transition.fadeIn,
       transitionDuration:
           const Duration(milliseconds: 150), // Faster transitions
@@ -111,6 +136,41 @@ class MainApp extends StatelessWidget {
           child: child!,
         );
       },
+    );
+  }
+
+  void _showThemeSelector(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('اختر المظهر', textAlign: TextAlign.center),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text('رمضان'),
+              onTap: () {
+                WelcomeThemeController.to.setTheme(WelcomeTheme.ramadan);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: Text('عيد'),
+              onTap: () {
+                WelcomeThemeController.to.setTheme(WelcomeTheme.eid);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: Text('عام'),
+              onTap: () {
+                WelcomeThemeController.to.setTheme(WelcomeTheme.general);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

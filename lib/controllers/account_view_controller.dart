@@ -17,7 +17,7 @@ class AccountViewController extends GetxController {
   void onInit() async {
     // check for all client system bills
     super.onInit();
-    
+
     try {
       final next = ProfitController.to.getNextMonthToBePaid();
       final month = next.month;
@@ -87,5 +87,17 @@ class AccountViewController extends GetxController {
     accounts.clear();
     accounts.addAll(accounts);
     return accounts;
+  }
+
+  Future<void> refreshAccounts() async {
+    isLoading.value = true;
+    try {
+      final data = await BackendServices.instance.accountRepository.getAllAccounts();
+      accounts.value = data;
+    } catch (e) {
+      print('Error refreshing accounts: $e');
+    } finally {
+      isLoading.value = false;
+    }
   }
 }

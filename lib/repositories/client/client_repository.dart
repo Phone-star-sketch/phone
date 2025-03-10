@@ -22,6 +22,7 @@ abstract class ClientRepository {
   void bindStreamToClientSystemsChanges(
       Client clinet, Function(List<Map<String, dynamic>>) callback);
 
+  Future<void> paySystemsBills(Client client, int month, int year);
 
-  Future<void> paySystemsBills(Client client , int month , int year);
+  Future<List<Map<String, dynamic>>> getAllClientsData();
 }

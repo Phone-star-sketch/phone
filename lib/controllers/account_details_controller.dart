@@ -16,8 +16,8 @@ class PageData {
   final Widget? content;
 
   PageData({
-    required this.title, 
-    required this.icon, 
+    required this.title,
+    required this.icon,
     required this.roles,
     this.content,
   });
@@ -26,6 +26,8 @@ class PageData {
 class AccountDetailsController extends GetxController {
   static AccountDetailsController get to => Get.find();
   final RxInt selectedIndex = 0.obs;
+
+  final Rx<String?> profileImage = Rx<String?>(null);
 
   final List<PageData> pages = [
     PageData(
