@@ -1,6 +1,8 @@
 import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/model.dart';
 import 'package:phone_system_app/models/phone_number.dart';
+import 'package:phone_system_app/views/pages/system_list.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class Client extends Model {
   static const String nameColumn = "name";
@@ -86,5 +88,22 @@ class Client extends Model {
       totalCashColumns: totalCash,
       expireColumns: (expireDate != null) ? expireDate.toString() : null,
     };
+  }
+
+  static Future<Map<String, double>> getAccountStats() async {
+    final response = await supabase
+        .from('clients')
+        .select('account_id, accounts!inner(name)')
+        .not('account_id', 'is', null);
+
+    final Map<String, double> stats = {};
+    final data = response as List;
+
+    for (var row in data) {
+      String accountName = row['accounts']['name'].toString();
+      stats[accountName] = (stats[accountName] ?? 0) + 1;
+    }
+
+    return stats;
   }
 }

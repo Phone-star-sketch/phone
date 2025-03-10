@@ -240,6 +240,17 @@ class AccountClientInfo extends GetxController {
     }
   }
 
+  Future<void> getAllClients() async {
+    try {
+      final allClientsData =
+          await BackendServices.instance.clientRepository.getAllClientsData();
+      allClients.value = allClientsData;
+      print("Fetched ${allClientsData.length} total clients");
+    } catch (e) {
+      print('Error fetching all clients: $e');
+    }
+  }
+
   void toggleMultiSelection() {
     enableMulipleClientPrint.value = !enableMulipleClientPrint.value;
     // Clear selections when disabling

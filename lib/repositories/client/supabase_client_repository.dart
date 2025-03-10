@@ -11,6 +11,7 @@ import 'package:phone_system_app/repositories/client/client_repository.dart';
 import 'package:phone_system_app/repositories/crud_mixin.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
+import 'package:phone_system_app/views/pages/system_list.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseClientRepository extends ClientRepository
@@ -162,9 +163,7 @@ class SupabaseClientRepository extends ClientRepository
     Object id = client.id;
     return _clinet
         .from(clientTableName)
-        .stream(primaryKey: ['id'])
-        .eq('id', id)
-        .execute();
+        .stream(primaryKey: ['id']).eq('id', id);
   }
 
   @override
@@ -287,10 +286,29 @@ class SupabaseClientRepository extends ClientRepository
 
   Stream<List<Client>> getRealtimeClients(Account account) {
     return _clinet
-      .from(clientTableName)
-      .stream(primaryKey: ['id'])
-      .eq('account_id', account.id)
-      .order('name')
-      .map((list) => list.map((e) => Client.fromJson(e)).toList());
+        .from(clientTableName)
+        .stream(primaryKey: ['id'])
+        .eq('account_id', account.id)
+        .order('name')
+        .map((list) => list.map((e) => Client.fromJson(e)).toList());
+  }
+
+  Future<List<Map<String, dynamic>>> getAllClientsData() async {
+    try {
+      final response = await _clinet.from(clientTableName).select(
+          'id, account_id, account:account_id (id, name)'); // Join with accounts table
+
+      print('Fetched client data: $response');
+
+      if (response == null) {
+        print('No data returned from query');
+        return [];
+      }
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print('Error in getAllClientsData: $e');
+      return [];
+    }
   }
 }

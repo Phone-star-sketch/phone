@@ -27,6 +27,7 @@ import 'package:phone_system_app/views/pages/system_list.dart';
 import 'package:phone_system_app/views/pages/create_user_page.dart';
 import 'package:phone_system_app/pages/user_management_page.dart'; // Add this import
 import 'animated_profile_avatar.dart';
+import 'package:image_picker/image_picker.dart';
 
 class Page {
   Widget content;
@@ -58,9 +59,10 @@ class AccountDetails extends StatelessWidget {
           color: Colors.black54,
         ),
       ),
-    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
+        SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
       Page(
-        roles: [UserRoles.manager],
+        roles: [UserRoles.manager, UserRoles.assistant],
         content: DuesManagement(),
         title: "المستحقات",
         icon: const Icon(
@@ -434,12 +436,30 @@ class SideBar extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            height: 200, // Increased height
-            alignment: Alignment.center, // Center alignment
+            height: 200,
+            alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(vertical: 20),
-            child: const AnimatedProfileAvatar(
-              imagePath: 'assets/images/owner.png',
-              size: 120,
+            child: GestureDetector(
+              onTap: () async {
+                final ImagePicker picker = ImagePicker();
+                final XFile? image = await picker.pickImage(
+                  source: ImageSource.gallery,
+                  maxWidth: 512,
+                  maxHeight: 512,
+                );
+
+                if (image != null) {
+                  controller.profileImage.value = image.path;
+                }
+              },
+              child: SizedBox(
+                width: 120,
+                height: 120,
+                child: Obx(() => AnimatedProfileAvatar(
+                      imagePath: controller.profileImage.value ??
+                          'assets/images/owner.png',
+                    )),
+              ),
             ),
           ),
           const SizedBox(height: 15),

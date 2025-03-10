@@ -1,440 +1,394 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'dart:math' as math;
+import 'package:phone_system_app/views/pages/auth_raper.dart';
+import 'package:phone_system_app/views/pages/login_page.dart';
+import 'package:audioplayers/audioplayers.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
+class WelcomePage extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'نظام ادارة الهواتف',
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        fontFamily: 'Cairo',
-      ),
-      home: const EntryPage(),
-    );
-  }
+  _WelcomePageState createState() => _WelcomePageState();
 }
 
-class EntryPage extends StatefulWidget {
-  const EntryPage({Key? key}) : super(key: key);
-
-  @override
-  State<EntryPage> createState() => _EntryPageState();
-}
-
-class _EntryPageState extends State<EntryPage> with TickerProviderStateMixin {
+class _WelcomePageState extends State<WelcomePage>
+    with TickerProviderStateMixin {
+  late AnimationController _controller;
+  late AnimationController _backgroundController;
+  late AnimationController _floatingController;
   late AnimationController _sheepController;
-  late AnimationController _cloudController;
   late AnimationController _crescentController;
-  late AnimationController _buttonController;
-
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  late AnimationController _cloudsController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _sheepSlideAnimation;
+  late Animation<double> _sheepScaleAnimation;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  final List<Star> _stars = [];
+  final List<Cloud> _clouds = [];
+  final List<Sheep> _sheepFlock = [];
+  bool _showJumpingSheep = false;
 
   @override
   void initState() {
     super.initState();
+    _initializeAnimations();
+    _generateStars();
+    _generateClouds();
+    _generateSheep();
+  }
+
+  void _initializeAnimations() {
+    _controller = AnimationController(
+        duration: Duration(milliseconds: 1500), vsync: this);
+
+    _backgroundController = AnimationController(
+        duration: Duration(seconds: 20), vsync: this)
+      ..repeat();
+
+    _floatingController =
+        AnimationController(duration: Duration(seconds: 2), vsync: this)
+          ..repeat(reverse: true);
 
     _sheepController = AnimationController(
+      duration: Duration(milliseconds: 2000),
       vsync: this,
-      duration: const Duration(seconds: 12),
-    )..repeat(reverse: true);
-
-    _cloudController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 20),
-    )..repeat();
-
-    _crescentController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat(reverse: true);
-
-    _buttonController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
     );
 
-    Future.delayed(const Duration(milliseconds: 500), () {
-      _buttonController.forward();
+    _crescentController = AnimationController(
+      duration: Duration(seconds: 3),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _cloudsController = AnimationController(
+      duration: Duration(seconds: 30),
+      vsync: this,
+    )..repeat();
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Interval(0.3, 0.8, curve: Curves.easeOut),
+    ));
+
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    );
+
+    _sheepSlideAnimation = Tween<Offset>(
+      begin: Offset(-1, 0.3),
+      end: Offset(1.5, 0.3),
+    ).animate(CurvedAnimation(
+      parent: _sheepController,
+      curve: Curves.easeInOut,
+    ));
+
+    _sheepScaleAnimation = Tween<double>(
+      begin: 1.2,
+      end: 0.8,
+    ).animate(CurvedAnimation(
+      parent: _sheepController,
+      curve: Interval(0.2, 0.8, curve: Curves.elasticInOut),
+    ));
+
+    _controller.forward();
+
+    // Start sheep movement animations
+    Future.delayed(Duration(milliseconds: 500), () {
+      for (var sheep in _sheepFlock) {
+        sheep.startMoving();
+      }
     });
+  }
+
+  void _generateStars() {
+    final random = math.Random();
+    for (int i = 0; i < 70; i++) {
+      _stars.add(Star(random));
+    }
+  }
+
+  void _generateClouds() {
+    final random = math.Random();
+    for (int i = 0; i < 6; i++) {
+      _clouds.add(Cloud(random));
+    }
+  }
+
+  void _generateSheep() {
+    final random = math.Random();
+    for (int i = 0; i < 5; i++) {
+      _sheepFlock.add(Sheep(random, this));
+    }
+  }
+
+  void _startJumpingSheepAnimation() async {
+    setState(() => _showJumpingSheep = true);
+    await _sheepController.forward();
+    setState(() => _showJumpingSheep = false);
+    _sheepController.reset();
   }
 
   @override
   void dispose() {
+    _controller.dispose();
+    _backgroundController.dispose();
+    _floatingController.dispose();
     _sheepController.dispose();
-    _cloudController.dispose();
     _crescentController.dispose();
-    _buttonController.dispose();
-    _usernameController.dispose();
-    _passwordController.dispose();
+    _cloudsController.dispose();
+    _audioPlayer.dispose();
+    for (var sheep in _sheepFlock) {
+      sheep.dispose();
+    }
     super.dispose();
+  }
+
+  Future<void> _playButtonSound() async {
+    await _audioPlayer.play(AssetSource('sounds/button_click.wav'));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        body: Stack(
-          children: [
-            // Festive background
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xFF0F2E40),
-                    Color(0xFF1A3B50),
-                    Color(0xFF24485D),
-                  ],
+    return Scaffold(
+      body: AnimatedBuilder(
+        animation: _backgroundController,
+        builder: (context, child) {
+          return Stack(
+            children: [
+              // Sky background with gradient
+              Container(
+                width: double.infinity,
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFF1A237E), // Deep blue for sky
+                      Color(0xFF3949AB), // Lighter blue
+                      Color(0xFF5C6BC0), // Even lighter blue for horizon
+                    ],
+                  ),
                 ),
               ),
-            ),
-
-            // Stars
-            CustomPaint(
-              painter: StarsPainter(),
-              size: Size.infinite,
-            ),
-
-            // Animated clouds
-            ...List.generate(3, (index) {
-              return AnimatedBuilder(
-                animation: _cloudController,
-                builder: (context, child) {
-                  double offset = index * 0.3;
-                  double position = (_cloudController.value + offset) % 1.0;
-
-                  return Positioned(
-                    left: position * MediaQuery.of(context).size.width * 1.5 -
-                        100,
-                    top: 50 + (index * 80),
-                    child: Opacity(
-                      opacity: 0.7,
-                      child: Container(
-                        width: 120,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.8),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
+              
+              // Stars in the sky
+              ..._stars.map((star) {
+                final progress = (_backgroundController.value + star.offset) % 1.0;
+                return Positioned(
+                  left: star.x * MediaQuery.of(context).size.width,
+                  top: star.y * MediaQuery.of(context).size.height * 0.7, // Only in upper 70% of screen
+                  child: Opacity(
+                    opacity: star.brightness * (0.3 + 0.7 * math.sin(progress * math.pi)),
+                    child: Container(
+                      width: star.size,
+                      height: star.size,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.7),
+                            blurRadius: star.size,
+                            spreadRadius: star.size * 0.2,
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
-              );
-            }),
-
-            // Animated crescent moon
-            Positioned(
-              right: 40,
-              top: 40,
-              child: AnimatedBuilder(
-                animation: _crescentController,
-                builder: (context, child) {
-                  return Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.amber.shade100,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.amber.shade100.withOpacity(
-                              0.5 + (_crescentController.value * 0.3)),
-                          blurRadius: 15 + (_crescentController.value * 10),
-                          spreadRadius: 5 + (_crescentController.value * 5),
-                        ),
+                  ),
+                );
+              }).toList(),
+              
+              // Green hill at bottom
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: MediaQuery.of(context).size.height * 0.3,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFF388E3C), // Medium green
+                        Color(0xFF2E7D32), // Darker green
                       ],
                     ),
-                    child: Stack(
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.amber.shade100,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: 15 + (_crescentController.value * 3),
-                          top: 0,
-                          child: Container(
-                            width: 55,
-                            height: 55,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFF0F2E40),
-                            ),
-                          ),
-                        ),
-                      ],
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(80),
+                      topRight: Radius.circular(80),
                     ),
-                  );
-                },
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 15,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-
-            // Animated sheep
-            ...List.generate(4, (index) {
-              return AnimatedBuilder(
-                animation: _sheepController,
-                builder: (context, child) {
-                  double offset = index * 0.2;
-                  double position = (_sheepController.value + offset) % 1.0;
-
-                  return Positioned(
-                    left:
-                        position * MediaQuery.of(context).size.width * 1.3 - 80,
-                    bottom: 100 +
-                        (index * 15) -
-                        (math.sin(position * math.pi * 2) * 5),
-                    child: SheepWidget(size: 60 + (index * 5).toDouble()),
-                  );
-                },
-              );
-            }),
-
-            // Main content
-            SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
+              
+              // Animated clouds
+              ..._clouds.map((cloud) {
+                return Positioned(
+                  left: ((cloud.x + _cloudsController.value) % 1.2 - 0.1) * 
+                      MediaQuery.of(context).size.width,
+                  top: cloud.y * MediaQuery.of(context).size.height * 0.5,
+                  child: Opacity(
+                    opacity: cloud.opacity,
+                    child: _buildCloud(cloud.scale),
+                  ),
+                );
+              }).toList(),
+              
+              // Grazing sheep
+              ..._sheepFlock.map((sheep) {
+                return AnimatedBuilder(
+                  animation: sheep.controller,
+                  builder: (context, child) {
+                    return Positioned(
+                      left: (sheep.x + sheep.moveAnimation.value * 0.1) * 
+                          MediaQuery.of(context).size.width,
+                      bottom: sheep.y * MediaQuery.of(context).size.height * 0.2 + 20,
+                      child: Transform.scale(
+                        scale: 0.8 + sheep.hopAnimation.value * 0.2,
+                        child: Transform.translate(
+                          offset: Offset(0, -sheep.hopAnimation.value * 10),
+                          child: _buildSheep(),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }).toList(),
+                
+              // Main content
+              SafeArea(
+                child: Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.symmetric(horizontal: 24.0),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // App title with fancy effect
-                        ShaderMask(
-                          shaderCallback: (Rect bounds) {
-                            return const LinearGradient(
-                              colors: [
-                                Colors.green,
-                                Colors.amber,
-                                Colors.green
-                              ],
-                              stops: [0.0, 0.5, 1.0],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ).createShader(bounds);
-                          },
-                          child: const Text(
-                            'نظام ادارة الهواتف',
-                            style: TextStyle(
-                              fontSize: 30,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        // Festival subtitle
-                        Text(
-                          'مهرجان العيد المبارك',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.amber.shade300,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-
-                        const SizedBox(height: 40),
-
-                        // Login form card
-                        Container(
-                          width: double.infinity,
-                          constraints: const BoxConstraints(maxWidth: 400),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.green.shade900.withOpacity(0.8),
-                                Colors.green.shade800.withOpacity(0.8),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 15,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Center(
-                                child: Text(
-                                  'تسجيل الدخول',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 25),
-
-                              // Username field
-                              const Text(
-                                'اسم المستخدم',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _usernameController,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.white.withOpacity(0.2),
-                                  prefixIcon: const Icon(Icons.person,
-                                      color: Colors.white70),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  hintText: 'أدخل اسم المستخدم',
-                                  hintStyle: TextStyle(
-                                      color: Colors.white.withOpacity(0.7)),
-                                ),
-                                style: const TextStyle(color: Colors.white),
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              // Password field
-                              const Text(
-                                'كلمة المرور',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _passwordController,
-                                obscureText: true,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.white.withOpacity(0.2),
-                                  prefixIcon: const Icon(Icons.lock,
-                                      color: Colors.white70),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  hintText: 'أدخل كلمة المرور',
-                                  hintStyle: TextStyle(
-                                      color: Colors.white.withOpacity(0.7)),
-                                ),
-                                style: const TextStyle(color: Colors.white),
-                              ),
-
-                              const SizedBox(height: 30),
-
-                              // Login button with animation
-                              Center(
-                                child: AnimatedBuilder(
-                                  animation: _buttonController,
-                                  builder: (context, child) {
-                                    return Transform.scale(
-                                      scale:
-                                          0.5 + (_buttonController.value * 0.5),
-                                      child: Opacity(
-                                        opacity: _buttonController.value,
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            // Add login logic
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                Colors.amber.shade600,
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 40, vertical: 12),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(30),
-                                            ),
-                                            elevation: 5,
-                                          ),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.login),
-                                              SizedBox(width: 8),
-                                              Text(
-                                                'دخول',
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                        AnimatedBuilder(
+                          animation: _crescentController,
+                          builder: (context, child) {
+                            return Container(
+                              height: 180,
+                              width: 180,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Crescent moon or Eid symbol
+                                  Transform.scale(
+                                    scale: 1.0 + _crescentController.value * 0.05,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.amber.shade300,
+                                            Colors.amber.shade600,
+                                          ],
                                         ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.amber.withOpacity(0.3),
+                                            blurRadius: 20,
+                                            spreadRadius: 5,
+                                          ),
+                                        ],
                                       ),
-                                    );
-                                  },
-                                ),
-                              ),
-
-                              const SizedBox(height: 15),
-
-                              // Forgot password
-                              Center(
-                                child: TextButton(
-                                  onPressed: () {},
-                                  child: Text(
-                                    'نسيت كلمة المرور؟',
-                                    style: TextStyle(
-                                      color: Colors.amber.shade300,
-                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                ),
+                                  Icon(
+                                    Icons.phone_android,
+                                    size: 80,
+                                    color: Colors.white,
+                                  ),
+                                ],
                               ),
-                            ],
+                            );
+                          },
+                        ),
+                        SizedBox(height: 48),
+                        SlideTransition(
+                          position: _slideAnimation,
+                          child: FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: Column(
+                              children: [
+                                Text(
+                                  'عيد مبارك',
+                                  style: TextStyle(
+                                    fontSize: 52,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber.shade300,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.amber.withOpacity(0.8),
+                                        blurRadius: 15,
+                                        offset: Offset(0, 5),
+                                      ),
+                                      Shadow(
+                                        color: Colors.amber.withOpacity(0.4),
+                                        blurRadius: 25,
+                                        offset: Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  'نظام إدارة الهواتف',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    color: Colors.white.withOpacity(0.9),
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-
-                        const SizedBox(height: 30),
-
-                        // Festival message
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.shade800.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                                color: Colors.amber.shade600.withOpacity(0.5)),
-                          ),
-                          child: Text(
-                            'عيد مبارك سعيد! 🌙✨',
-                            style: TextStyle(
-                              color: Colors.amber.shade300,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                        SizedBox(height: 48),
+                        SlideTransition(
+                          position: _slideAnimation,
+                          child: FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: Column(
+                              children: [
+                                _buildGlassButton(
+                                  'ابدأ الآن',
+                                  onPressed: () async {
+                                    await _playButtonSound();
+                                    _startJumpingSheepAnimation();
+                                    _controller.reverse().then((_) {
+                                      Get.off(() => AuthRaper());
+                                    });
+                                  },
+                                ),
+                                SizedBox(height: 24),
+                                _buildTextButton(
+                                  'لديك حساب بالفعل؟ سجل دخول',
+                                  onPressed: () async {
+                                    await _playButtonSound();
+                                    _controller.reverse().then((_) {
+                                      Get.off(() => LoginPage());
+                                    });
+                                  },
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -442,6 +396,346 @@ class _EntryPageState extends State<EntryPage> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
+              ),
+              
+              // Jumping sheep animation (shown on button press)
+              if (_showJumpingSheep)
+                AnimatedBuilder(
+                  animation: _sheepController,
+                  builder: (context, child) {
+                    final size = MediaQuery.of(context).size;
+                    return Positioned(
+                      left: size.width * 0.5 - 75,
+                      bottom: size.height * 0.3,
+                      child: Transform.translate(
+                        offset: _sheepSlideAnimation.value * size.width * 0.5,
+                        child: Transform.scale(
+                          scale: _sheepScaleAnimation.value,
+                          child: Opacity(
+                            opacity: 1 - (_sheepController.value * 0.5),
+                            child: _buildJumpingSheep(),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildGlassButton(String text, {required VoidCallback onPressed}) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(30),
+            color: Colors.white.withOpacity(0.2),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextButton(String text, {required VoidCallback onPressed}) {
+    return TextButton(
+      onPressed: onPressed,
+      child: Text(
+        text,
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.9),
+          fontSize: 16,
+          decoration: TextDecoration.underline,
+          decorationColor: Colors.white.withOpacity(0.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCloud(double scale) {
+    return Container(
+      width: 120 * scale,
+      height: 60 * scale,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            left: 30 * scale,
+            top: 10 * scale,
+            child: Container(
+              width: 50 * scale,
+              height: 50 * scale,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 5 * scale,
+            top: 20 * scale,
+            child: Container(
+              width: 40 * scale,
+              height: 40 * scale,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 60 * scale,
+            top: 15 * scale,
+            child: Container(
+              width: 45 * scale,
+              height: 45 * scale,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSheep() {
+    return Container(
+      width: 70,
+      height: 60,
+      child: Stack(
+        children: [
+          // Sheep Body
+          Positioned(
+            top: 15,
+            child: Container(
+              width: 60,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Sheep Wool (fluffy texture)
+          ..._generateWoolPuffs(),
+          
+          // Sheep Head
+          Positioned(
+            left: 5,
+            top: 10,
+            child: Container(
+              width: 25,
+              height: 25,
+              decoration: BoxDecoration(
+                color: Color(0xFF424242),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Sheep Eyes
+          Positioned(
+            left: 10,
+            top: 15,
+            child: Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          
+          // Sheep Legs
+          Positioned(
+            left: 15,
+            bottom: 0,
+            child: Container(
+              width: 4,
+              height: 15,
+              color: Color(0xFF616161),
+            ),
+          ),
+          Positioned(
+            left: 45,
+            bottom: 0,
+            child: Container(
+              width: 4,
+              height: 15,
+              color: Color(0xFF616161),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  List<Widget> _generateWoolPuffs() {
+    List<Widget> puffs = [];
+    final random = math.Random(42); // Fixed seed for consistent look
+    
+    for (int i = 0; i < 12; i++) {
+      double left = random.nextDouble() * 45 + 10;
+      double top = random.nextDouble() * 20 + 5;
+      double size = random.nextDouble() * 10 + 12;
+      
+      puffs.add(
+        Positioned(
+          left: left,
+          top: top,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.white.withOpacity(0.8),
+                  blurRadius: 2,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    
+    return puffs;
+  }
+
+  Widget _buildJumpingSheep() {
+    return Transform.scale(
+      scale: 1.8,
+      child: Container(
+        width: 100,
+        height: 80,
+        child: Stack(
+          children: [
+            // Jumping Sheep Body
+            Positioned(
+              top: 15,
+              left: 20,
+              child: Container(
+                width: 60,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Jumping Sheep Wool (more fluffy)
+            ..._generateWoolPuffs().map((puff) => 
+              Transform.scale(
+                scale: 1.2,
+                child: puff,
+              )
+            ).toList(),
+            
+            // Jumping Sheep Head
+            Positioned(
+              left: 15,
+              top: 10,
+              child: Container(
+                width: 25,
+                height: 25,
+                decoration: BoxDecoration(
+                  color: Color(0xFF424242),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Jumping Sheep Eyes
+            Positioned(
+              left: 20,
+              top: 15,
+              child: Container(
+                width: 5,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            
+            // Jumping Sheep Legs (tucked up for jumping)
+            Positioned(
+              left: 30,
+              bottom: 5,
+              child: Container(
+                width: 4,
+                height: 10,
+                color: Color(0xFF616161),
+                transform: Matrix4.rotationZ(0.5),
+              ),
+            ),
+            Positioned(
+              left: 60,
+              bottom: 5,
+              child: Container(
+                width: 4,
+                height: 10,
+                color: Color(0xFF616161),
+                transform: Matrix4.rotationZ(-0.5),
               ),
             ),
           ],
@@ -451,170 +745,77 @@ class _EntryPageState extends State<EntryPage> with TickerProviderStateMixin {
   }
 }
 
-// Sheep Widget
-class SheepWidget extends StatelessWidget {
+class Star {
+  final double x;
+  final double y;
   final double size;
+  final double offset;
+  final double brightness;
 
-  const SheepWidget({Key? key, this.size = 60}) : super(key: key);
+  Star(math.Random random)
+      : x = random.nextDouble(),
+        y = random.nextDouble(),
+        size = random.nextDouble() * 2.5 + 0.5,
+        offset = random.nextDouble(),
+        brightness = random.nextDouble() * 0.5 + 0.5;
+}
 
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      // Changed Container to SizedBox
-      width: size,
-      height: size,
-      child: Stack(
-        children: [
-          // Sheep body
-          Positioned(
-            left: size * 0.1,
-            top: size * 0.3,
-            child: Container(
-              width: size * 0.8,
-              height: size * 0.5,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(size * 0.25),
-              ),
-            ),
-          ),
+class Cloud {
+  final double x;
+  final double y;
+  final double scale;
+  final double opacity;
 
-          // Sheep wool (fluffy parts)
-          ...List.generate(8, (index) {
-            final angle = index * (math.pi / 4);
-            final xOffset = math.cos(angle) * (size * 0.2);
-            final yOffset = math.sin(angle) * (size * 0.2);
+  Cloud(math.Random random)
+      : x = random.nextDouble(),
+        y = random.nextDouble() * 0.4,
+        scale = random.nextDouble() * 0.5 + 0.8,
+        opacity = random.nextDouble() * 0.3 + 0.7;
+}
 
-            return Positioned(
-              left: (size / 2 - size * 0.15) + xOffset,
-              top: (size * 0.4 - size * 0.15) + yOffset,
-              child: Container(
-                width: size * 0.3,
-                height: size * 0.3,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            );
-          }),
-
-          // Head
-          Positioned(
-            left: size * 0.65,
-            top: size * 0.2,
-            child: Container(
-              width: size * 0.25,
-              height: size * 0.25,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(size * 0.125),
-              ),
-            ),
-          ),
-
-          // Eyes
-          Positioned(
-            left: size * 0.75,
-            top: size * 0.25,
-            child: Container(
-              width: size * 0.05,
-              height: size * 0.05,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-
-          // Legs
-          Positioned(
-            left: size * 0.25,
-            top: size * 0.8,
-            child: Container(
-              width: size * 0.1,
-              height: size * 0.2,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(size * 0.05),
-              ),
-            ),
-          ),
-          Positioned(
-            left: size * 0.65,
-            top: size * 0.8,
-            child: Container(
-              width: size * 0.1,
-              height: size * 0.2,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(size * 0.05),
-              ),
-            ),
-          ),
-
-          // Ears
-          Positioned(
-            left: size * 0.7,
-            top: size * 0.15,
-            child: Container(
-              width: size * 0.12,
-              height: size * 0.12,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(size * 0.06),
-              ),
-            ),
-          ),
-        ],
+class Sheep {
+  late double x;
+  late double y;
+  late AnimationController controller;
+  late Animation<double> moveAnimation;
+  late Animation<double> hopAnimation;
+  final math.Random _random;
+  final TickerProvider _vsync;
+  
+  Sheep(this._random, this._vsync)
+      : x = _random.nextDouble() * 0.7 + 0.1,
+        y = _random.nextDouble() * 0.7 {
+    controller = AnimationController(
+      duration: Duration(seconds: 5 + (_random.nextInt(5))),
+      vsync: _vsync,
+    );
+    
+    moveAnimation = Tween<double>(
+      begin: -0.1,
+      end: 0.1,
+    ).animate(
+      CurvedAnimation(
+        parent: controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+    
+    hopAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: controller,
+        curve: Interval(0.4, 0.6, curve: Curves.easeInOut),
       ),
     );
   }
-}
-
-// Stars Painter
-class StarsPainter extends CustomPainter {
-  final List<Star> stars = List.generate(100, (index) => Star());
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    for (final star in stars) {
-      final starPath = Path();
-      final centerX = star.x * size.width;
-      final centerY = star.y * size.height;
-      final outerRadius = star.size;
-      final innerRadius = outerRadius * 0.4;
-
-      for (int i = 0; i < 10; i++) {
-        final angle = math.pi / 5 * i;
-        final radius = i.isEven ? outerRadius : innerRadius;
-        final x = centerX + math.cos(angle) * radius;
-        final y = centerY + math.sin(angle) * radius;
-
-        if (i == 0) {
-          starPath.moveTo(x, y);
-        } else {
-          starPath.lineTo(x, y);
-        }
-      }
-
-      starPath.close();
-      canvas.drawPath(
-          starPath, paint..color = Colors.white.withOpacity(star.opacity));
-    }
+  
+  void startMoving() {
+    controller.repeat(reverse: true);
   }
-
-  @override
-  bool shouldRepaint(StarsPainter oldDelegate) => false;
-}
-
-class Star {
-  final double x = math.Random().nextDouble();
-  final double y = math.Random().nextDouble();
-  final double size = math.Random().nextDouble() * 2 + 1;
-  final double opacity = math.Random().nextDouble() * 0.7 + 0.3;
+  
+  void dispose() {
+    controller.dispose();
+  }
 }
