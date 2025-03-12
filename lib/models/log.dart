@@ -5,7 +5,7 @@ import 'package:phone_system_app/models/model.dart';
 enum TransactionType {
   moneyAdded,
   moneyDeducted,
-  transactionDone,
+  transactionDone, deposit, income, expense, transfer,
 }
 
 extension Printing on TransactionType {

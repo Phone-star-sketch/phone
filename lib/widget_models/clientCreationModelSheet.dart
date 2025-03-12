@@ -48,11 +48,11 @@ Future clientEditModelSheet(
         final clientId =
             await BackendServices.instance.clientRepository.create(newClient);
 
-        // Add phone number to the client
+        // Add phone number to the client - using the exact input value
         final phone = PhoneNumber(
           id: -1,
           createdAt: DateTime.now(),
-          phoneNumber: phoneNumberField.text,
+          phoneNumber: phoneNumberField.text,  // Using the exact entered phone number
           clientId: clientId,
           systems: [],
         );
@@ -81,7 +81,7 @@ Future clientEditModelSheet(
           final updatedPhone = PhoneNumber(
             id: existingPhone.id,
             createdAt: existingPhone.createdAt,
-            phoneNumber: phoneNumberField.text,
+            phoneNumber: phoneNumberField.text,  // Using the exact entered phone number
             clientId: client.id,
             systems: existingPhone.systems ?? [],
           );
@@ -93,7 +93,7 @@ Future clientEditModelSheet(
           final newPhone = PhoneNumber(
             id: -1,
             createdAt: DateTime.now(),
-            phoneNumber: phoneNumberField.text,
+            phoneNumber: phoneNumberField.text,  // Using the exact entered phone number
             clientId: client.id,
             systems: [],
           );
@@ -211,29 +211,16 @@ Future clientEditModelSheet(
                       if (value == null || value.isEmpty) {
                         return 'رقم الهاتف مطلوب';
                       }
-                      if (!value.startsWith('010')) {
-                        return 'يجب أن يبدأ الرقم بـ 010';
-                      }
-                      if (value.length != 11) {
-                        return 'يجب أن يتكون الرقم من 11 رقم';
-                      }
+                      // Removing the 010 prefix check and length constraint
+                      // You can add other validation if needed
                       return null;
                     },
                     keyboardType: TextInputType.phone,
-                    maxLength: 11,
-                    onChanged: (value) {
-                      if (value.isEmpty) {
-                        phoneNumberField.text = '010';
-                        phoneNumberField.selection = TextSelection.fromPosition(
-                          const TextPosition(offset: 3),
-                        );
-                      }
-                    },
+                    // Removing maxLength to allow different phone number formats
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.phone, color: Colors.blue),
                       labelText: 'رقم الهاتف',
-                      hintText: '010XXXXXXXX',
-                      counterText: '', // Hides the character counter
+                      hintText: 'أدخل رقم الهاتف',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
