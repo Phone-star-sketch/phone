@@ -140,33 +140,172 @@ class MainApp extends StatelessWidget {
   }
 
   void _showThemeSelector(BuildContext context) {
+    final Size screenSize = MediaQuery.of(context).size;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('اختر المظهر', textAlign: TextAlign.center),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 5,
+        backgroundColor: Colors.white,
+        child: Container(
+          width: screenSize.width * 0.8,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title with decorative elements
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.palette_outlined,
+                      color: Colors.purple[700], size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    'اختر المظهر',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple[800],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.palette_outlined,
+                      color: Colors.purple[700], size: 24),
+                ],
+              ),
+
+              const SizedBox(height: 6),
+              Container(
+                width: 100,
+                height: 3,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.purple.shade200, Colors.purple.shade800],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              _buildThemeOption(
+                context,
+                title: 'رمضان',
+                icon: Icons.mosque,
+                color: Colors.green,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1F8B4C), Color(0xFF3A6978)],
+                ),
+                onTap: () {
+                  WelcomeThemeController.to.setTheme(WelcomeTheme.ramadan);
+                  Navigator.pop(context);
+                },
+              ),
+
+              const SizedBox(height: 12),
+
+              _buildThemeOption(
+                context,
+                title: 'عيد',
+                icon: Icons.celebration,
+                color: Colors.amber,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFF9A825), Color(0xFFFF7043)],
+                ),
+                onTap: () {
+                  WelcomeThemeController.to.setTheme(WelcomeTheme.eid);
+                  Navigator.pop(context);
+                },
+              ),
+
+              const SizedBox(height: 12),
+
+              _buildThemeOption(
+                context,
+                title: 'عام',
+                icon: Icons.dashboard_customize,
+                color: Colors.blue,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2196F3), Color(0xFF673AB7)],
+                ),
+                onTap: () {
+                  WelcomeThemeController.to.setTheme(WelcomeTheme.general);
+                  Navigator.pop(context);
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: const Text(
+                    'إلغاء',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeOption(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Color color,
+    required LinearGradient gradient,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(15),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 12),
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
           children: [
-            ListTile(
-              title: Text('رمضان'),
-              onTap: () {
-                WelcomeThemeController.to.setTheme(WelcomeTheme.ramadan);
-                Navigator.pop(context);
-              },
+            Icon(icon, color: Colors.white, size: 28),
+            const SizedBox(width: 16),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            ListTile(
-              title: Text('عيد'),
-              onTap: () {
-                WelcomeThemeController.to.setTheme(WelcomeTheme.eid);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              title: Text('عام'),
-              onTap: () {
-                WelcomeThemeController.to.setTheme(WelcomeTheme.general);
-                Navigator.pop(context);
-              },
+            const Spacer(),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white70,
+              size: 18,
             ),
           ],
         ),

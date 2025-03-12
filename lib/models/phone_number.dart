@@ -27,7 +27,7 @@ class PhoneNumber extends Model {
   });
 
   PhoneNumber.fromJson(super.data)
-      : phoneNumber = "20${data[phoneColumnName].toString()}+",
+      : phoneNumber = "${data[phoneColumnName].toString()}",
         clientId = data[clientIdColumnName],
         forSale = data[forSaleColumnName] ?? false,
         price = (data[priceColumnName] != null)

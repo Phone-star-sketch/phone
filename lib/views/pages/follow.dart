@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -11,6 +12,7 @@ import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/user.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
+import 'package:phone_system_app/services/notification_service.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_sheet.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -136,6 +138,10 @@ class FollowController extends GetxController {
           )
           .toList();
       print("Real-time update: Found ${logs.length} logs");
+
+      // Process notifications for new transactions
+      await processNewTransactionsForNotifications();
+
       Loaders.to.followLoading.value = false;
     } catch (e) {
       print("Real-time update error: $e");
@@ -144,30 +150,42 @@ class FollowController extends GetxController {
     }
   }
 
-  Future<void> insertDummyLog() async {
-    try {
-      final firstClient =
-          AccountClientInfo.to.clinets.firstWhereOrNull((c) => c.id != null);
+  // Add notification processing method
+  Future<void> processNewTransactionsForNotifications() async {
+    await TransactionNotificationService.instance.initialize();
 
-      if (firstClient == null) {
-        Get.snackbar('خطأ', 'لا يوجد عملاء متاحين لإجراء الاختبار');
-        return;
-      }
+    final recentLogs = logs.where((logWithUser) {
+      final isRecent = logWithUser.log.createdAt
+              ?.isAfter(DateTime.now().subtract(const Duration(minutes: 5))) ??
+          false;
 
-      final supabase = Supabase.instance.client;
+      final isFromAssistant =
+          logWithUser.user?.name?.toLowerCase().contains('المساعد') ?? false;
 
-      Get.snackbar(
-        'اختبار',
-        'تم إضافة معاملة تجريبية',
-        backgroundColor: Colors.blue.withOpacity(0.1),
-      );
+      return isRecent && isFromAssistant;
+    }).toList();
 
-      // Refresh logs after insertion
-      await updateLogs();
-    } catch (e) {
-      print('🔴 Error inserting dummy log: $e');
-      Get.snackbar('خطأ', 'فشل في إضافة البيانات التجريبية: $e');
+    for (final logWithUser in recentLogs) {
+      await TransactionNotificationService.instance
+          .showAssistantTransactionNotification(logWithUser);
     }
+  }
+
+  Future<void> insertDummyLog() async {
+    final dummyLog = Log(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      accountId: AccountClientInfo.to.currentAccount.id,
+      createdBy: SupabaseAuthentication.myUser!.id,
+      price: Random().nextInt(1000).toDouble(),
+      transactionType: TransactionType.deposit,
+      createdAt: DateTime.now(),
+      systemType: '0',
+      clientId: AccountClientInfo.to.clinets.first.id,
+      phoneId: '0',
+    );
+    
+    await BackendServices.instance.logRepository.create(dummyLog);
+    await updateLogs();
   }
 }
 
