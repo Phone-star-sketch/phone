@@ -8,96 +8,215 @@ import 'package:phone_system_app/models/user.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:phone_system_app/views/pages/follow.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'dart:io';
+import 'package:app_badge_plus/app_badge_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class TransactionNotificationService {
-  static final TransactionNotificationService instance = TransactionNotificationService._internal();
+  static final TransactionNotificationService instance =
+      TransactionNotificationService._internal();
   factory TransactionNotificationService() => instance;
   TransactionNotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  bool _isInitialized = false;
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  int _badgeCount = 0;
+
+  static int? pendingClientId;
 
   Future<void> initialize() async {
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    
-    final DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings(
+    if (_isInitialized) return;
+
+    // Request notification permissions
+    await _requestPermissions();
+
+    // Initialize timezone data
+    tz.initializeTimeZones();
+
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'transactions_channel',
+      'Transactions',
+      description: 'Notifications for all transactions',
+      importance: Importance.high,
+      enableVibration: true,
+      playSound: true,
+      showBadge: true,
+    );
+
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    final DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
-      onDidReceiveLocalNotification: (int id, String? title, String? body, String? payload) async {},
+      onDidReceiveLocalNotification:
+          (int id, String? title, String? body, String? payload) async {},
     );
-    
-    final InitializationSettings initializationSettings = InitializationSettings(
+
+    final InitializationSettings initializationSettings =
+        InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
     );
-    
+
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
         if (response.payload != null) {
-          // Handle notification tap here
-          print('Notification tapped with payload: ${response.payload}');
+          final clientId = int.tryParse(response.payload!);
+          if (clientId != null) {
+            await Get.toNamed('/follow', arguments: {'clientId': clientId});
+          }
         }
       },
     );
+
+    _isInitialized = true;
+    print('🔔 Notification service initialized');
   }
 
-  Future<void> showAssistantTransactionNotification(LogWidthUser logWithUser) async {
-    final currentUser = SupabaseAuthentication.myUser;
-    final isManager = currentUser?.role == UserRoles.manager.index || 
-                     currentUser?.role == UserRoles.admin.index;
-    
-    final isAssistantTransaction = logWithUser.user?.name?.toLowerCase().contains('المساعد') ?? false;
-    
-    if (!isManager || !isAssistantTransaction) return;
-    
-    final platformChannelSpecifics = await _createStyledNotificationDetails(
-      logWithUser.log,
-      logWithUser.client,
-      logWithUser.log.transactionType.name(),
-      "${logWithUser.log.price} جنيه"
-    );
-    
-    await flutterLocalNotificationsPlugin.show(
-      logWithUser.log.id.hashCode,
-      'معاملة جديدة من المساعد',
-      'تمت معاملة ${logWithUser.log.transactionType.name()} لـ ${logWithUser.client?.name ?? "غير محدد"} بمبلغ ${logWithUser.log.price} جنيه',
-      platformChannelSpecifics,
-      payload: logWithUser.client!.id.toString(),
-    );
+  Future<void> _requestPermissions() async {
+    if (Platform.isAndroid) {
+      final status = await Permission.notification.request();
+      print('🔔 Notification permission status: $status');
+    }
   }
 
-  Future<NotificationDetails> _createStyledNotificationDetails(Log log, Client? client, String transactionTypeName, String amount) async {
-    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'assistant_transactions',
-      'معاملات المساعد',
-      channelDescription: 'إشعارات لمعاملات المساعد',
+  Future<void> showTransactionNotification(LogWidthUser logWithUser) async {
+    if (!_isInitialized) await initialize();
+
+    final Log log = logWithUser.log;
+    final Client? client = logWithUser.client;
+    final AppUser? user = logWithUser.user;
+
+    _badgeCount++;
+    await AppBadgePlus.updateBadge(_badgeCount);
+
+    final String userName = user?.name ?? 'غير محدد';
+    final String clientName = client?.name ?? 'غير محدد';
+    final String transactionType = log.transactionType.name();
+    final String amount = '${log.price} جنيه';
+    
+    // Create a unique notification ID based on log ID
+    final int notificationId = log.id.hashCode;
+
+    final AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'transactions_channel',
+      'Transactions',
+      channelDescription: 'Notifications for all transactions',
       importance: Importance.high,
       priority: Priority.high,
+      enableVibration: true,
+      playSound: true,
+      color: _getNotificationColor(log.transactionType),
+      largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
       styleInformation: BigTextStyleInformation(
-        'تمت معاملة ${transactionTypeName} لـ ${client?.name ?? "غير محدد"}\n'
-        'المبلغ: ${amount}\n'
+        'تمت معاملة بواسطة: $userName\n'
+        'نوع المعاملة: $transactionType\n'
+        'العميل: $clientName\n'
+        'المبلغ: $amount\n'
         'التاريخ: ${DateFormat.yMMMd('ar').add_jm().format(log.createdAt!)}',
         htmlFormatBigText: true,
-        contentTitle: '<b>معاملة جديدة من المساعد</b>',
+        contentTitle: '<b>معاملة جديدة</b>',
         htmlFormatContentTitle: true,
       ),
-      color: _getNotificationColor(log.transactionType),
     );
 
     final DarwinNotificationDetails iOSDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
-      subtitle: 'معاملة ${log.transactionType.name()}',
+      badgeNumber: _badgeCount,
+      threadIdentifier: 'transactions',
     );
 
-    return NotificationDetails(android: androidDetails, iOS: iOSDetails);
+    final NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iOSDetails,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      notificationId,
+      'معاملة جديدة',
+      'تمت معاملة $transactionType بمبلغ $amount',
+      platformDetails,
+      payload: client?.id.toString(),
+    );
+    
+    print('🔔 Notification sent for transaction ID: ${log.id}');
+  }
+
+  Future<void> showBasicNotification({
+    required String title,
+    required String body,
+    int? id,
+    String? payload,
+  }) async {
+    if (!_isInitialized) await initialize();
+
+    _badgeCount++;
+    await AppBadgePlus.updateBadge(_badgeCount);
+
+    final AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'transactions_channel',
+      'Transactions',
+      channelDescription: 'Notifications for all transactions',
+      importance: Importance.high,
+      priority: Priority.high,
+      enableVibration: true,
+      playSound: true,
+      styleInformation: BigTextStyleInformation(
+        body,
+        htmlFormatBigText: true,
+        contentTitle: '<b>$title</b>',
+        htmlFormatContentTitle: true,
+      ),
+    );
+    
+    final DarwinNotificationDetails iOSDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      badgeNumber: _badgeCount,
+      threadIdentifier: 'transactions',
+    );
+
+    final NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iOSDetails,
+    );
+
+    // Use timestamp to create unique notification IDs if not provided
+    final notificationId = id ?? DateTime.now().millisecondsSinceEpoch.hashCode;
+
+    await flutterLocalNotificationsPlugin.show(
+      notificationId,
+      title,
+      body,
+      platformDetails,
+      payload: payload,
+    );
+    
+    print('🔔 Basic notification sent: $title');
   }
 
   Color _getNotificationColor(TransactionType type) {
     switch (type) {
+      case TransactionType.deposit:
       case TransactionType.income:
         return Colors.green;
       case TransactionType.expense:
@@ -108,4 +227,31 @@ class TransactionNotificationService {
         return Colors.purple;
     }
   }
+
+  Future<void> clearBadge() async {
+    _badgeCount = 0;
+    await AppBadgePlus.updateBadge(0);
+  }
+  
+  Future<void> cancelNotification(int id) async {
+    await flutterLocalNotificationsPlugin.cancel(id);
+  }
+  
+  Future<void> cancelAllNotifications() async {
+    await flutterLocalNotificationsPlugin.cancelAll();
+    await clearBadge();
+  }
+}
+
+// This needs to be a top-level function
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse response) {
+  // Handle notification tap in background
+  if (response.payload != null) {
+    final clientId = int.tryParse(response.payload!);
+    if (clientId != null) {
+      TransactionNotificationService.pendingClientId = clientId;
+    }
+  }
+  print('Notification tapped in background: ${response.payload}');
 }

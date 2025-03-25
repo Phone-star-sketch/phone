@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:phone_system_app/components/money_display.dart';
 import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
+import 'package:phone_system_app/services/notification_service.dart';
 import 'package:phone_system_app/views/account_view.dart';
 import 'package:phone_system_app/views/pages/auth_raper.dart';
 import 'package:phone_system_app/views/pages/for_sale_number.dart';
@@ -21,9 +22,14 @@ import 'package:get/get.dart';
 import 'package:phone_system_app/views/pages/auth_wrapper.dart'; // Update import
 import 'package:phone_system_app/theme/welcome_theme_selector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-void main() async {
+@pragma('vm:entry-point')
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize notifications early
+  await TransactionNotificationService.instance.initialize();
 
   // Initialize theme controller
   await Get.putAsync<WelcomeThemeController>(() async {
