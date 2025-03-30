@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -12,7 +11,6 @@ import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/user.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
-import 'package:phone_system_app/services/notification_service.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_sheet.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -35,33 +33,15 @@ class LogWidthUser {
   }
 }
 
-class LogNotification {
-  final LogWidthUser logWithUser;
-  final bool isRead;
-  final DateTime createdAt;
-
-  LogNotification({
-    required this.logWithUser,
-    this.isRead = false,
-    required this.createdAt,
-  });
-
-  bool get isRecent => createdAt.isAfter(
-        DateTime.now().subtract(const Duration(minutes: 5)),
-      );
-}
-
 class FollowController extends GetxController {
   RxList<LogWidthUser> logs = <LogWidthUser>[].obs;
   RealtimeChannel? _subscription;
   RxString connectionStatus = 'غير متصل'.obs;
   RxString lastUpdateTime = ''.obs;
-  RxList<LogNotification> notifications = <LogNotification>[].obs;
 
   @override
   void onInit() async {
     super.onInit();
-    await TransactionNotificationService.instance.initialize();
     await _initializeData();
   }
 
@@ -80,43 +60,10 @@ class FollowController extends GetxController {
     }
   }
 
-  // Helper methods for log handling
-  Log _createLogFromPayload(Map<String, dynamic> record) {
-    return Log(
-      id: record['id'].toString(),
-      accountId: record['account_id'].toString(),
-      createdBy: record['created_by'].toString(),
-      price: double.parse(record['price'].toString()),
-      transactionType: TransactionType
-          .values[int.parse(record['transaction_type'].toString())],
-      createdAt: DateTime.parse(record['created_at'].toString()),
-      systemType: record['system_type'].toString(),
-      clientId: record['client_id']?.toString(),
-      phoneId: record['phone_id']?.toString(),
-    );
-  }
-
-  String _getClientNameFromLog(Log log) {
-    if (log.clientId == null) return "غير محدد";
-
-    final client = AccountClientInfo.to.clinets.firstWhereOrNull(
-      (element) => element.id == log.clientId,
-    );
-
-    return client?.name ?? "غير محدد";
-  }
-
-  String _getClientNameById(String clientId) {
-    final client = AccountClientInfo.to.clinets.firstWhereOrNull(
-      (element) => element.id == clientId,
-    );
-
-    return client?.name ?? "غير محدد";
-  }
-
   void _setupRealtime() {
     try {
       final client = Supabase.instance.client;
+
       connectionStatus.value = 'جاري الاتصال...';
 
       _subscription = client
@@ -133,112 +80,21 @@ class FollowController extends GetxController {
             callback: (payload) async {
               print(
                   '🔴 Realtime update received: ${payload.eventType} at ${DateTime.now()}');
+              print('🔴 Changed data: ${payload.newRecord}');
+
+              // Update timestamp
               lastUpdateTime.value = DateFormat.jm('ar').format(DateTime.now());
 
-              switch (payload.eventType) {
-                case PostgresChangeEvent.insert:
-                  if (payload.newRecord != null) {
-                    final log = _createLogFromPayload(payload.newRecord!);
-                    final logWithUser = LogWidthUser(log: log);
-                    final clientName = _getClientNameFromLog(log);
+              // Show update notification
+              Get.snackbar(
+                'تحديث مباشر',
+                'تم استلام تحديث جديد',
+                backgroundColor: Colors.green.withOpacity(0.1),
+                duration: Duration(seconds: 2),
+              );
 
-                    // Add to notifications list immediately
-                    notifications.insert(
-                      0,
-                      LogNotification(
-                        logWithUser: logWithUser,
-                        createdAt: log.createdAt!,
-                      ),
-                    );
-
-                    // Add to logs list immediately
-                    logs.insert(0, logWithUser);
-
-                    // Check if it's an assistant transaction and show notification
-                    final userName =
-                        logWithUser.user?.name?.toLowerCase() ?? '';
-                    if (userName.contains('المساعد')) {
-                      await TransactionNotificationService.instance
-                          .showTransactionNotification(logWithUser);
-                    }
-                  }
-                  break;
-
-                case PostgresChangeEvent.update:
-                  if (payload.oldRecord != null && payload.newRecord != null) {
-                    final log = _createLogFromPayload(payload.newRecord!);
-                    final logWithUser = LogWidthUser(log: log);
-                    final userName =
-                        logWithUser.user?.name?.toLowerCase() ?? '';
-
-                    if (userName.contains('المساعد')) {
-                      final clientName = _getClientNameFromLog(log);
-                      final oldPrice =
-                          double.parse(payload.oldRecord!['price'].toString());
-                      final newPrice =
-                          double.parse(payload.newRecord!['price'].toString());
-
-                      await TransactionNotificationService.instance
-                          .showBasicNotification(
-                        title: 'تحديث معاملة',
-                        body:
-                            'تم تعديل قيمة المعاملة للعميل $clientName من $oldPrice إلى $newPrice جنيه',
-                        id: log.id.hashCode,
-                        payload: log.clientId?.toString(),
-                      );
-                    }
-
-                    // Update logs list immediately
-                    final index =
-                        logs.indexWhere((item) => item.log.id == log.id);
-                    if (index != -1) {
-                      logs[index] = logWithUser;
-                    }
-                  }
-                  break;
-
-                case PostgresChangeEvent.delete:
-                  if (payload.oldRecord != null) {
-                    final logId = payload.oldRecord!['id'].toString();
-                    final clientId =
-                        payload.oldRecord!['client_id']?.toString();
-
-                    // Remove from logs list immediately
-                    logs.removeWhere((item) => item.log.id == logId);
-                    notifications.removeWhere(
-                        (item) => item.logWithUser.log.id == logId);
-
-                    final userName = logs
-                            .firstWhereOrNull((item) => item.log.id == logId)
-                            ?.user
-                            ?.name
-                            ?.toLowerCase() ??
-                        '';
-
-                    if (userName.contains('المساعد')) {
-                      final clientName = clientId != null
-                          ? _getClientNameById(clientId)
-                          : "غير محدد";
-                      final deletedPrice =
-                          double.parse(payload.oldRecord!['price'].toString());
-
-                      await TransactionNotificationService.instance
-                          .showBasicNotification(
-                        title: 'حذف معاملة',
-                        body:
-                            'تم حذف معاملة للعميل $clientName بقيمة $deletedPrice جنيه',
-                        id: DateTime.now().millisecondsSinceEpoch,
-                        payload: clientId,
-                      );
-                    }
-                  }
-                  break;
-                case PostgresChangeEvent.all:
-                  break;
-              }
-
-              // Fetch updated clients data in background
               await AccountClientInfo.to.fetchClients();
+              await updateLogs();
             },
           )
           .subscribe((status, error) {
@@ -279,23 +135,7 @@ class FollowController extends GetxController {
             (e) => LogWidthUser(log: e),
           )
           .toList();
-
-      // Create notifications for new logs
-      notifications.value = logs
-          .map((log) => LogNotification(
-                logWithUser: log,
-                createdAt: log.log.createdAt!,
-              ))
-          .toList();
-
-      // Sort notifications by date
-      notifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
       print("Real-time update: Found ${logs.length} logs");
-
-      // Process notifications for new transactions
-      await processNewTransactionsForNotifications();
-
       Loaders.to.followLoading.value = false;
     } catch (e) {
       print("Real-time update error: $e");
@@ -304,46 +144,30 @@ class FollowController extends GetxController {
     }
   }
 
-  // Add notification processing method
-  Future<void> processNewTransactionsForNotifications() async {
-    await TransactionNotificationService.instance.initialize();
-
-    final recentLogs = logs.where((logWithUser) {
-      final isRecent = logWithUser.log.createdAt
-              ?.isAfter(DateTime.now().subtract(const Duration(minutes: 5))) ??
-          false;
-      final userName = logWithUser.user?.name?.toLowerCase() ?? '';
-      final isAssistant = userName.contains('المساعد');
-      return isRecent && isAssistant;
-    }).toList();
-
-    for (final logWithUser in recentLogs) {
-      await TransactionNotificationService.instance
-          .showTransactionNotification(logWithUser);
-    }
-  }
-
   Future<void> insertDummyLog() async {
-    final dummyLog = Log(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      accountId: AccountClientInfo.to.currentAccount.id,
-      createdBy: SupabaseAuthentication.myUser!.id,
-      price: Random().nextInt(1000).toDouble(),
-      transactionType: TransactionType.deposit,
-      createdAt: DateTime.now(),
-      systemType: '0',
-      clientId: AccountClientInfo.to.clinets.first.id,
-      phoneId: '0',
-    );
+    try {
+      final firstClient =
+          AccountClientInfo.to.clinets.firstWhereOrNull((c) => c.id != null);
 
-    await BackendServices.instance.logRepository.create(dummyLog);
-    await updateLogs();
-  }
+      if (firstClient == null) {
+        Get.snackbar('خطأ', 'لا يوجد عملاء متاحين لإجراء الاختبار');
+        return;
+      }
 
-  // Add function to clear all notifications
-  Future<void> clearAllNotifications() async {
-    await TransactionNotificationService.instance.cancelAllNotifications();
-    notifications.clear();
+      final supabase = Supabase.instance.client;
+
+      Get.snackbar(
+        'اختبار',
+        'تم إضافة معاملة تجريبية',
+        backgroundColor: Colors.blue.withOpacity(0.1),
+      );
+
+      // Refresh logs after insertion
+      await updateLogs();
+    } catch (e) {
+      print('🔴 Error inserting dummy log: $e');
+      Get.snackbar('خطأ', 'فشل في إضافة البيانات التجريبية: $e');
+    }
   }
 }
 
@@ -356,29 +180,6 @@ class Follow extends StatelessWidget {
       length: 2,
       child: Obx(() {
         final list = controller.logs;
-        // Sort logs by creation date, most recent first
-        list.sort((a, b) => b.log.createdAt!.compareTo(a.log.createdAt!));
-
-        // Count unread notifications for each tab
-        final managerUnread = list.where((log) {
-          final userName = log.user?.name?.toLowerCase() ?? '';
-          final isManager =
-              userName.contains('كابتن') || userName.contains('اسلام النني');
-          final isRecent = log.log.createdAt?.isAfter(
-                  DateTime.now().subtract(const Duration(minutes: 5))) ??
-              false;
-          return isManager && isRecent;
-        }).length;
-
-        final assistantUnread = list.where((log) {
-          final userName = log.user?.name?.toLowerCase() ?? '';
-          final isAssistant = userName.contains('المساعد');
-          final isRecent = log.log.createdAt?.isAfter(
-                  DateTime.now().subtract(const Duration(minutes: 5))) ??
-              false;
-          return isAssistant && isRecent;
-        }).length;
-
         return Column(
           children: [
             Container(
@@ -445,58 +246,8 @@ class Follow extends StatelessWidget {
             ),
             TabBar(
               tabs: [
-                Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('المدير'),
-                      if (managerUnread > 0) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '$managerUnread',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('المساعد'),
-                      if (assistantUnread > 0) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '$assistantUnread',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                Tab(text: 'المدير'),
+                Tab(text: 'المساعد'),
               ],
               labelColor: Colors.blue,
               unselectedLabelColor: Colors.grey,
@@ -528,101 +279,60 @@ class Follow extends StatelessWidget {
   }
 
   Widget _buildManagerView(List<LogWidthUser> list, BuildContext context) {
-    final managerNotifications = controller.notifications.where((notification) {
-      final userName = notification.logWithUser.user?.name?.toLowerCase() ?? '';
+    // Filter logs for manager (كابتن/اسلام النني)
+    final managerLogs = list.where((logWithUser) {
+      final userName = logWithUser.user?.name?.toLowerCase() ?? '';
       return userName.contains('كابتن') || userName.contains('اسلام النني');
     }).toList();
 
-    return NotificationListView(
-      notifications: managerNotifications,
-      onTapNotification: (notification) async {
-        if (notification.logWithUser.client != null) {
-          final client = notification.logWithUser.client;
-          final controller = Get.put(ClientBottomSheetController());
-          controller.setClient(client!);
-          await showClientInfoSheet(context, client);
-          Get.delete<ClientBottomSheetController>(force: true);
-        }
+    return ListView.separated(
+      separatorBuilder: (context, index) => const Divider(),
+      itemCount: managerLogs.length,
+      itemBuilder: (context, index) {
+        return InkWell(
+          onTap: (managerLogs[index].client != null)
+              ? () async {
+                  final client = managerLogs[index].client;
+                  final controller = Get.put(ClientBottomSheetController());
+                  controller.setClient(client!);
+                  await showClientInfoSheet(context, client);
+                  Get.delete<ClientBottomSheetController>(force: true);
+                }
+              : null,
+          child: LogWithUserCardWidget(
+            logWidthUser: managerLogs[index],
+            showAdminControls: true,
+          ),
+        );
       },
-      showAdminControls: true,
     );
   }
 
   Widget _buildAssistantView(List<LogWidthUser> list, BuildContext context) {
-    final assistantNotifications =
-        controller.notifications.where((notification) {
-      final userName = notification.logWithUser.user?.name?.toLowerCase() ?? '';
+    // Filter logs for assistant (المساعد)
+    final assistantLogs = list.where((logWithUser) {
+      final userName = logWithUser.user?.name?.toLowerCase() ?? '';
       return userName.contains('المساعد');
     }).toList();
 
-    return NotificationListView(
-      notifications: assistantNotifications,
-      onTapNotification: (notification) async {
-        if (notification.logWithUser.client != null) {
-          final client = notification.logWithUser.client;
-          final controller = Get.put(ClientBottomSheetController());
-          controller.setClient(client!);
-          await showClientInfoSheet(context, client);
-          Get.delete<ClientBottomSheetController>(force: true);
-        }
-      },
-      showAdminControls: false,
-    );
-  }
-}
-
-class NotificationListView extends StatelessWidget {
-  final List<LogNotification> notifications;
-  final Function(LogNotification) onTapNotification;
-  final bool showAdminControls;
-
-  const NotificationListView({
-    Key? key,
-    required this.notifications,
-    required this.onTapNotification,
-    this.showAdminControls = false,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
     return ListView.separated(
-      itemCount: notifications.length,
       separatorBuilder: (context, index) => const Divider(),
+      itemCount: assistantLogs.length,
       itemBuilder: (context, index) {
-        final notification = notifications[index];
-        return Stack(
-          children: [
-            Card(
-              margin: EdgeInsets.all(8),
-              child: InkWell(
-                onTap: () => onTapNotification(notification),
-                child: LogWithUserCardWidget(
-                  logWidthUser: notification.logWithUser,
-                  showAdminControls: showAdminControls,
-                ),
-              ),
-            ),
-            if (notification.isRecent)
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'جديد',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-          ],
+        return InkWell(
+          onTap: (assistantLogs[index].client != null)
+              ? () async {
+                  final client = assistantLogs[index].client;
+                  final controller = Get.put(ClientBottomSheetController());
+                  controller.setClient(client!);
+                  await showClientInfoSheet(context, client);
+                  Get.delete<ClientBottomSheetController>(force: true);
+                }
+              : null,
+          child: LogWithUserCardWidget(
+            logWidthUser: assistantLogs[index],
+            showAdminControls: false,
+          ),
         );
       },
     );
