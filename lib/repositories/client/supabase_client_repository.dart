@@ -311,4 +311,35 @@ class SupabaseClientRepository extends ClientRepository
       return [];
     }
   }
+
+  Future<Client?> getClient(String clientId) async {
+    try {
+      final response = await supabase
+          .from('clients')
+          .select('*, numbers(*), systems(*)')
+          .eq('id', clientId)
+          .single();
+
+      if (response != null) {
+        return Client.fromJson(response);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching client: $e');
+      return null;
+    }
+  }
+
+  Future<void> updateClient(Client client) async {
+    try {
+      await supabase.from('clients').update({
+        'name': client.name,
+        'expire_date': client.expireDate?.toIso8601String(),
+        'total_cash': client.totalCash,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', client.id);
+    } catch (e) {
+      throw Exception('Failed to update client: $e');
+    }
+  }
 }

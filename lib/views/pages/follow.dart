@@ -142,6 +142,7 @@ class FollowController extends GetxController {
                     final logWithUser = LogWidthUser(log: log);
                     final clientName = _getClientNameFromLog(log);
 
+                    // Add to notifications list immediately
                     notifications.insert(
                       0,
                       LogNotification(
@@ -150,66 +151,94 @@ class FollowController extends GetxController {
                       ),
                     );
 
-                    await TransactionNotificationService.instance
-                        .showBasicNotification(
-                      title: 'معاملة جديدة - ${log.transactionType.name()}',
-                      body:
-                          'تم إضافة معاملة جديدة بقيمة ${log.price} جنيه للعميل $clientName',
-                      id: log.id.hashCode,
-                      payload: log.clientId?.toString(),
-                    );
-
+                    // Add to logs list immediately
                     logs.insert(0, logWithUser);
+
+                    // Check if it's an assistant transaction and show notification
+                    final userName =
+                        logWithUser.user?.name?.toLowerCase() ?? '';
+                    if (userName.contains('المساعد')) {
+                      await TransactionNotificationService.instance
+                          .showTransactionNotification(logWithUser);
+                    }
                   }
                   break;
 
                 case PostgresChangeEvent.update:
                   if (payload.oldRecord != null && payload.newRecord != null) {
                     final log = _createLogFromPayload(payload.newRecord!);
-                    final clientName = _getClientNameFromLog(log);
-                    final oldPrice =
-                        double.parse(payload.oldRecord!['price'].toString());
-                    final newPrice =
-                        double.parse(payload.newRecord!['price'].toString());
+                    final logWithUser = LogWidthUser(log: log);
+                    final userName =
+                        logWithUser.user?.name?.toLowerCase() ?? '';
 
-                    await TransactionNotificationService.instance
-                        .showBasicNotification(
-                      title: 'تحديث معاملة',
-                      body:
-                          'تم تعديل قيمة المعاملة للعميل $clientName من $oldPrice إلى $newPrice جنيه',
-                      id: log.id.hashCode,
-                      payload: log.clientId?.toString(),
-                    );
+                    if (userName.contains('المساعد')) {
+                      final clientName = _getClientNameFromLog(log);
+                      final oldPrice =
+                          double.parse(payload.oldRecord!['price'].toString());
+                      final newPrice =
+                          double.parse(payload.newRecord!['price'].toString());
+
+                      await TransactionNotificationService.instance
+                          .showBasicNotification(
+                        title: 'تحديث معاملة',
+                        body:
+                            'تم تعديل قيمة المعاملة للعميل $clientName من $oldPrice إلى $newPrice جنيه',
+                        id: log.id.hashCode,
+                        payload: log.clientId?.toString(),
+                      );
+                    }
+
+                    // Update logs list immediately
+                    final index =
+                        logs.indexWhere((item) => item.log.id == log.id);
+                    if (index != -1) {
+                      logs[index] = logWithUser;
+                    }
                   }
                   break;
 
                 case PostgresChangeEvent.delete:
                   if (payload.oldRecord != null) {
+                    final logId = payload.oldRecord!['id'].toString();
                     final clientId =
                         payload.oldRecord!['client_id']?.toString();
-                    final clientName = clientId != null
-                        ? _getClientNameById(clientId)
-                        : "غير محدد";
-                    final deletedPrice =
-                        double.parse(payload.oldRecord!['price'].toString());
 
-                    await TransactionNotificationService.instance
-                        .showBasicNotification(
-                      title: 'حذف معاملة',
-                      body:
-                          'تم حذف معاملة للعميل $clientName بقيمة $deletedPrice جنيه',
-                      id: DateTime.now().millisecondsSinceEpoch,
-                      payload: clientId,
-                    );
+                    // Remove from logs list immediately
+                    logs.removeWhere((item) => item.log.id == logId);
+                    notifications.removeWhere(
+                        (item) => item.logWithUser.log.id == logId);
+
+                    final userName = logs
+                            .firstWhereOrNull((item) => item.log.id == logId)
+                            ?.user
+                            ?.name
+                            ?.toLowerCase() ??
+                        '';
+
+                    if (userName.contains('المساعد')) {
+                      final clientName = clientId != null
+                          ? _getClientNameById(clientId)
+                          : "غير محدد";
+                      final deletedPrice =
+                          double.parse(payload.oldRecord!['price'].toString());
+
+                      await TransactionNotificationService.instance
+                          .showBasicNotification(
+                        title: 'حذف معاملة',
+                        body:
+                            'تم حذف معاملة للعميل $clientName بقيمة $deletedPrice جنيه',
+                        id: DateTime.now().millisecondsSinceEpoch,
+                        payload: clientId,
+                      );
+                    }
                   }
                   break;
                 case PostgresChangeEvent.all:
                   break;
               }
 
-              // Update data in background
+              // Fetch updated clients data in background
               await AccountClientInfo.to.fetchClients();
-              await updateLogs();
             },
           )
           .subscribe((status, error) {
@@ -283,7 +312,9 @@ class FollowController extends GetxController {
       final isRecent = logWithUser.log.createdAt
               ?.isAfter(DateTime.now().subtract(const Duration(minutes: 5))) ??
           false;
-      return isRecent;
+      final userName = logWithUser.user?.name?.toLowerCase() ?? '';
+      final isAssistant = userName.contains('المساعد');
+      return isRecent && isAssistant;
     }).toList();
 
     for (final logWithUser in recentLogs) {

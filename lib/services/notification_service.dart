@@ -97,6 +97,12 @@ class TransactionNotificationService {
   Future<void> showTransactionNotification(LogWidthUser logWithUser) async {
     if (!_isInitialized) await initialize();
 
+    // Check if the transaction is from المساعد
+    final String userName = logWithUser.user?.name?.toLowerCase() ?? '';
+    if (!userName.contains('المساعد')) {
+      return; // Skip notifications for non-assistant transactions
+    }
+
     final Log log = logWithUser.log;
     final Client? client = logWithUser.client;
     final AppUser? user = logWithUser.user;
@@ -104,11 +110,10 @@ class TransactionNotificationService {
     _badgeCount++;
     await AppBadgePlus.updateBadge(_badgeCount);
 
-    final String userName = user?.name ?? 'غير محدد';
     final String clientName = client?.name ?? 'غير محدد';
     final String transactionType = log.transactionType.name();
     final String amount = '${log.price} جنيه';
-    
+
     // Create a unique notification ID based on log ID
     final int notificationId = log.id.hashCode;
 
@@ -155,7 +160,7 @@ class TransactionNotificationService {
       platformDetails,
       payload: client?.id.toString(),
     );
-    
+
     print('🔔 Notification sent for transaction ID: ${log.id}');
   }
 
@@ -186,7 +191,7 @@ class TransactionNotificationService {
         htmlFormatContentTitle: true,
       ),
     );
-    
+
     final DarwinNotificationDetails iOSDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
@@ -210,7 +215,7 @@ class TransactionNotificationService {
       platformDetails,
       payload: payload,
     );
-    
+
     print('🔔 Basic notification sent: $title');
   }
 
@@ -232,11 +237,11 @@ class TransactionNotificationService {
     _badgeCount = 0;
     await AppBadgePlus.updateBadge(0);
   }
-  
+
   Future<void> cancelNotification(int id) async {
     await flutterLocalNotificationsPlugin.cancel(id);
   }
-  
+
   Future<void> cancelAllNotifications() async {
     await flutterLocalNotificationsPlugin.cancelAll();
     await clearBadge();
