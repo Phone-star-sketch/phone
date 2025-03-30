@@ -155,10 +155,10 @@ class PrintClientsReceipts extends StatelessWidget {
 
     try {
       final logo = await getImage("assets/images/rece_bg.jpg");
-      final backgroundImage =
-          await getImage("assets/images/rece_bg.jpg"); // Changed this line
+      final backgroundImage = await getImage("assets/images/rece_bg.jpg");
       final vCashIcon = await getImage("assets/images/v_cash_icon.png");
       final instaPayIcon = await getImage("assets/images/instapay_icon.png");
+      final whatsappIcon = await getImage("assets/images/whatsapp_icon.png");
 
       final cairoRegular = await PdfGoogleFonts.cairoRegular();
       final cairoBold = await PdfGoogleFonts.cairoBold();
@@ -185,7 +185,8 @@ class PrintClientsReceipts extends StatelessWidget {
                     pw.Divider(color: PdfColors.red),
                     pw.Expanded(
                         child: pw.Container()), // Add this to push footer down
-                    buildFooter(vCashIcon, instaPayIcon, cairoBold),
+                    buildFooter(
+                        vCashIcon, instaPayIcon, whatsappIcon, cairoBold),
                   ],
                 ),
               ],
@@ -243,7 +244,8 @@ class PrintClientsReceipts extends StatelessWidget {
                           pw.Expanded(
                               child: pw
                                   .Container()), // Add this to push footer down
-                          buildFooter(vCashIcon, instaPayIcon, cairoBold),
+                          buildFooter(
+                              vCashIcon, instaPayIcon, whatsappIcon, cairoBold),
                         ],
                       ),
                     ],
@@ -289,7 +291,7 @@ class PrintClientsReceipts extends StatelessWidget {
         boldFont,
         boldFont,
         regularFont,
-        'رقم المحمول',
+        'رقم الهاتف',
         'المطلوب سداده',
         totalPrice,
         number,
@@ -308,7 +310,7 @@ class PrintClientsReceipts extends StatelessWidget {
           },
           children: [
             buildTableHead(
-              ["الوقت", "التاريخ", "المبلغ", "نوع التعامل"],
+              ["الوقت", "تاريخ تجديد الباقة", "المبلغ", "نوع الباقة"],
               boldFont,
               12,
             ),
@@ -472,7 +474,7 @@ class PrintClientsReceipts extends StatelessWidget {
 
     return [
       for (final w in buildTableTitle(tableTitle, titleFont, fieldFont,
-          valueFont, 'رقم المحمول', 'المطلوب سداده', totalPrice, number))
+          valueFont, 'رقم الهاتف', 'المطلوب سداده', totalPrice, number))
         w,
       pw.Align(
         alignment: pw.Alignment.center,
@@ -589,8 +591,8 @@ class PrintClientsReceipts extends StatelessWidget {
     );
   }
 
-  pw.Widget buildFooter(
-      Uint8List vCashIcon, Uint8List instaPayIcon, pw.Font font) {
+  pw.Widget buildFooter(Uint8List vCashIcon, Uint8List instaPayIcon,
+      Uint8List whatsappIcon, pw.Font font) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(10),
       margin: const pw.EdgeInsets.only(top: 60),
@@ -625,6 +627,20 @@ class PrintClientsReceipts extends StatelessWidget {
                   makeText("01017174149", font, 14.0, PdfColors.purple900),
                 ],
               ),
+            ],
+          ),
+          pw.SizedBox(height: 15),
+          pw.Divider(color: PdfColors.grey300),
+          pw.SizedBox(height: 10),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              pw.Image(pw.MemoryImage(whatsappIcon), width: 20),
+              makeText("01017174149", font, 14.0, PdfColors.red900),
+              pw.SizedBox(width: 10),
+              
+              pw.SizedBox(width: 5),
+              makeText("للاستفسار: ", font, 14.0, PdfColors.blue900),
             ],
           ),
         ],

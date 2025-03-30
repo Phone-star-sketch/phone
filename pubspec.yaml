@@ -86,3 +86,8 @@ flutter:
     - assets/images/owner.png
     - assets/images/superman.png
     - assets/images/logo.png
+    - assets/images/rece_bg.jpg
+    - assets/images/v_cash_icon.png
+    - assets/images/instapay_icon.png
+    - assets/images/whatsapp_icon.png  # Changed from WhatsApp_icon.png to whatsapp_icon.png
+    

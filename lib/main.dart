@@ -7,6 +7,7 @@ import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:phone_system_app/components/money_display.dart';
 import 'package:phone_system_app/models/log.dart';
+import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/services/notification_service.dart';
 import 'package:phone_system_app/views/account_view.dart';
@@ -28,8 +29,10 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize notifications early
-  await TransactionNotificationService.instance.initialize();
+  // Initialize notifications only for mobile platforms
+  if (!kIsWeb) {
+    await TransactionNotificationService.instance.initialize();
+  }
 
   // Initialize theme controller
   await Get.putAsync<WelcomeThemeController>(() async {
@@ -51,6 +54,8 @@ Future<void> main() async {
 
   // Initialize services
   await BackendServices.instance.initialize();
+
+  Get.put(SupabaseSystemRepository());
 
   runApp(MainApp());
 }

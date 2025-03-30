@@ -67,6 +67,21 @@ class ClientBottomSheetController extends GetxController {
     );
   }
 
+  void updateClient() {
+    final currentClient = getClient();
+    if (currentClient != null) {
+      // Refresh client data
+      BackendServices.instance.clientRepository
+          .getClient(currentClient.id.toString())
+          .then((updatedClient) {
+        if (updatedClient != null) {
+          _client.value = updatedClient;
+          update();
+        }
+      });
+    }
+  }
+
   Client getClient() {
     return _client.value;
   }

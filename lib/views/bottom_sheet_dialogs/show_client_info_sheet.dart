@@ -14,6 +14,7 @@ import 'package:phone_system_app/controllers/client_bottom_sheet_controller.dart
 import 'package:phone_system_app/controllers/money_display_loading.dart';
 import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/models/log.dart';
+import 'package:phone_system_app/models/system.dart';
 import 'package:phone_system_app/models/system_type.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
@@ -66,6 +67,62 @@ Future<void> showDangerDialog(
       ),
       title: title,
       content: Center(child: Text(message)));
+}
+
+Future<void> showEditSystemDialog(System system) async {
+  final TextEditingController nameController =
+      TextEditingController(text: system.name);
+
+  await Get.dialog(
+    AlertDialog(
+      title: const Text('تعديل النظام'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('النظام: ${system.type!.name}'),
+          const SizedBox(height: 16),
+          TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              labelText: 'الملاحظات',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Get.back(),
+          child: const Text('إلغاء'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            try {
+              system.name = nameController.text;
+              await BackendServices.instance.systemRepository.update(system);
+              Get.back();
+              Get.snackbar(
+                'نجاح',
+                'تم تحديث الملاحظات بنجاح',
+                snackPosition: SnackPosition.BOTTOM,
+              );
+              // Update UI in both views
+              Get.find<ClientBottomSheetController>().updateClient();
+              Get.find<AccountClientInfo>().updateCurrnetClinets();
+            } catch (e) {
+              Get.snackbar(
+                'خطأ',
+                'حدث خطأ أثناء تحديث الملاحظات',
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            }
+          },
+          child: const Text('حفظ', style: TextStyle(color: Colors.black)),
+        ),
+      ],
+    ),
+  );
 }
 
 class ClientDataWidget extends StatelessWidget {
@@ -491,6 +548,13 @@ class ClientDataWidget extends StatelessWidget {
                                                         style: const TextStyle(
                                                           fontSize: 14,
                                                         ),
+                                                      ),
+                                                      IconButton(
+                                                        icon: const Icon(
+                                                            Icons.edit),
+                                                        onPressed: () =>
+                                                            showEditSystemDialog(
+                                                                systems[index]),
                                                       ),
                                                     ],
                                                   )),

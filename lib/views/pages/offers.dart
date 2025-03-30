@@ -3,14 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/models/client.dart';
+import 'package:phone_system_app/models/system.dart';
 import 'package:phone_system_app/models/system_type.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
+import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_sheet.dart';
 import 'package:phone_system_app/views/client_list_view.dart';
 import 'package:phone_system_app/views/pages/all_clinets_page.dart';
 import 'package:phone_system_app/views/pages/dues_management.dart';
 import 'package:intl/intl.dart';
 import 'package:phone_system_app/utils/arabic_normalizer.dart';
+import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
 
 class OfferManagement extends StatelessWidget {
   final controller = Get.find<AccountClientInfo>();
@@ -279,7 +282,7 @@ class ExpiredSystemsPage extends StatelessWidget {
                             itemCount: controller.filteredClients.length,
                             itemBuilder: (context, index) {
                               final client = controller.filteredClients[index];
-                              return _buildClientCard(client);
+                              return _buildClientCard(client, context);
                             },
                           )),
                     ),
@@ -293,7 +296,8 @@ class ExpiredSystemsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildClientCard(Client client) {
+  Widget _buildClientCard(Client client, BuildContext context) {
+    // Add BuildContext parameter here
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
@@ -334,9 +338,47 @@ class ExpiredSystemsPage extends StatelessWidget {
                 'عدد الأنظمة المنتهية: ${client.numbers!.fold<int>(0, (sum, number) => sum + number.getExpiredSystems().length)}',
                 style: TextStyle(color: Colors.black),
               ),
-              Text(
-                'تاريخ انتهاء العرض: ${(client.expireDate != null && client.expireDate!.isBefore(DateTime.now())) ? fullExpressionArabicDate(client.expireDate!) : "لا يوجد"}',
-                style: TextStyle(color: Colors.black),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'تاريخ المتابعة: ${(client.expireDate != null && client.expireDate!.isBefore(DateTime.now())) ? fullExpressionArabicDate(client.expireDate!) : "لا يوجد"}',
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.edit_calendar, size: 20),
+                    onPressed: () async {
+                      final DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: client.expireDate ?? DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        try {
+                          // Update in database
+                          await BackendServices.instance.clientRepository
+                              .updateClient(
+                                  client.copyWith(expireDate: picked));
+                          // Refresh the client list
+                          await controller.fetchClients();
+                          Get.snackbar(
+                            'تم التحديث',
+                            'تم تحديث تاريخ المتابعة بنجاح',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                        } catch (e) {
+                          Get.snackbar(
+                            'خطأ',
+                            'حدث خطأ أثناء تحديث التاريخ',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
               ),
             ],
           ),
@@ -431,13 +473,23 @@ class ExpiredSystemsPage extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(15),
                                 border: Border.all(color: Colors.grey.shade300),
                               ),
-                              child: Text(
-                                system.type!.name!,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black87,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    system.type!.name!,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.edit, size: 20),
+                                    onPressed: () =>
+                                        _showEditSystemDialog(system),
+                                  ),
+                                ],
                               ),
                             );
                           }).toList(),
@@ -453,21 +505,8 @@ class ExpiredSystemsPage extends StatelessWidget {
       ),
     );
   }
-}
 
-String normalizeArabicText(String text) {
-  // Remove all special characters and spaces
-  text = text.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(' ', '');
-
-  // Normalize Arabic characters
-  text = text
-      .replaceAll('أ', 'ا')
-      .replaceAll('إ', 'ا')
-      .replaceAll('آ', 'ا')
-      .replaceAll('ة', 'ه')
-      .replaceAll('ى', 'ي')
-      .replaceAll('ؤ', 'و')
-      .replaceAll('ئ', 'ي');
-
-  return text.trim().toLowerCase();
+  void _showEditSystemDialog(System system) {
+    showEditSystemDialog(system); // Use the shared dialog function
+  }
 }

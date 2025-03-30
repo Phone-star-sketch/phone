@@ -90,6 +90,24 @@ class Client extends Model {
     };
   }
 
+  Client copyWith({
+    String? id,
+    String? name,
+    DateTime? expireDate,
+    List<PhoneNumber>? numbers,
+    double? totalCash,
+    String? accountId,
+  }) {
+    return Client(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      expireDate: expireDate ?? this.expireDate,
+      numbers: numbers ?? this.numbers,
+      totalCash: totalCash ?? this.totalCash,
+      accountId: accountId ?? this.accountId,
+    );
+  }
+
   static Future<Map<String, double>> getAccountStats() async {
     final response = await supabase
         .from('clients')

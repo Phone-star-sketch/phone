@@ -25,4 +25,6 @@ abstract class ClientRepository {
   Future<void> paySystemsBills(Client client, int month, int year);
 
   Future<List<Map<String, dynamic>>> getAllClientsData();
+
+  Future<Client?> getClient(String clientId);
 }
