@@ -6,6 +6,7 @@ import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/models/phone_number.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:intl/intl.dart';
 
 final accountController = Get.find<AccountClientInfo>();
 
@@ -21,6 +22,7 @@ Future clientEditModelSheet(
   final nationalIdField = TextEditingController();
   final addressField = TextEditingController();
   final phoneNumberField = TextEditingController(text: initialPhoneNumber);
+  DateTime selectedDate = client?.createdAt ?? DateTime.now();
 
   // Pre-populate fields if client exists
   if (client != null) {
@@ -32,12 +34,37 @@ Future clientEditModelSheet(
     }
   }
 
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Colors.blue,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != selectedDate) {
+      selectedDate = picked;
+    }
+  }
+
   Future saveClientData() async {
     try {
       if (client == null) {
         final newClient = Client(
           id: -1,
-          createdAt: DateTime.now(),
+          createdAt: selectedDate,
           totalCash: 0,
           name: nameField.text,
           nationalId: nationalIdField.text,
@@ -48,11 +75,10 @@ Future clientEditModelSheet(
         final clientId =
             await BackendServices.instance.clientRepository.create(newClient);
 
-        // Add phone number to the client - using the exact input value
         final phone = PhoneNumber(
           id: -1,
-          createdAt: DateTime.now(),
-          phoneNumber: phoneNumberField.text,  // Using the exact entered phone number
+          createdAt: selectedDate,
+          phoneNumber: phoneNumberField.text,
           clientId: clientId,
           systems: [],
         );
@@ -61,10 +87,9 @@ Future clientEditModelSheet(
 
         print('Finished creating new client');
       } else {
-        // First update the client basic info
         final updatedClient = Client(
           id: client.id,
-          createdAt: client.createdAt,
+          createdAt: selectedDate,
           totalCash: client.totalCash,
           name: nameField.text,
           nationalId: nationalIdField.text,
@@ -73,27 +98,24 @@ Future clientEditModelSheet(
         );
         await BackendServices.instance.clientRepository.update(updatedClient);
 
-        // Then handle phone number update
         final hasExistingPhone = client.numbers?.isNotEmpty ?? false;
 
         if (hasExistingPhone) {
           final existingPhone = client.numbers![0];
           final updatedPhone = PhoneNumber(
             id: existingPhone.id,
-            createdAt: existingPhone.createdAt,
-            phoneNumber: phoneNumberField.text,  // Using the exact entered phone number
+            createdAt: selectedDate,
+            phoneNumber: phoneNumberField.text,
             clientId: client.id,
             systems: existingPhone.systems ?? [],
           );
 
-          // Update the existing phone number
           await BackendServices.instance.phoneRepository.update(updatedPhone);
         } else {
-          // Create a new phone number if none exists
           final newPhone = PhoneNumber(
             id: -1,
-            createdAt: DateTime.now(),
-            phoneNumber: phoneNumberField.text,  // Using the exact entered phone number
+            createdAt: selectedDate,
+            phoneNumber: phoneNumberField.text,
             clientId: client.id,
             systems: [],
           );
@@ -164,15 +186,18 @@ Future clientEditModelSheet(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'بيانات العميل',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: const Text(
+                      'بيانات العميل',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: nameField,
                     cursorWidth: 2,
@@ -211,12 +236,9 @@ Future clientEditModelSheet(
                       if (value == null || value.isEmpty) {
                         return 'رقم الهاتف مطلوب';
                       }
-                      // Removing the 010 prefix check and length constraint
-                      // You can add other validation if needed
                       return null;
                     },
                     keyboardType: TextInputType.phone,
-                    // Removing maxLength to allow different phone number formats
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.phone, color: Colors.blue),
                       labelText: 'رقم الهاتف',
@@ -273,6 +295,32 @@ Future clientEditModelSheet(
                       ),
                       filled: true,
                       fillColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: () => _selectDate(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today, color: Colors.blue),
+                          const SizedBox(width: 12),
+                          Text(
+                            'تاريخ الإنشاء: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
