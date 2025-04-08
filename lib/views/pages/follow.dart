@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
@@ -15,6 +15,7 @@ import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_sheet.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:phone_system_app/services/transaction_notification_service.dart';
 
 class LogWidthUser {
   Log log;
@@ -55,6 +56,11 @@ class FollowController extends GetxController {
 
       // Finally setup real-time
       _setupRealtime();
+
+      // Initialize notification service if not already initialized
+      if (!kIsWeb) {
+        await TransactionNotificationService.instance.initialize();
+      }
     } catch (e) {
       print('Error initializing data: $e');
     }
@@ -85,7 +91,27 @@ class FollowController extends GetxController {
               // Update timestamp
               lastUpdateTime.value = DateFormat.jm('ar').format(DateTime.now());
 
-              // Show update notification
+              // Get the new log data
+              final newLog = Log.fromJson(payload.newRecord);
+
+              // Create LogWidthUser to check if it's from assistant
+              final logWithUser = LogWidthUser(log: newLog);
+
+              // Check if the transaction is from المساعد and current user is المدير
+              final String userName =
+                  logWithUser.user?.name?.toLowerCase() ?? '';
+              final bool isManager = SupabaseAuthentication.myUser?.role ==
+                      UserRoles.admin.index ||
+                  SupabaseAuthentication.myUser?.role ==
+                      UserRoles.manager.index;
+
+              if (userName.contains('المساعد') && isManager) {
+                // Show notification for assistant transactions only to manager
+                await TransactionNotificationService.instance
+                    .showTransactionNotification(logWithUser);
+              }
+
+              // Show update notification in app
               Get.snackbar(
                 'تحديث مباشر',
                 'تم استلام تحديث جديد',

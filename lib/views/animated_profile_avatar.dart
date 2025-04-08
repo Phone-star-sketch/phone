@@ -4,11 +4,13 @@ import 'dart:math' as math;
 class AnimatedProfileAvatar extends StatefulWidget {
   final String imagePath;
   final double size;
+  final bool isNetworkImage;
 
   const AnimatedProfileAvatar({
     Key? key,
     required this.imagePath,
     this.size = 100,
+    this.isNetworkImage = false,
   }) : super(key: key);
 
   @override
@@ -165,10 +167,25 @@ class _AnimatedProfileAvatarState extends State<AnimatedProfileAvatar>
                         padding: EdgeInsets.all(4),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(widget.size),
-                          child: Image.asset(
-                            widget.imagePath,
-                            fit: BoxFit.cover,
-                          ),
+                          child: widget.isNetworkImage
+                              ? Image.network(
+                                  widget.imagePath,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    print(
+                                        'Error loading network image: $error');
+                                    return Image.asset(
+                                      'assets/images/owner.png',
+                                      fit: BoxFit.cover,
+                                    );
+                                  },
+                                )
+                              : Image.asset(
+                                  widget.imagePath,
+                                  fit: BoxFit.cover,
+                                ),
                         ),
                       ),
                     ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/views/pages/all_clinets_page.dart';
 import 'package:phone_system_app/views/pages/dues_management.dart';
@@ -8,6 +9,7 @@ import 'package:phone_system_app/views/pages/for_sale_number.dart';
 import 'package:phone_system_app/views/pages/offers.dart';
 import 'package:phone_system_app/views/pages/profit_management_page.dart';
 import 'package:phone_system_app/views/pages/system_list.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PageData {
   final String title;
@@ -28,6 +30,7 @@ class AccountDetailsController extends GetxController {
   final RxInt selectedIndex = 0.obs;
 
   final Rx<String?> profileImage = Rx<String?>(null);
+  final RxList<String> userImages = <String>[].obs;
 
   final List<PageData> pages = [
     PageData(
@@ -66,6 +69,86 @@ class AccountDetailsController extends GetxController {
       roles: [UserRoles.admin, UserRoles.manager],
     ),
   ];
+
+  @override
+  void onInit() {
+    super.onInit();
+    loadUserImages();
+  }
+
+  Future<void> loadUserImages() async {
+    try {
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) return;
+
+      // List all files with the user's ID prefix
+      final List<FileObject> files = await supabase.storage
+          .from('images')
+          .list(searchOptions: SearchOptions(limit: 100));
+
+      // Filter files that belong to this user (by prefix)
+      final userFiles =
+          files.where((file) => file.name.startsWith('${userId}_'));
+
+      // Get public URLs for all user images
+      userImages.value = userFiles
+          .map(
+              (file) => supabase.storage.from('images').getPublicUrl(file.name))
+          .toList();
+    } catch (e) {
+      print('Error loading user images: $e');
+    }
+  }
+
+  Future<void> uploadNewImage() async {
+    try {
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) {
+        Get.snackbar('خطأ', 'يرجى تسجيل الدخول أولاً',
+            snackPosition: SnackPosition.BOTTOM);
+        return;
+      }
+
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+      );
+
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+
+        // Generate unique filename using timestamp
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final fileName = '${userId}_$timestamp.jpg';
+
+        await supabase.storage.from('images').uploadBinary(
+              fileName,
+              bytes,
+              fileOptions: const FileOptions(
+                contentType: 'image/jpeg',
+                upsert: true,
+              ),
+            );
+
+        // Get public URL and add to list
+        final imageUrl = supabase.storage.from('images').getPublicUrl(fileName);
+        userImages.add(imageUrl);
+
+        Get.snackbar('نجاح', 'تم تحميل الصورة بنجاح',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white);
+      }
+    } catch (e) {
+      print('Error uploading image: $e');
+      Get.snackbar('خطأ', 'حدث خطأ في تحميل الصورة',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white);
+    }
+  }
 
   void handleNavigation(int index) {
     selectedIndex.value = index;

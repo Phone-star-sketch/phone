@@ -26,6 +26,7 @@ import 'package:phone_system_app/views/pages/profit_management_page.dart';
 import 'package:phone_system_app/views/pages/system_list.dart';
 import 'package:phone_system_app/views/pages/create_user_page.dart';
 import 'package:phone_system_app/pages/user_management_page.dart'; // Add this import
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'animated_profile_avatar.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -399,14 +400,12 @@ class AccountDetails extends StatelessWidget {
 
 class SideBar extends StatelessWidget {
   List<Page> pages;
-  // Add controller instance
   final AccountDetailsController controller;
 
   SideBar({
     super.key,
     required this.pages,
-  }) : controller =
-            Get.find<AccountDetailsController>(); // Initialize in constructor
+  }) : controller = Get.find<AccountDetailsController>();
 
   @override
   Widget build(BuildContext context) {
@@ -421,8 +420,8 @@ class SideBar extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.lightBlue[300]!, // Lighter sky blue
-            Colors.lightBlue[200]!, // Even lighter sky blue
+            Colors.lightBlue[300]!,
+            Colors.lightBlue[200]!,
           ],
         ),
         boxShadow: [
@@ -440,25 +439,40 @@ class SideBar extends StatelessWidget {
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(vertical: 20),
             child: GestureDetector(
-              onTap: () async {
-                final ImagePicker picker = ImagePicker();
-                final XFile? image = await picker.pickImage(
-                  source: ImageSource.gallery,
-                  maxWidth: 512,
-                  maxHeight: 512,
-                );
-
-                if (image != null) {
-                  controller.profileImage.value = image.path;
-                }
-              },
+              onTap: () => controller.uploadNewImage(),
               child: SizedBox(
                 width: 120,
                 height: 120,
-                child: Obx(() => AnimatedProfileAvatar(
-                      imagePath: controller.profileImage.value ??
-                          'assets/images/owner.png',
-                    )),
+                child: Stack(
+                  children: [
+                    Obx(() {
+                      final images = controller.userImages;
+                      final latestImage =
+                          images.isNotEmpty ? images.last : null;
+
+                      return AnimatedProfileAvatar(
+                        imagePath: latestImage ?? 'assets/images/owner.png',
+                        isNetworkImage: latestImage != null,
+                      );
+                    }),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.lightBlue,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.add_photo_alternate,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -466,7 +480,7 @@ class SideBar extends StatelessWidget {
           const Text(
             'كابتن / إسلام النني',
             style: TextStyle(
-              color: Color(0xFF2C3E50), // Darker text for contrast
+              color: Color(0xFF2C3E50),
               fontWeight: FontWeight.bold,
               fontSize: 18,
               letterSpacing: 0.5,

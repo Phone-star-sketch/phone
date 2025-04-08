@@ -330,6 +330,10 @@ class ClientDataWidget extends StatelessWidget {
                                       Text(
                                           style: const TextStyle(fontSize: 12),
                                           'تاريخ انتهاء العرض:  ${(client.expireDate != null) ? fullExpressionArabicDate(client.expireDate!) : "لا يوجد"}'),
+                                      const Divider(),
+                                      Text(
+                                          style: const TextStyle(fontSize: 12),
+                                          'تاريخ الإنشاء:  ${fullExpressionArabicDate(client.createdAt!)}'),
                                     ],
                                   ),
                                 ),
