@@ -13,6 +13,8 @@ class Client extends Model {
   static const String totalCashColumns = "total_cash";
   static const String addressColumns = "address";
   static const String expireColumns = "expire_date";
+  static const String discountPercentageColumn = "discount_percentage";
+  static const String discountEndDateColumn = "discount_end_date";
 
   String? nationalId;
   String? name;
@@ -22,6 +24,8 @@ class Client extends Model {
   List<Log>? logs;
   List<PhoneNumber>? numbers;
   DateTime? expireDate;
+  double? discountPercentage;
+  DateTime? discountEndDate;
 
   Client(
       {required super.id,
@@ -33,7 +37,9 @@ class Client extends Model {
       this.accountId,
       this.logs,
       this.numbers,
-      this.expireDate});
+      this.expireDate,
+      this.discountPercentage,
+      this.discountEndDate});
 
   double systemsCost() {
     if (numbers?.isEmpty ?? true) return 0.0;
@@ -67,6 +73,12 @@ class Client extends Model {
         expireDate = (data[expireColumns] != null)
             ? DateTime.parse(data[expireColumns])
             : null,
+        discountPercentage = (data[discountPercentageColumn] != null)
+            ? (data[discountPercentageColumn]).toDouble()
+            : null,
+        discountEndDate = (data[discountEndDateColumn] != null)
+            ? DateTime.parse(data[discountEndDateColumn])
+            : null,
         numbers = (data[phoneNumbersTable] != null)
             ? (data[phoneNumbersTable] as List)
                 .map((e) => PhoneNumber.fromJson(e))
@@ -87,6 +99,9 @@ class Client extends Model {
       addressColumns: address,
       totalCashColumns: totalCash,
       expireColumns: (expireDate != null) ? expireDate.toString() : null,
+      discountPercentageColumn: discountPercentage,
+      discountEndDateColumn:
+          (discountEndDate != null) ? discountEndDate.toString() : null,
     };
   }
 

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
@@ -43,6 +43,8 @@ class FollowController extends GetxController {
   @override
   void onInit() async {
     super.onInit();
+    // Initialize notification service
+    await TransactionNotificationService.instance.initialize();
     await _initializeData();
   }
 
@@ -56,11 +58,6 @@ class FollowController extends GetxController {
 
       // Finally setup real-time
       _setupRealtime();
-
-      // Initialize notification service if not already initialized
-      if (!kIsWeb) {
-        await TransactionNotificationService.instance.initialize();
-      }
     } catch (e) {
       print('Error initializing data: $e');
     }
@@ -91,27 +88,7 @@ class FollowController extends GetxController {
               // Update timestamp
               lastUpdateTime.value = DateFormat.jm('ar').format(DateTime.now());
 
-              // Get the new log data
-              final newLog = Log.fromJson(payload.newRecord);
-
-              // Create LogWidthUser to check if it's from assistant
-              final logWithUser = LogWidthUser(log: newLog);
-
-              // Check if the transaction is from المساعد and current user is المدير
-              final String userName =
-                  logWithUser.user?.name?.toLowerCase() ?? '';
-              final bool isManager = SupabaseAuthentication.myUser?.role ==
-                      UserRoles.admin.index ||
-                  SupabaseAuthentication.myUser?.role ==
-                      UserRoles.manager.index;
-
-              if (userName.contains('المساعد') && isManager) {
-                // Show notification for assistant transactions only to manager
-                await TransactionNotificationService.instance
-                    .showTransactionNotification(logWithUser);
-              }
-
-              // Show update notification in app
+              // Show update notification
               Get.snackbar(
                 'تحديث مباشر',
                 'تم استلام تحديث جديد',
@@ -140,6 +117,8 @@ class FollowController extends GetxController {
 
   @override
   void onClose() {
+    // Clear notifications when leaving the page
+    TransactionNotificationService.instance.clearBadge();
     _subscription?.unsubscribe();
     super.onClose();
   }
@@ -154,13 +133,32 @@ class FollowController extends GetxController {
         Log.accountIdColumnName: AccountClientInfo.to.currentAccount.id,
       }, 200);
 
+      // Filter logs for the assistant view separately
+      final assistantLogs =
+          await BackendServices.instance.logRepository.getLogsByMatchMapQuery({
+        Log.accountIdColumnName: AccountClientInfo.to.currentAccount.id,
+        'creator ': 2, // Filter for assistant (creator = 2)
+        'select': 'system_type,created_at', // Select specific fields
+      }, 200);
+
       l.addAll(dataAdd);
+      l.addAll(assistantLogs);
 
       logs.value = l
           .map(
             (e) => LogWidthUser(log: e),
           )
           .toList();
+
+      // Show notifications for new assistant transactions
+      for (var logWithUser in logs) {
+        if (logWithUser.user?.name?.toLowerCase().contains('المساعد') ??
+            false) {
+          await TransactionNotificationService.instance
+              .showTransactionNotification(logWithUser);
+        }
+      }
+
       print("Real-time update: Found ${logs.length} logs");
       Loaders.to.followLoading.value = false;
     } catch (e) {
@@ -335,29 +333,98 @@ class Follow extends StatelessWidget {
   }
 
   Widget _buildAssistantView(List<LogWidthUser> list, BuildContext context) {
-    // Filter logs for assistant (المساعد)
-    final assistantLogs = list.where((logWithUser) {
-      final userName = logWithUser.user?.name?.toLowerCase() ?? '';
-      return userName.contains('المساعد');
-    }).toList();
+    // Filter logs for assistant (created_by = 2)
+    final assistantLogs =
+        list.where((logWithUser) => logWithUser.log.createdBy == 2).toList();
 
-    return ListView.separated(
-      separatorBuilder: (context, index) => const Divider(),
-      itemCount: assistantLogs.length,
+    // Sort logs by date (most recent first)
+    assistantLogs.sort((a, b) => b.log.createdAt!.compareTo(a.log.createdAt!));
+
+    // Group logs by date and system_type
+    final groupedLogs = <String, Map<String, List<LogWidthUser>>>{};
+
+    for (var log in assistantLogs) {
+      final date = DateFormat.yMMMMd('ar').format(log.log.createdAt!);
+      final systemType = log.log.systemType ?? 'غير محدد';
+
+      groupedLogs.putIfAbsent(date, () => {});
+      groupedLogs[date]!.putIfAbsent(systemType, () => []).add(log);
+    }
+
+    return ListView.builder(
+      itemCount: groupedLogs.length,
       itemBuilder: (context, index) {
-        return InkWell(
-          onTap: (assistantLogs[index].client != null)
-              ? () async {
-                  final client = assistantLogs[index].client;
-                  final controller = Get.put(ClientBottomSheetController());
-                  controller.setClient(client!);
-                  await showClientInfoSheet(context, client);
-                  Get.delete<ClientBottomSheetController>(force: true);
-                }
-              : null,
-          child: LogWithUserCardWidget(
-            logWidthUser: assistantLogs[index],
-            showAdminControls: false,
+        final date = groupedLogs.keys.elementAt(index);
+        final logsForDate = groupedLogs[date]!;
+
+        return Card(
+          margin: EdgeInsets.all(8),
+          elevation: 2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Date header
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      date,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // System type groups
+              ...logsForDate.entries.map((entry) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // System type header
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      color: Colors.grey.shade100,
+                      child: Row(
+                        children: [
+                          Icon(Icons.system_update, size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            'النظام: ${entry.key}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            '(${entry.value.length})',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Logs for this system type
+                    ...entry.value.map((log) => LogWithUserCardWidget(
+                          logWidthUser: log,
+                          showAdminControls: false,
+                        )),
+                  ],
+                );
+              }),
+            ],
           ),
         );
       },

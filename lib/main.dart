@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -29,7 +30,27 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize notifications only for mobile platforms
+  // Configure web platform if running on web
+  if (kIsWeb) {
+    // Set Chrome as preferred browser for debugging
+    const String dartFlag = '--dart-define=FLUTTER_WEB_USE_SKIA=true';
+    const String browserFlag = '--web-browser-flag=--disable-web-security';
+
+    // Register error handler for browser launch
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      print('Browser launch error: ${details.exception}');
+      // Attempt to launch Chrome as fallback
+      try {
+        const String chromeExecutable = 'chrome';
+        Process.run(chromeExecutable, [dartFlag, browserFlag]);
+      } catch (e) {
+        print('Failed to launch Chrome: $e');
+      }
+    };
+  }
+
+  // Initialize notification service early
   if (!kIsWeb) {
     await TransactionNotificationService.instance.initialize();
   }
