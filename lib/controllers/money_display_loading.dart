@@ -15,7 +15,7 @@ class Loaders extends GetxController {
   RxBool logInIsLoading = false.obs;
   RxBool showPassword = true.obs;
   RxBool followLoading = true.obs;
-
+  RxBool discountIsLoading = false.obs;
 
   Future<void> manageSystemType(Client client, SystemType currentType) async {
     systemIsLoading.value = true;

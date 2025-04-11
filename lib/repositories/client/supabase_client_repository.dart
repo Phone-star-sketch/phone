@@ -233,6 +233,14 @@ class SupabaseClientRepository extends ClientRepository
       double totalCash = client.totalCash;
       double bills = client.systemsCost();
 
+      // Apply discount if it exists and hasn't expired
+      if (client.discountPercentage != null &&
+          client.discountEndDate != null &&
+          client.discountEndDate!.isAfter(DateTime.now())) {
+        double discountAmount = bills * (client.discountPercentage! / 100);
+        bills -= discountAmount;
+      }
+
       double newCash = totalCash - bills;
 
       final data = client.toJson();

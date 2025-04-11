@@ -7,6 +7,7 @@ import 'package:phone_system_app/models/phone_number.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
+import 'package:phone_system_app/controllers/client_bottom_sheet_controller.dart';
 
 final accountController = Get.find<AccountClientInfo>();
 
@@ -16,6 +17,7 @@ Future clientEditModelSheet(
   String? initialPhoneNumber,
   Function()? onSuccess,
 }) async {
+  final controller = Get.put(ClientBottomSheetController());
   final screenSize = MediaQuery.of(context).size;
   final formKey = GlobalKey<FormState>();
   final nameField = TextEditingController();
@@ -56,6 +58,7 @@ Future clientEditModelSheet(
     );
     if (picked != null && picked != selectedDate) {
       selectedDate = picked;
+      controller.updateDate(picked);
     }
   }
 
@@ -236,6 +239,14 @@ Future clientEditModelSheet(
                       if (value == null || value.isEmpty) {
                         return 'رقم الهاتف مطلوب';
                       }
+                      // Remove any whitespace and check if the number is empty
+                      if (value.trim().isEmpty) {
+                        return 'رقم الهاتف غير صالح';
+                      }
+                      // Check if the number contains valid digits
+                      if (!RegExp(r'^\d+$').hasMatch(value.trim())) {
+                        return 'يجب أن يحتوي رقم الهاتف على أرقام فقط';
+                      }
                       return null;
                     },
                     keyboardType: TextInputType.phone,
@@ -313,7 +324,7 @@ Future clientEditModelSheet(
                           const Icon(Icons.calendar_today, color: Colors.blue),
                           const SizedBox(width: 12),
                           Text(
-                            'تاريخ الإنشاء: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+                            'تاريخ الأشتراك: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
                             style: const TextStyle(
                               fontSize: 16,
                               color: Colors.black87,

@@ -279,6 +279,37 @@ class ClientDataWidget extends StatelessWidget {
                   const SizedBox(
                     height: 10,
                   ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        shape: const StadiumBorder(),
+                        backgroundColor: Colors.orange[900],
+                        padding: const EdgeInsets.all(10)),
+                    onPressed: () async {
+                      await showDiscountDialog(context, client);
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.discount,
+                          color: Colors.white,
+                        ),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        Text(
+                          "إضافة خصم",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
                   Column(
                     children: [
                       Padding(
@@ -333,7 +364,11 @@ class ClientDataWidget extends StatelessWidget {
                                       const Divider(),
                                       Text(
                                           style: const TextStyle(fontSize: 12),
-                                          'تاريخ الإنشاء:  ${fullExpressionArabicDate(client.createdAt!)}'),
+                                          'الخصم الحالي:  ${client.discountPercentage != null ? "${client.discountPercentage}% حتى ${fullExpressionArabicDate(client.discountEndDate!)}" : "لا يوجد"}'),
+                                      const Divider(),
+                                      Text(
+                                          style: const TextStyle(fontSize: 12),
+                                          'تاريخ الأشتراك:  ${fullExpressionArabicDate(client.createdAt!)}'),
                                     ],
                                   ),
                                 ),
@@ -877,4 +912,360 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
           ],
         ),
       ));
+}
+
+Future<void> showDiscountDialog(BuildContext context, Client client) async {
+  // Initialize with current values if they exist
+  final amountController =
+      TextEditingController(text: client.discountPercentage?.toString() ?? '');
+  final loaders = Get.put(Loaders());
+
+  final discountAmount = (client.discountPercentage ?? 0.0).obs;
+  final selectedDate = (client.discountEndDate ?? DateTime.now()).obs;
+  final endDate = (client.discountEndDate ?? DateTime.now()).obs;
+  final isLongPressed = false.obs;
+
+  // Update preview when inputs change
+  void updatePreview() {
+    final amount = double.tryParse(amountController.text) ?? 0.0;
+    discountAmount.value = amount;
+    endDate.value = selectedDate.value;
+  }
+
+  void applyDiscount() async {
+    try {
+      final discountAmount = double.tryParse(amountController.text);
+
+      if (discountAmount == null) {
+        Get.snackbar(
+          'خطأ',
+          'الرجاء إدخال نسبة خصم صحيحة',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      if (discountAmount <= 0 || discountAmount > 100) {
+        Get.snackbar(
+          'خطأ',
+          'نسبة الخصم يجب أن تكون بين 0 و 100',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      if (selectedDate.value.isBefore(DateTime.now())) {
+        Get.snackbar(
+          'خطأ',
+          'تاريخ الانتهاء يجب أن يكون في المستقبل',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      // Apply discount and update database
+      client.discountPercentage = discountAmount;
+      client.discountEndDate = selectedDate.value;
+
+      // Calculate discounted amount for money transactions
+      if (client.totalCash != null && client.totalCash! > 0) {
+        final discountedAmount = client.totalCash! * (discountAmount / 100);
+        client.totalCash = client.totalCash! - discountedAmount;
+      }
+
+      await BackendServices.instance.clientRepository.update(client);
+
+      // Update UI controllers
+      Get.find<ClientBottomSheetController>().updateClient();
+      Get.find<AccountClientInfo>().updateCurrnetClinets();
+
+      Get.back();
+      Get.snackbar(
+        'نجاح',
+        'تم إضافة الخصم وتطبيقه على المبلغ المستحق بنجاح',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'خطأ',
+        'حدث خطأ أثناء إضافة الخصم: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  amountController.addListener(updatePreview);
+
+  await Get.defaultDialog(
+    backgroundColor: Colors.white,
+    title: "إضافة خصم",
+    content: Obx(
+      () => Column(
+        children: [
+          // Preview Card
+          Card(
+            color: Colors.orange[50],
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    "معاينة الخصم",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text("نسبة الخصم:"),
+                          const SizedBox(width: 4),
+                          Text(
+                            "${discountAmount.value}%",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text("تاريخ الانتهاء:"),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              fullExpressionArabicDate(endDate.value),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Input Fields
+          Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: GestureDetector(
+              onLongPress: () {
+                isLongPressed.value = true;
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  isLongPressed.value = false;
+                });
+              },
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  textSelectionTheme: TextSelectionThemeData(
+                    selectionColor: Colors.orange[200],
+                    selectionHandleColor: Colors.orange[900],
+                    cursorColor: Colors.orange[900],
+                  ),
+                ),
+                child: TextField(
+                  controller: amountController,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'نسبة الخصم (%)',
+                    prefixIcon: const Icon(Icons.percent),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: Icon(
+                      Icons.discount,
+                      color:
+                          discountAmount.value > 0 ? Colors.green : Colors.grey,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Colors.orange[900]!, width: 2),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey[400]!),
+                    ),
+                    labelStyle: TextStyle(
+                      color: Colors.orange[900],
+                      fontWeight: FontWeight.bold,
+                    ),
+                    floatingLabelStyle: TextStyle(
+                      color: Colors.orange[900],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                    hintText: 'أدخل نسبة الخصم',
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 15),
+                    filled: true,
+                    fillColor:
+                        isLongPressed.value ? Colors.blue[50] : Colors.grey[50],
+                  ),
+                  onChanged: (value) {
+                    updatePreview();
+                  },
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: GestureDetector(
+              onLongPress: () {
+                isLongPressed.value = true;
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  isLongPressed.value = false;
+                });
+              },
+              child: InkWell(
+                onTap: () async {
+                  final DateTime? picked = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate.value,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                    builder: (context, child) {
+                      return Theme(
+                        data: Theme.of(context).copyWith(
+                          colorScheme: ColorScheme.light(
+                            primary: Colors.orange[900]!,
+                            onPrimary: Colors.white,
+                            surface: Colors.white,
+                            onSurface: Colors.black,
+                          ),
+                        ),
+                        child: child!,
+                      );
+                    },
+                  );
+                  if (picked != null) {
+                    final TimeOfDay? time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(selectedDate.value),
+                      builder: (context, child) {
+                        return Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: ColorScheme.light(
+                              primary: Colors.orange[900]!,
+                              onPrimary: Colors.white,
+                              surface: Colors.white,
+                              onSurface: Colors.black,
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (time != null) {
+                      selectedDate.value = DateTime(
+                        picked.year,
+                        picked.month,
+                        picked.day,
+                        time.hour,
+                        time.minute,
+                      );
+                      updatePreview();
+                    }
+                  }
+                },
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'تاريخ الانتهاء',
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: Icon(
+                      Icons.timer,
+                      color: selectedDate.value.isAfter(DateTime.now())
+                          ? Colors.green
+                          : Colors.grey,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Colors.orange[900]!, width: 2),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey[400]!),
+                    ),
+                    labelStyle: TextStyle(
+                      color: Colors.orange[900],
+                      fontWeight: FontWeight.bold,
+                    ),
+                    floatingLabelStyle: TextStyle(
+                      color: Colors.orange[900],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 15),
+                    filled: true,
+                    fillColor:
+                        isLongPressed.value ? Colors.blue[50] : Colors.grey[50],
+                  ),
+                  child: Text(
+                    fullExpressionArabicDate(selectedDate.value),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Submit Button
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[900],
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            onPressed: loaders.discountIsLoading.value ? null : applyDiscount,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.check, color: Colors.white),
+                const SizedBox(width: 8),
+                const Text(
+                  'تأكيد',
+                  style: TextStyle(color: Colors.white),
+                ),
+                if (loaders.discountIsLoading.value)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8.0),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

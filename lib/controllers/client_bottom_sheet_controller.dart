@@ -19,6 +19,9 @@ class ClientBottomSheetController extends GetxController {
   int _logsLength = 0;
   int _systemsLength = 0;
 
+  final isLoading = false.obs;
+  final dateSelected = DateTime.now().obs;
+
   void setClient(Client client) async {
     _client = client.obs;
     _client.value = client;
@@ -104,5 +107,9 @@ class ClientBottomSheetController extends GetxController {
 
   List<SystemType> getAllTypes() {
     return _types;
+  }
+
+  void updateDate(DateTime date) {
+    dateSelected.value = date;
   }
 }
