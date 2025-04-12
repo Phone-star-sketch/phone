@@ -16,6 +16,7 @@ import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_she
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:phone_system_app/services/transaction_notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart' as prefs;
 
 class LogWidthUser {
   Log log;
@@ -39,6 +40,8 @@ class FollowController extends GetxController {
   RealtimeChannel? _subscription;
   RxString connectionStatus = 'غير متصل'.obs;
   RxString lastUpdateTime = ''.obs;
+  final Set<int> _shownNotifications = {};
+  static const String LAST_NOTIFICATION_KEY = 'last_notified_transaction_id';
 
   @override
   void onInit() async {
@@ -137,7 +140,7 @@ class FollowController extends GetxController {
       final assistantLogs =
           await BackendServices.instance.logRepository.getLogsByMatchMapQuery({
         Log.accountIdColumnName: AccountClientInfo.to.currentAccount.id,
-        'creator ': 2, // Filter for assistant (creator = 2)
+        'creator': 2, // Filter for assistant (creator = 2)
         'select': 'system_type,created_at', // Select specific fields
       }, 200);
 
@@ -150,12 +153,30 @@ class FollowController extends GetxController {
           )
           .toList();
 
-      // Show notifications for new assistant transactions
-      for (var logWithUser in logs) {
-        if (logWithUser.user?.name?.toLowerCase().contains('المساعد') ??
-            false) {
+      // Get assistant transactions and sort by date
+      final assistantTransactions = logs
+          .where((log) => log.log.createdBy == 2)
+          .toList()
+        ..sort((a, b) => b.log.createdAt!.compareTo(a.log.createdAt!));
+
+      if (assistantTransactions.isNotEmpty) {
+        // Get the latest transaction
+        final latestTransaction = assistantTransactions.first;
+
+        // Get the last notified transaction ID
+        final prefs.SharedPreferences sharedPrefs =
+            await prefs.SharedPreferences.getInstance();
+        final int? lastNotifiedId = sharedPrefs.getInt(LAST_NOTIFICATION_KEY);
+
+        // Show notification only if this is a new transaction
+        if (lastNotifiedId == null ||
+            latestTransaction.log.id != lastNotifiedId) {
           await TransactionNotificationService.instance
-              .showTransactionNotification(logWithUser);
+              .showTransactionNotification(latestTransaction);
+
+          // Store the new transaction ID
+          await sharedPrefs.setInt(
+              LAST_NOTIFICATION_KEY, latestTransaction.log.id as int);
         }
       }
 
