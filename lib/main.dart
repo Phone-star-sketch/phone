@@ -32,20 +32,40 @@ Future<void> main() async {
 
   // Configure web platform if running on web
   if (kIsWeb) {
-    // Set Chrome as preferred browser for debugging
-    const String dartFlag = '--dart-define=FLUTTER_WEB_USE_SKIA=true';
-    const String browserFlag = '--web-browser-flag=--disable-web-security';
-
-    // Register error handler for browser launch
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
       print('Browser launch error: ${details.exception}');
-      // Attempt to launch Chrome as fallback
       try {
-        const String chromeExecutable = 'chrome';
-        Process.run(chromeExecutable, [dartFlag, browserFlag]);
+        const String edgePath =
+            r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe';
+        final tempDir = Platform.environment['TEMP'] ?? 'C:\\temp';
+        final userDataDir = '--user-data-dir=$tempDir\\flutter_tools_edge_data';
+
+        final args = [
+          userDataDir,
+          '--remote-debugging-port=52363',
+          '--disable-background-timer-throttling',
+          '--disable-extensions',
+          '--disable-popup-blocking',
+          '--bwsi',
+          '--no-first-run',
+          '--no-default-browser-check',
+          '--disable-default-apps',
+          '--disable-translate',
+          '--start-maximized',
+          'http://localhost:51953' // Add the localhost URL
+        ];
+
+        final process = Process.runSync(edgePath, args);
+        if (process.exitCode != 0) {
+          print('Edge launch error: ${process.stderr}');
+          // Fallback to system default browser
+          Process.runSync('cmd', ['/c', 'start', 'http://localhost:51953']);
+        }
       } catch (e) {
-        print('Failed to launch Chrome: $e');
+        print('Failed to launch Edge: $e');
+        // Fallback to system default browser
+        Process.runSync('cmd', ['/c', 'start', 'http://localhost:51953']);
       }
     };
   }

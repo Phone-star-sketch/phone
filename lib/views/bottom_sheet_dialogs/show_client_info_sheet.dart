@@ -865,15 +865,14 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                 cursorColor: Colors.red,
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(
-                      RegExp((both!) ? r'[0-9.]' : r'[0-9.-]')),
-
-                  //FilteringTextInputFormatter.digitsOnly
+                      RegExp((both) ? r'[0-9.]' : r'[0-9]')),
                 ],
                 controller: controller,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(FontAwesomeIcons.cashRegister),
                   border: OutlineInputBorder(),
+                  hintText: 'أدخل المبلغ',
                 ),
               ),
             ),
@@ -884,24 +883,68 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                     ? null
                     : () async {
                         try {
+                          if (controller.text.isEmpty) {
+                            throw 'الرجاء إدخال مبلغ صحيح';
+                          }
+
+                          final amount = int.tryParse(controller.text);
+                          if (amount == null) {
+                            throw 'الرجاء إدخال مبلغ صحيح';
+                          }
+
                           await loaders.changeMoneyValue(
                               client, controller.text, adding);
+
+                          final message = adding
+                              ? 'تم إضافة المبلغ بنجاح'
+                              : 'تم تسديد المبلغ بنجاح';
+
+                          // First dismiss the dialog using context
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                          }
+
+                          // Then show the success snackbar directly
+                          Get.showSnackbar(
+                            GetSnackBar(
+                              message: message,
+                              title: 'نجاح',
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: Colors.green[100]!,
+                              titleText: const Text(
+                                'نجاح',
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              messageText: Text(
+                                message,
+                                style: TextStyle(
+                                  color: Colors.green[900],
+                                ),
+                              ),
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
                         } catch (e) {
-                          Get.showSnackbar(GetSnackBar(
-                            title: "حدث مشكلة",
-                            message: e.toString(),
+                          Get.snackbar(
+                            'خطأ',
+                            e.toString(),
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.red[100],
+                            colorText: Colors.red[900],
                             duration: const Duration(seconds: 3),
-                          ));
+                          );
                         }
-                        Navigator.pop(context);
                       },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.check_rounded),
-                        Text("تأكيد"),
+                        Icon(adding ? Icons.add : Icons.payment),
+                        Text(adding ? "تأكيد" : "تأكيد"),
                       ],
                     ),
                     Visibility(

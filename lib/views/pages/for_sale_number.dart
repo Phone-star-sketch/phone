@@ -3,12 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/phone_number.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
-import 'package:phone_system_app/widget_models/clientCreationModelSheet.dart'; // Correct import
+import 'package:phone_system_app/widget_models/clientCreationModelSheet.dart';
 
 class ForSaleController extends GetxController {
-  List<PhoneNumber> _numbers = <PhoneNumber>[].obs;
-
+  RxList<PhoneNumber> _numbers = <PhoneNumber>[].obs;
   RxString _query = "".obs;
+  RxBool isLoading = false.obs;
 
   List<PhoneNumber> getNumbers() {
     return _numbers;
@@ -17,32 +17,78 @@ class ForSaleController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    loadPhoneNumbers();
+  }
 
-    BackendServices.instance.phoneRepository.bindStreamToForSaleNumbersChanges(
-      (payload) {
-        _numbers.clear();
-
-        _numbers.addAll(payload
-            .map((phoneJsonObject) => PhoneNumber.fromJson(phoneJsonObject))
-            .toList());
-      },
-    );
+  void loadPhoneNumbers() {
+    try {
+      isLoading.value = true;
+      BackendServices.instance.phoneRepository
+          .bindStreamToForSaleNumbersChanges(
+        (payload) {
+          _numbers.clear();
+          _numbers.addAll(payload
+              .map((phoneJsonObject) => PhoneNumber.fromJson(phoneJsonObject))
+              .toList());
+          isLoading.value = false;
+        },
+      );
+    } catch (e) {
+      isLoading.value = false;
+      Get.snackbar(
+        'خطأ',
+        'حدث خطأ أثناء تحميل الأرقام: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   void updateQuery(String value) {
     _query.value = value;
   }
 
-  void addPhoneNumber(PhoneNumber newPhoneNumber) async {
-    await BackendServices.instance.phoneRepository.create(newPhoneNumber);
-  }
-
-  void removePhoneNumber(PhoneNumber removed) {
+  Future<void> addPhoneNumber(PhoneNumber newPhoneNumber) async {
     try {
-      BackendServices.instance.phoneRepository.delete(removed);
+      isLoading.value = true;
+      await BackendServices.instance.phoneRepository.create(newPhoneNumber);
+      Get.snackbar(
+        'تم بنجاح',
+        'تم إضافة الرقم بنجاح',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
     } catch (e) {
       Get.snackbar(
-          "Problem happened during removing phone number ", e.toString());
+        'خطأ',
+        'حدث خطأ أثناء إضافة الرقم: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> removePhoneNumber(PhoneNumber removed) async {
+    try {
+      isLoading.value = true;
+      await BackendServices.instance.phoneRepository.delete(removed);
+      Get.snackbar(
+        'تم بنجاح',
+        'تم حذف الرقم بنجاح',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'خطأ',
+        'حدث خطأ أثناء حذف الرقم: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
     }
   }
 
@@ -57,6 +103,7 @@ class ForSaleController extends GetxController {
       initialPhoneNumber: assigned.phoneNumber,
       onSuccess: () async {
         try {
+          isLoading.value = true;
           // Delete the phone number from for_sale after successful client creation
           await BackendServices.instance.phoneRepository.delete(assigned);
           Get.back(); // Close the current view
@@ -69,10 +116,12 @@ class ForSaleController extends GetxController {
         } catch (e) {
           Get.snackbar(
             'خطأ',
-            'حدث خطأ أثناء تخصيص الرقم',
+            'حدث خطأ أثناء تخصيص الرقم: ${e.toString()}',
             backgroundColor: Colors.red,
             colorText: Colors.white,
           );
+        } finally {
+          isLoading.value = false;
         }
       },
     );
@@ -84,10 +133,8 @@ class ForSaleNumbers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Get.theme.colorScheme;
-
     return Scaffold(
-      backgroundColor: Colors.grey[100], // Light background for contrast
+      backgroundColor: Colors.grey[100],
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showNewNumberModalForm(context);
@@ -100,6 +147,14 @@ class ForSaleNumbers extends StatelessWidget {
         ),
       ),
       body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(
+            child: CircularProgressIndicator(
+              color: Colors.red,
+            ),
+          );
+        }
+
         final allNumbers = controller.getNumbers();
         final query = controller.getQuery();
         final numbers = (query != "")
@@ -133,9 +188,9 @@ class ForSaleNumbers extends StatelessWidget {
                 ),
               ),
             ),
-            (numbers.isNotEmpty)
-                ? Expanded(
-                    child: ListView.separated(
+            Expanded(
+              child: numbers.isNotEmpty
+                  ? ListView.separated(
                       itemCount: numbers.length,
                       itemBuilder: (context, index) {
                         final phone = numbers[index];
@@ -146,7 +201,7 @@ class ForSaleNumbers extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 20, vertical: 10),
                           child: Card(
-                            elevation: 5, // Add shadow
+                            elevation: 5,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -211,7 +266,8 @@ class ForSaleNumbers extends StatelessWidget {
                                       const SizedBox(width: 12),
                                       InkWell(
                                         onTap: () async {
-                                          controller.removePhoneNumber(phone);
+                                          await controller
+                                              .removePhoneNumber(phone);
                                         },
                                         child: const Icon(
                                           Icons.delete,
@@ -230,12 +286,8 @@ class ForSaleNumbers extends StatelessWidget {
                       separatorBuilder: (context, index) => const SizedBox(
                         height: 10,
                       ),
-                    ),
-                  )
-                : SizedBox(
-                    width: MediaQuery.of(context).size.width,
-                    height: 0.7 * MediaQuery.of(context).size.height,
-                    child: Center(
+                    )
+                  : Center(
                       child: Container(
                         padding: const EdgeInsets.all(20),
                         margin: const EdgeInsets.all(20),
@@ -243,34 +295,31 @@ class ForSaleNumbers extends StatelessWidget {
                           color: Colors.red[50],
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: SizedBox(
-                          height: 200,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                (query == "")
-                                    ? Icons.heart_broken
-                                    : Icons.search_off,
-                                size: 70,
-                                color: Colors.red,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              (query == "")
+                                  ? Icons.heart_broken
+                                  : Icons.search_off,
+                              size: 70,
+                              color: Colors.red,
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              (query == "")
+                                  ? "لا يوجد أرقام للبيع"
+                                  : "لا توجد نتائج لهذا البحث",
+                              style: const TextStyle(
+                                fontSize: 18,
+                                color: Colors.black54,
                               ),
-                              const SizedBox(height: 20),
-                              Text(
-                                (query == "")
-                                    ? "لا يوجد أرقام للبيع"
-                                    : "لا توجد نتائج لهذا البحث",
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
+            ),
           ],
         );
       }),
@@ -279,85 +328,181 @@ class ForSaleNumbers extends StatelessWidget {
 }
 
 String? validator(String? value) {
-  if (value!.isEmpty) {
+  if (value == null || value.isEmpty) {
     return "لا يمكن تركه فارغ !!!";
-  } else if (!value.isNumericOnly) {
+  } else if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
     return "قيمة غير صالحة";
   }
   return null;
 }
 
 Future<void> showNewNumberModalForm(BuildContext context) {
-  final controller = Get.put(ForSaleController());
+  final controller = Get.find<ForSaleController>();
+  final phoneController = TextEditingController();
+  final priceController = TextEditingController();
+  final formKey = GlobalKey<FormState>();
+  final isSubmitting = false.obs;
 
   return showModalBottomSheet(
     context: context,
-    backgroundColor: Colors.blue[100],
+    backgroundColor: Colors.blue[50],
     enableDrag: true,
     showDragHandle: true,
     isScrollControlled: true,
-    barrierLabel: "اضافة رقم",
+    useSafeArea: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
+    ),
     builder: (context) {
-      final phoneController = TextEditingController();
-      final priceController = TextEditingController();
-      final formKey = GlobalKey<FormState>();
-
-      return Form(
-        key: formKey,
+      return SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              TextFormField(
-                controller: phoneController,
-                decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: "الرقم",
-                    hintStyle: TextStyle(color: Colors.black38),
-                    icon: Icon(Icons.phone)),
-                validator: validator,
-              ),
-              const SizedBox(
-                height: 50,
-              ),
-              TextFormField(
-                controller: priceController,
-                decoration: const InputDecoration(
-                  disabledBorder: OutlineInputBorder(),
-                  border: OutlineInputBorder(),
-                  hintText: "السعر",
-                  hintStyle: TextStyle(color: Colors.black38),
-                  icon: Icon(Icons.price_change),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 20,
+            right: 20,
+            top: 10,
+          ),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  "إضافة رقم جديد",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
                 ),
-                validator: validator,
-              ),
-              const SizedBox(
-                height: 50,
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(11),
+                  ],
+                  decoration: InputDecoration(
+                    labelText: "الرقم",
+                    hintText: "أدخل الرقم",
+                    prefixIcon: const Icon(Icons.phone, color: Colors.red),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  validator: validator,
                 ),
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    final phoneValue = phoneController.text;
-                    final priceValue = double.parse(priceController.text);
-                    final phoneObject = PhoneNumber(
-                      id: -1,
-                      createdAt: DateTime.now(),
-                      clientId: null,
-                      phoneNumber: phoneValue,
-                      price: priceValue,
-                      forSale: true,
-                    );
-                    controller.addPhoneNumber(phoneObject);
-                    Get.back();
-                  }
-                },
-                child: const Text("أضافة"),
-              )
-            ],
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: priceController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
+                  decoration: InputDecoration(
+                    labelText: "السعر",
+                    hintText: "أدخل السعر",
+                    prefixIcon:
+                        const Icon(Icons.price_change, color: Colors.green),
+                    suffixText: "جـ",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(color: Colors.green),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  validator: validator,
+                ),
+                const SizedBox(height: 30),
+                Obx(() => ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: isSubmitting.value
+                          ? null
+                          : () async {
+                              if (formKey.currentState?.validate() ?? false) {
+                                try {
+                                  isSubmitting.value = true;
+                                  final phoneValue =
+                                      phoneController.text.trim();
+                                  final priceText = priceController.text.trim();
+                                  final priceValue = double.tryParse(priceText);
+
+                                  if (priceValue == null) {
+                                    throw Exception("السعر غير صالح");
+                                  }
+
+                                  final phoneObject = PhoneNumber(
+                                    id: -1,
+                                    createdAt: DateTime.now(),
+                                    clientId: null,
+                                    phoneNumber: phoneValue,
+                                    price: priceValue,
+                                    forSale: true,
+                                  );
+
+                                  await controller.addPhoneNumber(phoneObject);
+                                  if (context.mounted) {
+                                    Navigator.of(context).pop();
+                                  }
+                                } catch (e) {
+                                  Get.snackbar(
+                                    'خطأ',
+                                    'فشل في إضافة الرقم: ${e.toString()}',
+                                    backgroundColor: Colors.red,
+                                    colorText: Colors.white,
+                                  );
+                                } finally {
+                                  isSubmitting.value = false;
+                                }
+                              }
+                            },
+                      child: isSubmitting.value
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              "إضافة الرقم",
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                    )),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       );

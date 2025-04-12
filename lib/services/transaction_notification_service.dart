@@ -15,102 +15,103 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 class TransactionNotificationService {
-  static final TransactionNotificationService instance = 
+  static final TransactionNotificationService instance =
       TransactionNotificationService._internal();
-  
+
   factory TransactionNotificationService() => instance;
-  
+
   TransactionNotificationService._internal();
 
   // Vibration pattern
-  static final Int64List _vibrationPattern = 
+  static final Int64List _vibrationPattern =
       Int64List.fromList([0, 500, 200, 500]);
-  
+
   // Service state
   bool _isInitialized = false;
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = 
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
   int _badgeCount = 0;
-  
+
   // For handling notification taps
   static int? pendingClientId;
-  
+
   // Channel IDs
   static const String MAIN_CHANNEL_ID = 'transactions_channel';
   static const String ASSISTANT_CHANNEL_ID = 'assistant_transactions_channel';
-  
+
   // Completer for initialization
   final Completer<bool> _initCompleter = Completer<bool>();
   Future<bool> get isInitialized => _initCompleter.future;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
-    
+
     try {
       print('🔔 Starting notification service initialization');
-      
+
       // Initialize timezone data first
       tz.initializeTimeZones();
-      
+
       // Request permissions
       final permissionStatus = await _requestPermissions();
       if (!permissionStatus) {
         print('🔔 Warning: Notification permissions not granted');
       }
-      
+
       // Create notification channels for Android
       if (Platform.isAndroid) {
         await _createAndroidNotificationChannels();
       }
-      
+
       // Initialize platforms
       final initializationSettings = await _setupPlatformSettings();
-      
+
       // Initialize plugin
       await flutterLocalNotificationsPlugin.initialize(
         initializationSettings,
         onDidReceiveNotificationResponse: _handleNotificationResponse,
         onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
       );
-      
+
       // Check if there are any pending client IDs from background taps
       _checkPendingClientId();
-      
+
       _isInitialized = true;
       if (!_initCompleter.isCompleted) {
         _initCompleter.complete(true);
       }
-      
+
       print('🔔 Notification service initialized successfully');
     } catch (e) {
       print('🔔 Error initializing notification service: $e');
       _isInitialized = false;
-      
+
       // If the completer is not completed yet, complete with false
       if (!_initCompleter.isCompleted) {
         _initCompleter.complete(false);
       }
-      
+
       // Retry initialization after a delay
       Future.delayed(Duration(seconds: 5), () => initialize());
     }
   }
-  
+
   Future<bool> _requestPermissions() async {
     bool isGranted = false;
-    
+
     try {
       if (Platform.isAndroid) {
         // For Android 13+ we need to request specific permissions
         final notificationStatus = await Permission.notification.status;
-        
+
         if (notificationStatus.isDenied) {
           final result = await Permission.notification.request();
           isGranted = result.isGranted;
-          
+
           if (result.isPermanentlyDenied) {
             // Suggest opening app settings
-            print('🔔 Notification permission permanently denied. Please enable in settings.');
+            print(
+                '🔔 Notification permission permanently denied. Please enable in settings.');
           }
         } else {
           isGranted = notificationStatus.isGranted;
@@ -123,10 +124,10 @@ class TransactionNotificationService {
       print('🔔 Error requesting permissions: $e');
       isGranted = false;
     }
-    
+
     return isGranted;
   }
-  
+
   Future<void> _createAndroidNotificationChannels() async {
     // Main transactions channel
     const AndroidNotificationChannel mainChannel = AndroidNotificationChannel(
@@ -140,7 +141,8 @@ class TransactionNotificationService {
     );
 
     // Assistant-specific channel with custom sound
-    final AndroidNotificationChannel assistantChannel = AndroidNotificationChannel(
+    final AndroidNotificationChannel assistantChannel =
+        AndroidNotificationChannel(
       ASSISTANT_CHANNEL_ID,
       'Assistant Transactions',
       description: 'Priority notifications for assistant transactions',
@@ -154,16 +156,17 @@ class TransactionNotificationService {
     );
 
     // Create the channels
-    final androidPlugin = flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    
+    final androidPlugin =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
     if (androidPlugin != null) {
       await androidPlugin.createNotificationChannel(mainChannel);
       await androidPlugin.createNotificationChannel(assistantChannel);
       print('🔔 Android notification channels created');
     }
   }
-  
+
   Future<InitializationSettings> _setupPlatformSettings() async {
     // Android settings
     const AndroidInitializationSettings initializationSettingsAndroid =
@@ -175,7 +178,8 @@ class TransactionNotificationService {
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
-      onDidReceiveLocalNotification: (int id, String? title, String? body, String? payload) async {
+      onDidReceiveLocalNotification:
+          (int id, String? title, String? body, String? payload) async {
         // For older iOS versions (deprecated but needed for backward compatibility)
         print('🔔 Received local notification: $id, $title, $body, $payload');
       },
@@ -187,7 +191,7 @@ class TransactionNotificationService {
       iOS: initializationSettingsIOS,
     );
   }
-  
+
   void _checkPendingClientId() {
     if (pendingClientId != null) {
       print('🔔 Found pending client ID: $pendingClientId');
@@ -199,7 +203,8 @@ class TransactionNotificationService {
     }
   }
 
-  Future<void> _handleNotificationResponse(NotificationResponse response) async {
+  Future<void> _handleNotificationResponse(
+      NotificationResponse response) async {
     print('🔔 Notification tapped: ${response.payload}');
     if (response.payload != null) {
       final clientId = int.tryParse(response.payload!);
@@ -222,12 +227,18 @@ class TransactionNotificationService {
 
     final Log log = logWithUser.log;
     final Client? client = logWithUser.client;
-    final AppUser? user = logWithUser.user;
 
-    // Check if transaction is from المساعد (assistant)
-    final String userName = user?.name?.toLowerCase() ?? '';
-    if (!userName.contains('المساعد')) {
-      print('🔔 Skipping notification - not from المساعد');
+    // Only show notifications for assistant transactions (createdBy = 2)
+    if (log.createdBy != 2) {
+      print('🔔 Skipping notification - not from assistant');
+      return;
+    }
+
+    // Check if the transaction is recent (within last 24 hours)
+    final now = DateTime.now();
+    final transactionTime = log.createdAt ?? now;
+    if (now.difference(transactionTime).inHours > 24) {
+      print('🔔 Skipping notification - transaction is older than 24 hours');
       return;
     }
 
@@ -244,15 +255,17 @@ class TransactionNotificationService {
       final String clientName = client?.name ?? 'غير محدد';
       final String transactionType = log.transactionType.name();
       final String amount = '${log.price} جنيه';
-      final String date = DateFormat.yMMMd('ar').add_jm().format(log.createdAt!);
+      final String date =
+          DateFormat.yMMMd('ar').add_jm().format(log.createdAt!);
 
       // Create a unique ID for the notification
-      final int notificationId = log.id.hashCode ^ DateTime.now().millisecondsSinceEpoch;
+      final int notificationId = log.id.hashCode;
 
       // Build notification details based on platform
-      final NotificationDetails platformDetails = await _buildNotificationDetails(
+      final NotificationDetails platformDetails =
+          await _buildNotificationDetails(
         log.transactionType,
-        user?.name ?? 'المساعد',
+        'المساعد',
         transactionType,
         clientName,
         amount,
@@ -285,7 +298,8 @@ class TransactionNotificationService {
     String date,
   ) async {
     // Android notification details
-    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       ASSISTANT_CHANNEL_ID,
       'Assistant Transactions',
       channelDescription: 'Notifications for assistant transactions',
@@ -343,16 +357,16 @@ class TransactionNotificationService {
         importance: Importance.high,
         priority: Priority.high,
       );
-      
+
       final simpleDarwinDetails = DarwinNotificationDetails();
-      
+
       final simpleDetails = NotificationDetails(
         android: simpleAndroidDetails,
         iOS: simpleDarwinDetails,
       );
-      
+
       final int fallbackId = log.id.hashCode;
-      
+
       await flutterLocalNotificationsPlugin.show(
         fallbackId,
         'معاملة جديدة',
@@ -360,7 +374,7 @@ class TransactionNotificationService {
         simpleDetails,
         payload: client?.id.toString(),
       );
-      
+
       print('🔔 Simple fallback notification sent successfully');
     } catch (e) {
       print('🔔 Even simple notification failed: $e');
@@ -398,16 +412,17 @@ class TransactionNotificationService {
     await flutterLocalNotificationsPlugin.cancelAll();
     await clearBadge();
   }
-  
+
   // Test notification method for debugging
   Future<void> sendTestNotification() async {
     if (!_isInitialized) {
       await initialize();
     }
-    
+
     try {
       // Simple test notification
-      final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      final AndroidNotificationDetails androidDetails =
+          AndroidNotificationDetails(
         ASSISTANT_CHANNEL_ID,
         'Assistant Transactions',
         channelDescription: 'Notifications for assistant transactions',
@@ -416,26 +431,26 @@ class TransactionNotificationService {
         sound: const RawResourceAndroidNotificationSound('notification_sound'),
         vibrationPattern: _vibrationPattern,
       );
-      
+
       final DarwinNotificationDetails iOSDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
         sound: 'notification_sound.aiff',
       );
-      
+
       final NotificationDetails platformDetails = NotificationDetails(
         android: androidDetails,
         iOS: iOSDetails,
       );
-      
+
       await flutterLocalNotificationsPlugin.show(
         999,
         'اختبار الإشعارات',
         'هذا اختبار للتأكد من أن الإشعارات تعمل بشكل صحيح',
         platformDetails,
       );
-      
+
       print('🔔 Test notification sent successfully');
     } catch (e) {
       print('🔔 Test notification failed: $e');
