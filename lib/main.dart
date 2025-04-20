@@ -10,7 +10,7 @@ import 'package:phone_system_app/components/money_display.dart';
 import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
-import 'package:phone_system_app/services/notification_service.dart';
+import 'package:phone_system_app/services/transaction_notification_service.dart';
 import 'package:phone_system_app/views/account_view.dart';
 import 'package:phone_system_app/views/pages/auth_raper.dart';
 import 'package:phone_system_app/views/pages/for_sale_number.dart';
@@ -70,9 +70,16 @@ Future<void> main() async {
     };
   }
 
-  // Initialize notification service early
+  // Initialize notification service and background service early
   if (!kIsWeb) {
+    // Initialize the notification service
     await TransactionNotificationService.instance.initialize();
+    
+    // Make sure the background service is started
+    final backgroundService = TransactionNotificationService.backgroundService;
+    if (!await backgroundService.isRunning()) {
+      await backgroundService.startService();
+    }
   }
 
   // Initialize theme controller

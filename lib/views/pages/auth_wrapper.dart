@@ -4,6 +4,7 @@ import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/views/account_view.dart';
 import 'package:phone_system_app/views/pages/login_page.dart';
+import 'package:phone_system_app/controllers/account_details_controller.dart';
 
 class WelcomeOverlay extends StatefulWidget {
   @override
@@ -50,6 +51,8 @@ class _WelcomeOverlayState extends State<WelcomeOverlay>
 
   @override
   Widget build(BuildContext context) {
+    final accountDetailsController = Get.put(AccountDetailsController());
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -81,12 +84,22 @@ class _WelcomeOverlayState extends State<WelcomeOverlay>
                         height: 120,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          image: DecorationImage(
-                            image: AssetImage('assets/images/owner.png'),
-                            fit: BoxFit.cover,
-                          ),
-                          border: Border.all(color: Colors.blue, width: 3),
+                          color: Colors.grey[200],
+                          image: accountDetailsController.userImages.isNotEmpty
+                              ? DecorationImage(
+                                  image: NetworkImage(accountDetailsController
+                                      .getLatestImageFromBucket() as String),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
                         ),
+                        child: accountDetailsController.userImages.isEmpty
+                            ? Icon(
+                                Icons.person,
+                                size: 60,
+                                color: Colors.grey[400],
+                              )
+                            : null,
                       ),
                       SizedBox(height: 20),
                       Text(

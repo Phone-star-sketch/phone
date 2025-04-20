@@ -31,6 +31,7 @@ class AccountDetailsController extends GetxController {
 
   final Rx<String?> profileImage = Rx<String?>(null);
   final RxList<String> userImages = <String>[].obs;
+  var lastBucketImage = ''.obs;
 
   final List<PageData> pages = [
     PageData(
@@ -74,6 +75,7 @@ class AccountDetailsController extends GetxController {
   void onInit() {
     super.onInit();
     loadUserImages();
+    fetchLastBucketImage();
   }
 
   Future<void> loadUserImages() async {
@@ -97,6 +99,50 @@ class AccountDetailsController extends GetxController {
           .toList();
     } catch (e) {
       print('Error loading user images: $e');
+    }
+  }
+
+  Future<void> fetchLastBucketImage() async {
+    try {
+      final response = await supabase.storage.from('images').list();
+
+      if (response.isNotEmpty) {
+        // Sort files by created_at in descending order
+        response
+            .sort((a, b) => (b.createdAt ?? '').compareTo(a.createdAt ?? ''));
+
+        // Get the public URL of the last image
+        final String publicUrl =
+            supabase.storage.from('images').getPublicUrl(response.first.name);
+
+        lastBucketImage.value = publicUrl;
+      }
+    } catch (e) {
+      print('Error fetching last bucket image: $e');
+    }
+  }
+
+  Future<String> getLatestImageFromBucket() async {
+    try {
+      final storage = Supabase.instance.client.storage;
+      final List<FileObject> files = await storage
+          .from('images')
+          .list();
+      
+      if (files.isEmpty) return '';
+      
+      // Sort files by created date in descending order
+      files.sort((a, b) => (b.createdAt ?? '').compareTo(a.createdAt ?? ''));
+      
+      // Get the URL for the most recent file
+      final String publicUrl = storage
+          .from('images')
+          .getPublicUrl(files.first.name);
+          
+      return publicUrl;
+    } catch (e) {
+      print('Error fetching image from bucket: $e');
+      return '';
     }
   }
 

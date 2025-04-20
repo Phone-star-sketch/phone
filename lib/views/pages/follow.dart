@@ -99,6 +99,48 @@ class FollowController extends GetxController {
                 duration: Duration(seconds: 2),
               );
 
+              // Check if this is an assistant transaction (creator = 2)
+              if (payload.eventType == PostgresChangeEvent.insert &&
+                  payload.newRecord != null &&
+                  payload.newRecord!['creator'] == 2) {
+                print(
+                    '🔴 Assistant transaction detected, showing immediate notification');
+
+                // Fetch the client information
+                await AccountClientInfo.to.fetchClients();
+
+                // Create a log object from the payload
+                final newLog =
+                    Log.fromJson(Map<String, dynamic>.from(payload.newRecord!));
+
+                // Find client information if available
+                Client? client;
+                if (newLog.clientId != null) {
+                  client = AccountClientInfo.to.clinets.firstWhereOrNull(
+                    (element) => element.id == newLog.clientId,
+                  );
+                }
+
+                // Create a LogWidthUser object
+                final logWithUser = LogWidthUser(log: newLog);
+                logWithUser.client = client;
+
+                // Show notification immediately (this will also send to background service)
+                await TransactionNotificationService.instance
+                    .showTransactionNotification(logWithUser);
+
+                // Store the new transaction ID
+                final prefs.SharedPreferences sharedPrefs =
+                    await prefs.SharedPreferences.getInstance();
+                await sharedPrefs.setInt(
+                    LAST_NOTIFICATION_KEY, newLog.id as int);
+
+                // Explicitly send to background service to ensure it works when app is closed
+                await TransactionNotificationService.instance
+                    .sendToBackgroundService(logWithUser);
+              }
+
+              // Update logs list
               await AccountClientInfo.to.fetchClients();
               await updateLogs();
             },
@@ -136,16 +178,7 @@ class FollowController extends GetxController {
         Log.accountIdColumnName: AccountClientInfo.to.currentAccount.id,
       }, 200);
 
-      // Filter logs for the assistant view separately
-      final assistantLogs =
-          await BackendServices.instance.logRepository.getLogsByMatchMapQuery({
-        Log.accountIdColumnName: AccountClientInfo.to.currentAccount.id,
-        'creator': 2, // Filter for assistant (creator = 2)
-        'select': 'system_type,created_at', // Select specific fields
-      }, 200);
-
       l.addAll(dataAdd);
-      l.addAll(assistantLogs);
 
       logs.value = l
           .map(
