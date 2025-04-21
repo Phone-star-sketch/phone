@@ -296,17 +296,17 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.SizedBox(height: 20),
 
                   // Greeting
-                    pw.Center(
+                  pw.Center(
                     child: pw.Text(
                       'تحية طيبه وبعد ،،،',
                       style: pw.TextStyle(font: arabicBoldFont, fontSize: 16),
                     ),
-                    ),
+                  ),
                   pw.SizedBox(height: 20),
 
                   // Body content with consistent spacing
                   pw.Text(
-                    'يرجي التكرم الإحاطة بالعلم بأننا شركة : محمد السيد عبد الحميد',
+                    'يرجي التكرم الإحاطة بالعلم بأننا شركة : محمد السيد عبد المجيد',
                     style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
                   ),
                   pw.SizedBox(height: 10),
@@ -350,10 +350,23 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                         style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
                       ),
                       pw.SizedBox(height: 10),
-                        pw.Text(
-                        'التوقيع : إسلام محمد عبد الرسول النني                    توقيع المفوض بموجب هذاالإقرار ،،،',
-                        style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
-                        ),
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Container(
+                            child: pw.Text(
+                              'التوقيع : إسلام محمد عبد الرسول النني               ',
+                              style: pw.TextStyle(
+                                  font: arabicBoldFont, fontSize: 14),
+                            ),
+                          ),
+                          pw.Text(
+                            'توقيع المفوض بموجب هذا الإقرار ،،،',
+                            style: pw.TextStyle(
+                                font: arabicBoldFont, fontSize: 14),
+                          ),
+                        ],
+                      ),
                       pw.SizedBox(height: 10),
                       pw.Text(
                         'التاريخ     /      /    ٢٠٢ ',
