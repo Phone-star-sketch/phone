@@ -136,8 +136,7 @@ class FollowController extends GetxController {
                     LAST_NOTIFICATION_KEY, newLog.id as int);
 
                 // Explicitly send to background service to ensure it works when app is closed
-                await TransactionNotificationService.instance
-                    .sendToBackgroundService(logWithUser);
+                
               }
 
               // Update logs list

@@ -346,41 +346,47 @@ class ExpiredSystemsPage extends StatelessWidget {
                       style: TextStyle(color: Colors.black),
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.edit_calendar, size: 20),
-                    onPressed: () async {
-                      final DateTime? picked = await showDatePicker(
-                        context: context,
-                        initialDate: client.expireDate ?? DateTime.now(),
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        try {
-                          // Update in database
-                          await BackendServices.instance.clientRepository
-                              .updateClient(
-                                  client.copyWith(expireDate: picked));
-                          // Refresh the client list
-                          await controller.fetchClients();
-                          Get.snackbar(
-                            'تم التحديث',
-                            'تم تحديث تاريخ المتابعة بنجاح',
-                            snackPosition: SnackPosition.BOTTOM,
-                          );
-                        } catch (e) {
-                          Get.snackbar(
-                            'خطأ',
-                            'حدث خطأ أثناء تحديث التاريخ',
-                            snackPosition: SnackPosition.BOTTOM,
-                          );
-                        }
-                      }
-                    },
-                  ),
                 ],
               ),
             ],
+          ),
+          trailing: IconButton(
+            icon: Icon(Icons.edit_calendar, size: 20),
+            onPressed: () async {
+              final DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: client.expireDate ?? DateTime.now(),
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+              );
+              if (picked != null) {
+                try {
+                  // Update in Supabase
+                  await BackendServices.instance.clientRepository
+                      .updateClientInSupabase(
+                          client.id.toString(),
+                          {'expire_date': picked.toIso8601String()}
+                              as Map<String, Object>);
+
+                  // Update local state after successful Supabase update
+                  await controller.fetchClients();
+
+                  Get.snackbar(
+                    'تم التحديث',
+                    'تم تحديث تاريخ المتابعة بنجاح',
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                } catch (e) {
+                  Get.snackbar(
+                    'خطأ',
+                    'حدث خطأ أثناء تحديث التاريخ',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.red[100],
+                  );
+                  print('Error updating expire date: $e');
+                }
+              }
+            },
           ),
           children: [
             Container(

@@ -76,10 +76,7 @@ Future<void> main() async {
     await TransactionNotificationService.instance.initialize();
     
     // Make sure the background service is started
-    final backgroundService = TransactionNotificationService.backgroundService;
-    if (!await backgroundService.isRunning()) {
-      await backgroundService.startService();
-    }
+    
   }
 
   // Initialize theme controller
