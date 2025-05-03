@@ -14,8 +14,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:phone_system_app/views/pages/follow.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:flutter_background_service_android/flutter_background_service_android.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TransactionNotificationService {
   static final TransactionNotificationService instance =
@@ -34,6 +33,7 @@ class TransactionNotificationService {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
   int _badgeCount = 0;
+  RealtimeChannel? _subscription;
 
   // For handling notification taps
   static int? pendingClientId;
@@ -41,18 +41,10 @@ class TransactionNotificationService {
   // Channel IDs
   static const String MAIN_CHANNEL_ID = 'transactions_channel';
   static const String ASSISTANT_CHANNEL_ID = 'assistant_transactions_channel';
-  static const String BACKGROUND_SERVICE_ID = 'phone_system_background_service';
-
-  // Background service instance
-  static final FlutterBackgroundService _backgroundService = FlutterBackgroundService();
-  static bool _backgroundServiceInitialized = false;
 
   // Completer for initialization
   final Completer<bool> _initCompleter = Completer<bool>();
   Future<bool> get isInitialized => _initCompleter.future;
-  
-  // Background service getter
-  static FlutterBackgroundService get backgroundService => _backgroundService;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -84,8 +76,8 @@ class TransactionNotificationService {
         onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
       );
 
-      // Initialize background service for handling notifications when app is closed
-      await _initializeBackgroundService();
+      // Set up real-time subscription
+      _setupRealtimeSubscription();
 
       // Check if there are any pending client IDs from background taps
       _checkPendingClientId();
@@ -100,7 +92,6 @@ class TransactionNotificationService {
       print('🔔 Error initializing notification service: $e');
       _isInitialized = false;
 
-      // If the completer is not completed yet, complete with false
       if (!_initCompleter.isCompleted) {
         _initCompleter.complete(false);
       }
@@ -110,41 +101,73 @@ class TransactionNotificationService {
     }
   }
 
-  // Initialize the background service
-  Future<void> _initializeBackgroundService() async {
-    if (_backgroundServiceInitialized) return;
-    
+  void _setupRealtimeSubscription() {
     try {
-      print('🔔 Initializing background service');
-      
-      // Configure and start background service
-      await _backgroundService.configure(
-        androidConfiguration: AndroidConfiguration(
-          onStart: _onBackgroundServiceStart,
-          autoStart: true,
-          isForegroundMode: true,
-          notificationChannelId: ASSISTANT_CHANNEL_ID,
-          initialNotificationTitle: 'خدمة الإشعارات',
-          initialNotificationContent: 'جاري مراقبة المعاملات',
-          foregroundServiceNotificationId: 888,
-        ),
-        iosConfiguration: IosConfiguration(
-          autoStart: true,
-          onForeground: _onBackgroundServiceStart,
-          onBackground: (ServiceInstance service) => true,
-        ),
-      );
-      
-      // Start the service
-      await _backgroundService.startService();
-      
-      _backgroundServiceInitialized = true;
-      print('🔔 Background service initialized successfully');
+      final client = Supabase.instance.client;
+
+      _subscription = client
+          .channel('logs-channel')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'logs',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'created_by',
+              value: 2, // Assistant's user ID
+            ),
+            callback: (payload) async {
+              if (payload.newRecord != null) {
+                try {
+                  // Create log from data
+                  final logData = Map<String, dynamic>.from(payload.newRecord!);
+                  final Log log = Log.fromJson(logData);
+
+                  // Get client data if available
+                  Client? client;
+                  if (log.clientId != null) {
+                    try {
+                      final response = await Supabase.instance.client
+                          .from('client')
+                          .select()
+                          .eq('id', log.clientId as int)
+                          .single();
+
+                      if (response != null) {
+                        client =
+                            Client.fromJson(response as Map<String, dynamic>);
+                      }
+                    } catch (e) {
+                      print('🔔 Error fetching client data: $e');
+                    }
+                  }
+
+                  // Create LogWidthUser object
+                  final logWithUser = LogWidthUser(log: log);
+                  logWithUser.client = client;
+
+                  // Show notification
+                  await showTransactionNotification(logWithUser);
+                } catch (e) {
+                  print('🔔 Error processing notification: $e');
+                }
+              }
+            },
+          )
+          .subscribe((status, error) {
+        if (error != null) {
+          print('🔔 Realtime subscription error: $error');
+        } else {
+          print('🔔 Realtime subscription status: $status');
+        }
+      });
     } catch (e) {
-      print('🔔 Error initializing background service: $e');
-      // Retry after a delay
-      Future.delayed(Duration(seconds: 5), () => _initializeBackgroundService());
+      print('🔔 Error setting up realtime subscription: $e');
     }
+  }
+
+  void dispose() {
+    _subscription?.unsubscribe();
   }
 
   Future<bool> _requestPermissions() async {
@@ -265,94 +288,6 @@ class TransactionNotificationService {
     }
   }
 
-  // Background service handler
-  @pragma('vm:entry-point')
-  static bool _onBackgroundServiceStart(ServiceInstance service) {
-    // This is needed for Flutter to draw custom UI in the background
-    DartPluginRegistrant.ensureInitialized();
-    
-    // For Android service instance
-    if (service is AndroidServiceInstance) {
-      service.on('setAsForeground').listen((event) {
-        service.setAsForegroundService();
-      });
-      
-      service.on('setAsBackground').listen((event) {
-        service.setAsBackgroundService();
-      });
-    }
-    
-    // Handle transaction events
-    service.on('showTransactionNotification').listen((event) async {
-      if (event != null && event.containsKey('logData')) {
-        try {
-          // Create log from data
-          final logData = Map<String, dynamic>.from(event['logData']);
-          final Log log = Log.fromJson(logData);
-          
-          // Create client from data if available
-          Client? client;
-          if (event.containsKey('clientData') && event['clientData'] != null) {
-            final clientData = Map<String, dynamic>.from(event['clientData']);
-            client = Client.fromJson(clientData);
-          }
-          
-          // Create LogWidthUser object
-          final logWithUser = LogWidthUser(log: log);
-          logWithUser.client = client;
-          
-          // Show notification
-          await TransactionNotificationService.instance.showTransactionNotification(logWithUser);
-        } catch (e) {
-          print('🔔 Background service error processing notification: $e');
-        }
-      }
-    });
-    
-    // Keep the service alive
-    service.on('stopService').listen((event) {
-      service.stopSelf();
-    });
-    
-    // Periodic check for new transactions
-    Timer.periodic(Duration(minutes: 1), (timer) async {
-      if (service is AndroidServiceInstance) {
-        if (await service.isForegroundService()) {
-          // Update notification
-          service.setForegroundNotificationInfo(
-            title: 'خدمة الإشعارات نشطة',
-            content: 'جاري مراقبة المعاملات: ${DateTime.now().toString().substring(11, 16)}',
-          );
-        }
-      }
-      
-      // Send heartbeat to keep service alive
-      service.invoke('update', {'time': DateTime.now().toString()});
-    });
-    
-    // Return true to indicate the service should stay running
-    return true;
-  }
-  
-  // Send notification data to background service
-  Future<void> sendToBackgroundService(LogWidthUser logWithUser) async {
-    if (_backgroundServiceInitialized) {
-      try {
-        // Prepare data to send to background service
-        final Map<String, dynamic> data = {
-          'logData': logWithUser.log.toJson(),
-          'clientData': logWithUser.client?.toJson(),
-        };
-        
-        // Send to background service
-        _backgroundService.invoke('showTransactionNotification', data);
-        print('🔔 Sent notification data to background service');
-      } catch (e) {
-        print('🔔 Error sending to background service: $e');
-      }
-    }
-  }
-
   Future<void> showTransactionNotification(LogWidthUser logWithUser) async {
     // Ensure initialized or wait for initialization
     if (!_isInitialized) {
@@ -413,9 +348,6 @@ class TransactionNotificationService {
         platformDetails,
         payload: client?.id.toString(),
       );
-
-      // Also send to background service to ensure it works when app is closed
-      await sendToBackgroundService(logWithUser);
 
       print('🔔 Notification sent successfully for transaction ID: ${log.id}');
     } catch (e) {

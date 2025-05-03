@@ -68,7 +68,10 @@ class SupabaseClientRepository extends ClientRepository
 
   @override
   Future<void> delete(Client item) async {
-    await _clinet.from(clientTableName).delete().match({'id': item.id});
+    await _clinet
+        .from(clientTableName)
+        .delete()
+        .match({'id': item.id!, 'account_id': item.accountId!});
   }
 
   @override
@@ -84,7 +87,7 @@ class SupabaseClientRepository extends ClientRepository
     await _clinet
         .from(clientTableName)
         .update(item.toJson())
-        .match({'id': item.id});
+        .match({'id': item.id!, 'account_id': item.accountId!});
   }
 
   @override
@@ -346,6 +349,15 @@ class SupabaseClientRepository extends ClientRepository
         'total_cash': client.totalCash,
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', client.id);
+    } catch (e) {
+      throw Exception('Failed to update client: $e');
+    }
+  }
+
+  Future<void> updateClientInSupabase(
+      String clientId, Map<String, Object> data) async {
+    try {
+      await _clinet.from(clientTableName).update(data).eq('id', clientId);
     } catch (e) {
       throw Exception('Failed to update client: $e');
     }
