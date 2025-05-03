@@ -124,8 +124,12 @@ class OfferManagement extends StatelessWidget {
 class ExpiredSystemsController extends GetxController {
   final RxString searchQuery = ''.obs;
   final RxList<Client> filteredClients = <Client>[].obs;
+  final RxList<Client> filteredNoExpiryClients = <Client>[].obs;
+  final RxList<Client> noExpiryClients = <Client>[].obs;
   final RxInt totalExpiredSystems = 0.obs;
+  final RxBool isNoExpiryView = false.obs;
   List<Client>? allClients = <Client>[].obs;
+  List<Client>? allNoExpiryClients = <Client>[];
 
   Future<void> fetchClients() async {
     var clients = await BackendServices.instance.clientRepository
@@ -140,13 +144,22 @@ class ExpiredSystemsController extends GetxController {
                 .any((number) => number.getExpiredSystems().isNotEmpty))
         .toList();
 
+    // Filter clients with no expiry date
+    noExpiryClients.value = clients
+        .where((client) =>
+            client.expireDate == null &&
+            client.numbers!
+                .any((number) => number.getExpiredSystems().isNotEmpty))
+        .toList();
+
     allClients = filteredClients.value;
+    allNoExpiryClients = noExpiryClients.value;
     _updateTotalExpiredSystems();
   }
 
-  ExpiredSystemsController() {
-    // filteredClients.value = allClients;
-    fetchClients();
+  void setViewMode(bool isNoExpiry) {
+    isNoExpiryView.value = isNoExpiry;
+    updateSearch(searchQuery.value);
   }
 
   void initializeWithClients(List<Client> clients) {
@@ -159,8 +172,17 @@ class ExpiredSystemsController extends GetxController {
                 .any((number) => number.getExpiredSystems().isNotEmpty))
         .toList();
 
+    // Filter clients with no expiry date
+    allNoExpiryClients = clients
+        .where((client) =>
+            client.expireDate == null &&
+            client.numbers!
+                .any((number) => number.getExpiredSystems().isNotEmpty))
+        .toList();
+
     // Set initial filtered clients
     filteredClients.value = allClients!;
+    filteredNoExpiryClients.value = allNoExpiryClients!;
     _updateTotalExpiredSystems();
   }
 
@@ -180,115 +202,160 @@ class ExpiredSystemsController extends GetxController {
     searchQuery.value = query;
     if (query.isEmpty) {
       filteredClients.value = allClients!;
+      filteredNoExpiryClients.value = allNoExpiryClients!;
     } else {
       final normalized = removeSpecialArabicChars(query.toLowerCase());
-      filteredClients.value = allClients!
-          .where((client) =>
-              removeSpecialArabicChars(client.name!.toLowerCase())
-                  .contains(normalized) ||
-              client.numbers!.any((number) =>
-                  number.phoneNumber != null &&
-                  number.phoneNumber!.contains(normalized)))
-          .toList();
+      if (isNoExpiryView.value) {
+        filteredNoExpiryClients.value = allNoExpiryClients!
+            .where((client) => _matchesSearch(client, normalized))
+            .toList();
+      } else {
+        filteredClients.value = allClients!
+            .where((client) => _matchesSearch(client, normalized))
+            .toList();
+      }
     }
     _updateTotalExpiredSystems();
   }
+
+  bool _matchesSearch(Client client, String normalized) {
+    return removeSpecialArabicChars(client.name!.toLowerCase())
+            .contains(normalized) ||
+        client.numbers!.any((number) =>
+            number.phoneNumber != null &&
+            number.phoneNumber!.contains(normalized));
+  }
 }
 
-class ExpiredSystemsPage extends StatelessWidget {
+class ExpiredSystemsPage extends StatefulWidget {
   final List<Client> clients;
-  final ExpiredSystemsController controller;
 
-  ExpiredSystemsPage({required this.clients})
-      : controller = Get.put(ExpiredSystemsController()) {
+  ExpiredSystemsPage({required this.clients});
+
+  @override
+  _ExpiredSystemsPageState createState() => _ExpiredSystemsPageState();
+}
+
+class _ExpiredSystemsPageState extends State<ExpiredSystemsPage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final controller = Get.put(ExpiredSystemsController());
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.initializeWithClients(clients);
+      controller.initializeWithClients(widget.clients);
     });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      child: WillPopScope(
-        onWillPop: () async {
-          if (Navigator.canPop(context)) {
-            await Get.delete<ExpiredSystemsController>(force: true);
-            Navigator.pop(context);
-          }
-          return false;
-        },
-        child: Scaffold(
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
           backgroundColor: Colors.white,
-          appBar: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 1,
-            iconTheme: IconThemeData(color: Colors.black),
-            title: Text(
-              "العروض المطلوبة",
-              style: TextStyle(color: Colors.black),
-            ),
+          elevation: 1,
+          iconTheme: IconThemeData(color: Colors.black),
+          title: Text(
+            "العروض المطلوبة",
+            style: TextStyle(color: Colors.black),
           ),
-          body: SafeArea(
-            child: Container(
-              color: Colors.white,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Container(
-                      color: Colors.white,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              onChanged: controller.updateSearch,
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: Colors.grey[200],
-                                labelText: 'بحث',
-                                prefixIcon: Icon(Icons.search),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+          bottom: TabBar(
+            controller: _tabController,
+            labelColor: Colors.black,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.blue,
+            tabs: [
+              Tab(text: "العروض المنتهية"),
+              Tab(text: "غير متوفر"),
+            ],
+            onTap: (index) {
+              controller.setViewMode(index == 1);
+            },
+          ),
+        ),
+        body: SafeArea(
+          child: Container(
+            color: Colors.white,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Container(
+                    color: Colors.white,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            onChanged: controller.updateSearch,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.grey[200],
+                              labelText: 'بحث',
+                              prefixIcon: Icon(Icons.search),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                           ),
-                          SizedBox(width: 10),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Obx(() => Text(
-                                  'عدد العروض المنتهية: ${controller.totalExpiredSystems}',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                )),
+                        ),
+                        SizedBox(width: 10),
+                        Container(
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ],
-                      ),
+                          child: Obx(() => Text(
+                                'العدد: ${controller.filteredClients.length}',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )),
+                        ),
+                      ],
                     ),
                   ),
-                  Expanded(
-                    child: Container(
-                      color: Colors.white,
-                      child: Obx(() => ListView.builder(
+                ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      // Expired systems tab
+                      Obx(() => ListView.builder(
                             itemCount: controller.filteredClients.length,
                             itemBuilder: (context, index) {
                               final client = controller.filteredClients[index];
                               return _buildClientCard(client, context);
                             },
                           )),
-                    ),
+                      // No expiry date tab
+                      Obx(() => ListView.builder(
+                            itemCount:
+                                controller.filteredNoExpiryClients.length,
+                            itemBuilder: (context, index) {
+                              final client =
+                                  controller.filteredNoExpiryClients[index];
+                              return _buildClientCard(client, context);
+                            },
+                          )),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -297,7 +364,6 @@ class ExpiredSystemsPage extends StatelessWidget {
   }
 
   Widget _buildClientCard(Client client, BuildContext context) {
-    // Add BuildContext parameter here
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
