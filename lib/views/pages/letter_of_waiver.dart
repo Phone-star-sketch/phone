@@ -9,6 +9,18 @@ import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+class Company {
+  final String name;
+  final String taxNumber;
+  final String ownerName;
+
+  Company({
+    required this.name,
+    required this.taxNumber,
+    required this.ownerName,
+  });
+}
+
 class LetterOfWaiver extends StatefulWidget {
   const LetterOfWaiver({Key? key}) : super(key: key);
 
@@ -24,6 +36,23 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
   final TextEditingController _nationalIdController = TextEditingController();
   final TextEditingController _waivedPhoneController = TextEditingController();
   bool _isLoading = false;
+
+  // Define the two companies
+  final List<Company> _companies = [
+    Company(
+      name: " محمد السيد عبد الحميد",
+      taxNumber: "477-466-478",
+      ownerName: "محمد السيد عبد الحميد",
+    ),
+    Company(
+      name: "  مواهب حسن علي محمد",
+      taxNumber: "799-499-418",
+      ownerName: "حسن علي محمد",
+    ),
+  ];
+
+  // Selected company index
+  int _selectedCompanyIndex = 0;
 
   @override
   void initState() {
@@ -94,6 +123,38 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                 ),
               ),
               const SizedBox(height: 24),
+
+              // Company Selection Section
+              Card(
+                elevation: 8,
+                shadowColor: Colors.blue.withOpacity(0.2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'اختر الشركة:',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildCompanySelector(),
+                      const SizedBox(height: 8),
+                      _buildCompanyInfoCard(),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
               // Form Section
               Card(
                 elevation: 8,
@@ -153,6 +214,96 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCompanySelector() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue[200]!),
+        color: Colors.white,
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: _selectedCompanyIndex,
+          isExpanded: true,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          borderRadius: BorderRadius.circular(12),
+          icon: Icon(Icons.arrow_drop_down, color: Colors.blue[700]),
+          items: [
+            DropdownMenuItem(
+              value: 0,
+              child: Text(_companies[0].name),
+            ),
+            DropdownMenuItem(
+              value: 1,
+              child: Text(_companies[1].name),
+            ),
+          ],
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                _selectedCompanyIndex = value;
+              });
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompanyInfoCard() {
+    Company selectedCompany = _companies[_selectedCompanyIndex];
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.blue[100]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.business, size: 16, color: Colors.blue[700]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'اسم الشركة: ${selectedCompany.name}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.person, size: 16, color: Colors.blue[700]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('المالك: ${selectedCompany.ownerName}'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.receipt_long, size: 16, color: Colors.blue[700]),
+              const SizedBox(width: 8),
+              const Text('رقم ضريبي: '),
+              Container(
+                child: Text(
+                  selectedCompany.taxNumber.split('-').reversed.join('-'),
+                  textAlign: TextAlign.left,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -270,6 +421,9 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
     final arabicFont = await PdfGoogleFonts.cairoRegular();
     final arabicBoldFont = await PdfGoogleFonts.cairoBold();
 
+    // Get the selected company
+    Company selectedCompany = _companies[_selectedCompanyIndex];
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -315,13 +469,22 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
 
                   // Body content with consistent spacing
                   pw.Text(
-                    'يرجي التكرم الإحاطة بالعلم بأننا شركة : محمد السيد عبد المجيد',
+                    'يرجي التكرم الإحاطة بالعلم بأننا شركة : ${selectedCompany.name}',
                     style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
                   ),
                   pw.SizedBox(height: 10),
-                  pw.Text(
-                    'المشهرة بسجل ضريبي رقم : ${convertToArabicNumbers("478-466-477")}',
-                    style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
+                  pw.Row(
+                    children: [
+                      pw.Text(
+                        'المشهرة بسجل ضريبي رقم : ',
+                        style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
+                      ),
+                      pw.Text(
+                        convertToArabicNumbers(selectedCompany.taxNumber),
+                        style: pw.TextStyle(font: arabicFont, fontSize: 14),
+                        textAlign: pw.TextAlign.left,
+                      ),
+                    ],
                   ),
                   pw.SizedBox(height: 10),
                   pw.Text(
@@ -345,11 +508,12 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   ),
                   pw.SizedBox(height: 20),
                   pw.Text(
-                    'لنفسه و كمـا تقرر الشركه بأنها قـد قامت بسداد جميع المستحقات المتعلقة بالخط المذكور عاليه قبل تاريخ هذا الإقرار كما نقر${'\u00A0'}بموافقتنا علي الأعمال السابق ذكرها وأنه لا يجوز لنا الرجوع في اى عمـل مــن الأعمال المتضمنة في هذا الإقرار.',
+                    'لنفسه و كمـا تقرر الشركة بأنها قـد قامت بسداد جميع المستحقات المتعلقة بالخط المذكور عاليه قبل تاريخ هذا الإقرار كما نقر  بموافقتنا علي الأعمال السابق ذكرها وأنه لا يجوز لنا الرجوع في اى عمـل مــن الأعمال المتضمنة في هذا الإقرار.',
                     style: pw.TextStyle(
                       font: arabicBoldFont,
                       fontSize: 14,
-                      wordSpacing: 2.0, // Added word spacing
+                      letterSpacing: 0.5,
+                      wordSpacing: 2.0,
                     ),
                   ),
                   pw.SizedBox(height: 40),
@@ -359,7 +523,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        'إسم المفوض الأصلي :',
+                        'إسم المفوض الأصلي :  ',
                         style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
                       ),
                       pw.SizedBox(height: 10),
@@ -382,7 +546,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                       ),
                       pw.SizedBox(height: 10),
                       pw.Text(
-                        'التاريخ     /      /    ٢٠٢ ',
+                        'التاريخ     /      /    ${convertToArabicNumbers(DateTime.now().year.toString())}',
                         style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
                       ),
                       pw.SizedBox(height: 10),
@@ -410,19 +574,21 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
     if (kIsWeb) {
       await Printing.sharePdf(
         bytes: pdfData,
-        filename: 'خطاب_تنازل_$dateStr.pdf',
+        filename: 'خطاب_تنازل_${selectedCompany.name}_$dateStr.pdf',
       );
     } else {
       final directory = await getApplicationDocumentsDirectory();
-      final String filePath = '${directory.path}/خطاب_تنازل_$dateStr.pdf';
+      final String filePath =
+          '${directory.path}/خطاب_تنازل_${selectedCompany.name}_$dateStr.pdf';
       final File file = File(filePath);
       await file.writeAsBytes(pdfData);
       await OpenFile.open(filePath);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم إنشاء خطاب التنازل بنجاح'),
+          SnackBar(
+            content: Text(
+                'تم إنشاء خطاب التنازل لشركة ${selectedCompany.name} بنجاح'),
             backgroundColor: Colors.green,
           ),
         );

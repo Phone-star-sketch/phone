@@ -344,21 +344,27 @@ class PrintClientsReceipts extends StatelessWidget {
   }
 
   pw.TableRow buildRow(List<String> data, pw.Font font, double fontSize) {
-    // Create lighter version of #02ccfe
     final lightBlue = PdfColor.fromHex('#e5f9fe');
     final borderBlue = PdfColor.fromHex('#02ccfe');
 
-    return pw.TableRow(
-        decoration: pw.BoxDecoration(color: lightBlue),
-        children: [
-          for (final d in data)
-            pw.Container(
-                padding: const pw.EdgeInsets.all(3),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: borderBlue, width: 0.5),
-                ),
-                child: pw.Center(child: makeText(d, font, fontSize)))
-        ]);
+    return pw
+        .TableRow(decoration: pw.BoxDecoration(color: lightBlue), children: [
+      for (final d in data)
+        pw.Container(
+            padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 3),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: borderBlue, width: 0.5),
+            ),
+            child: pw.Center(
+                child: pw.Text(
+              d,
+              textDirection: pw.TextDirection.rtl,
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(font: font, fontSize: fontSize),
+              maxLines: 2,
+              softWrap: true,
+            )))
+    ]);
   }
 
   pw.TableRow buildTableHead(
@@ -638,7 +644,6 @@ class PrintClientsReceipts extends StatelessWidget {
               pw.Image(pw.MemoryImage(whatsappIcon), width: 20),
               makeText("01017174149", font, 14.0, PdfColors.red900),
               pw.SizedBox(width: 10),
-              
               pw.SizedBox(width: 5),
               makeText("للاستفسار: ", font, 14.0, PdfColors.blue900),
             ],
