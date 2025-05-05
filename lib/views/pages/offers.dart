@@ -429,13 +429,19 @@ class _ExpiredSystemsPageState extends State<ExpiredSystemsPage>
                 try {
                   // Update in Supabase
                   await BackendServices.instance.clientRepository
-                      .updateClientInSupabase(
-                          client.id.toString(),
-                          {'expire_date': picked.toIso8601String()}
-                              as Map<String, Object>);
+                      .updateClientInSupabase(client.id.toString(),
+                          {'expire_date': picked.toIso8601String()});
 
-                  // Update local state after successful Supabase update
+                  // Update the client locally first
+                  client.expireDate = picked;
+
+                  // Refresh both local states
                   await controller.fetchClients();
+
+                  // Also update the main controller's state using the correct method
+                  final mainController = Get.find<AccountClientInfo>();
+                  await mainController
+                      .getClients(); // Changed from refreshData() to getClients
 
                   Get.snackbar(
                     'تم التحديث',
