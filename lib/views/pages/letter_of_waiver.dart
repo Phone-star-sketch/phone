@@ -26,7 +26,16 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _phoneNumberController.addListener(() {
+      _waivedPhoneController.text = _phoneNumberController.text;
+    });
+  }
+
+  @override
   void dispose() {
+    _phoneNumberController.removeListener(() {});
     _phoneNumberController.dispose();
     _recipientNameController.dispose();
     _nationalIdController.dispose();
@@ -336,8 +345,9 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   ),
                   pw.SizedBox(height: 20),
                   pw.Text(
-                    'لنفسه و كمـا تقرر الشركه بأنها قـد قامت بسداد جميع المستحقات المتعلقة بالخط المذكور عاليه قبل تاريخ هذا الإقرار كما نقر بموافقتنا علي الأعمال السابق ذكرها وأنه لا يجوز لنا الرجوع في أـي عمـل مــن الأعمال المتضمنة في هذا الإقرار.',
-                    style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
+                    'لنفسه و كمـا تقرر الشركه بأنها قـد قامت بسداد جميع المستحقات المتعلقة بالخط المذكور عاليه قبل تاريخ هذا الإقرار كما نقر بموافقتنا علي الأعمال السابق ذكرها وأنه لا يجوز لنا الرجوع في اى عمـل مــن الأعمال المتضمنة في هذا الإقرار.',
+                    style: pw.TextStyle(
+                        font: arabicBoldFont, fontSize: 14, letterSpacing: 0),
                   ),
                   pw.SizedBox(height: 40),
 
