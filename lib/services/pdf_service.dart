@@ -219,24 +219,37 @@ class PdfService {
       ),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(
-            title,
-            style: pw.TextStyle(
-              font: boldFont,
-              fontSize: 16,
-              color: color,
+          pw.Expanded(
+            flex: 2,
+            child: pw.Text(
+              title,
+              style: pw.TextStyle(
+                font: boldFont,
+                fontSize: 16,
+                color: color,
+              ),
+              textDirection: pw.TextDirection.rtl,
+              maxLines: 2,
+              softWrap: true,
             ),
-            textDirection: pw.TextDirection.rtl,
           ),
-          pw.Text(
-            value,
-            style: pw.TextStyle(
-              font: boldFont,
-              fontSize: 16,
-              color: PdfColors.black,
+          pw.SizedBox(width: 10),
+          pw.Expanded(
+            flex: 1,
+            child: pw.Text(
+              value,
+              style: pw.TextStyle(
+                font: boldFont,
+                fontSize: 16,
+                color: PdfColors.black,
+              ),
+              textDirection: pw.TextDirection.rtl,
+              textAlign: pw.TextAlign.left,
+              maxLines: 2,
+              softWrap: true,
             ),
-            textDirection: pw.TextDirection.rtl,
           ),
         ],
       ),
