@@ -127,6 +127,9 @@ class ExpiredSystemsController extends GetxController {
   final RxList<Client> filteredNoExpiryClients = <Client>[].obs;
   final RxList<Client> noExpiryClients = <Client>[].obs;
   final RxInt totalExpiredSystems = 0.obs;
+  final RxInt totalNoExpirySystems = 0.obs;
+  final RxInt filteredExpiredCount = 0.obs;
+  final RxInt filteredNoExpiryCount = 0.obs;
   final RxBool isNoExpiryView = false.obs;
   List<Client>? allClients = <Client>[].obs;
   List<Client>? allNoExpiryClients = <Client>[];
@@ -187,14 +190,27 @@ class ExpiredSystemsController extends GetxController {
   }
 
   void _updateTotalExpiredSystems() {
+    // Count expired systems
     totalExpiredSystems.value = filteredClients.fold<int>(
       0,
-      (sum, client) =>
-          sum +
-          client.numbers!.fold<int>(
-            0,
-            (innerSum, number) => innerSum + number.getExpiredSystems().length,
-          ),
+      (sum, client) => sum + _countExpiredSystems(client),
+    );
+
+    // Count no expiry systems
+    totalNoExpirySystems.value = filteredNoExpiryClients.fold<int>(
+      0,
+      (sum, client) => sum + _countExpiredSystems(client),
+    );
+
+    // Update filtered counts
+    filteredExpiredCount.value = filteredClients.length;
+    filteredNoExpiryCount.value = filteredNoExpiryClients.length;
+  }
+
+  int _countExpiredSystems(Client client) {
+    return client.numbers!.fold<int>(
+      0,
+      (sum, number) => sum + number.getExpiredSystems().length,
     );
   }
 
@@ -276,8 +292,12 @@ class _ExpiredSystemsPageState extends State<ExpiredSystemsPage>
             unselectedLabelColor: Colors.grey,
             indicatorColor: Colors.blue,
             tabs: [
-              Tab(text: "العروض المنتهية"),
-              Tab(text: "غير متوفر"),
+              Obx(() => Tab(
+                  text:
+                      "العروض المنتهية (${controller.filteredExpiredCount} عميل - ${controller.totalExpiredSystems} نظام)")),
+              Obx(() => Tab(
+                  text:
+                      "غير متوفر (${controller.filteredNoExpiryCount} عميل - ${controller.totalNoExpirySystems} نظام)")),
             ],
             onTap: (index) {
               controller.setViewMode(index == 1);
@@ -319,7 +339,7 @@ class _ExpiredSystemsPageState extends State<ExpiredSystemsPage>
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Obx(() => Text(
-                                'العدد: ${controller.filteredClients.length}',
+                                'العدد: ${controller.isNoExpiryView.value ? controller.filteredNoExpiryCount : controller.filteredExpiredCount}',
                                 style: TextStyle(
                                   color: Colors.black,
                                   fontWeight: FontWeight.bold,

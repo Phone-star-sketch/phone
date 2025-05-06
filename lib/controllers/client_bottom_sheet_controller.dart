@@ -10,7 +10,7 @@ class ClientBottomSheetController extends GetxController {
   //--------------------------------------
 
   //--------------------------------------
-  late final Rx<Client> _client;
+  final _client = Rx<Client?>(null);
   final List<Log> _logs = <Log>[].obs;
   final List<System> _systems = <System>[].obs;
 
@@ -22,22 +22,46 @@ class ClientBottomSheetController extends GetxController {
   final isLoading = false.obs;
   final dateSelected = DateTime.now().obs;
 
-  void setClient(Client client) async {
-    _client = client.obs;
-    _client.value = client;
+  Future<void> setClient(Client client) async {
+    isLoading.value = true;
+    try {
+      _client.value = client;
 
-    _types =
-        await BackendServices.instance.systemTypeRepository.getAllTypes(true);
-
-    BackendServices.instance.clientRepository
-        .bindStreamToClientLogsChanges(client, (data) {
+      // Clear existing data
       _logs.clear();
-      _logs.addAll(
-          data.map((logJsonObject) => Log.fromJson(logJsonObject)).toList());
+      _systems.clear();
 
-      _logsLength = _logs.length;
-    });
+      // Fetch system types
+      _types =
+          await BackendServices.instance.systemTypeRepository.getAllTypes(true);
 
+      // Set up streams
+      await Future.wait([
+        _setupLogsStream(client),
+        _setupSystemsStream(client),
+        _setupClientStream(client),
+      ]);
+    } catch (e) {
+      print('Error initializing client data: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> _setupLogsStream(Client client) async {
+    BackendServices.instance.clientRepository.bindStreamToClientLogsChanges(
+      client,
+      (data) {
+        _logs.clear();
+        _logs.addAll(
+            data.map((logJsonObject) => Log.fromJson(logJsonObject)).toList());
+        _logsLength = _logs.length;
+        update();
+      },
+    );
+  }
+
+  Future<void> _setupSystemsStream(Client client) async {
     BackendServices.instance.clientRepository
         .bindStreamToClientSystemsChanges(client, (data) async {
       try {
@@ -54,7 +78,9 @@ class ClientBottomSheetController extends GetxController {
         print(e);
       }
     });
+  }
 
+  Future<void> _setupClientStream(Client client) async {
     BackendServices.instance.clientRepository.bindStreamToClientChanges(
       client,
       (payload) {
@@ -62,7 +88,7 @@ class ClientBottomSheetController extends GetxController {
           print(payload);
 
           final data = payload[0];
-          _client.value.totalCash = data[Client.totalCashColumns];
+          _client.value!.totalCash = data[Client.totalCashColumns];
         } catch (e) {
           print(e);
         }
@@ -86,7 +112,10 @@ class ClientBottomSheetController extends GetxController {
   }
 
   Client getClient() {
-    return _client.value;
+    if (_client.value == null) {
+      throw Exception('Client has not been initialized');
+    }
+    return _client.value!;
   }
 
   List<Log> getClientLogs() {

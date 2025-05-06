@@ -30,6 +30,12 @@ Future showClientInfoSheet(
   double width = MediaQuery.of(context).size.width;
   double height = MediaQuery.of(context).size.height;
 
+  // Create a new controller instance for this sheet
+  final controller =
+      Get.put(ClientBottomSheetController(), tag: client.id.toString());
+  // Initialize the client data first
+  await controller.setClient(client);
+
   return showModalBottomSheet(
       backgroundColor: Colors.white,
       enableDrag: true,
@@ -45,6 +51,7 @@ Future showClientInfoSheet(
           colors: colors,
           height: height,
           client: client,
+          controller: controller, // Pass the controller
         );
       });
 }
@@ -126,13 +133,14 @@ Future<void> showEditSystemDialog(System system) async {
 }
 
 class ClientDataWidget extends StatelessWidget {
-  final clientController = Get.find<ClientBottomSheetController>();
+  final ClientBottomSheetController controller;
 
   ClientDataWidget({
     super.key,
     required this.colors,
     required this.height,
     required this.client,
+    required this.controller,
   });
 
   final ColorScheme colors;
@@ -149,9 +157,17 @@ class ClientDataWidget extends StatelessWidget {
     int crossAxisCount =
         max((screenWidth ~/ minWidth != 0) ? screenWidth ~/ minWidth : 1, 2);
     return Obx(() {
-      final client = clientController.getClient();
-      final systems = clientController.getClientSystems();
-      var logs = clientController.getClientLogs()
+      if (controller.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
+      final clientData = controller.getClient();
+      if (clientData == null) {
+        return const Center(child: Text("خطأ في تحميل البيانات"));
+      }
+
+      final systems = controller.getClientSystems();
+      final logs = controller.getClientLogs()
         ..sort(
           (a, b) {
             return (a.createdAt!.isAfter(b.createdAt!)) ? -1 : 1;
@@ -432,8 +448,7 @@ class ClientDataWidget extends StatelessWidget {
                                   child: SizedBox(
                                     height: 0.5 * height,
                                     child: ListView.builder(
-                                      itemCount:
-                                          clientController.getLogLength(),
+                                      itemCount: controller.getLogLength(),
                                       itemBuilder: (context, index) {
                                         final currentLog = logs[index];
                                         return LogCardWidget(
