@@ -432,7 +432,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
             decoration: InputDecoration(
               hintText: "ابحث عن عميل (الاسم، رقم الهاتف)",
               hintStyle: const TextStyle(
-                color: Colors.black38,
+                color: Colors.grey,
                 fontSize: 14,
                 fontWeight: FontWeight.normal,
               ),
@@ -442,10 +442,16 @@ class _CustomTextFieldState extends State<CustomTextField> {
                 borderRadius: BorderRadius.circular(15),
                 borderSide: const BorderSide(color: Colors.lightBlue),
               ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(15),
-                borderSide: const BorderSide(color: Colors.lightBlue),
+                borderSide: const BorderSide(color: Colors.lightBlue, width: 2),
               ),
+              filled: true,
+              fillColor: Colors.grey.shade50,
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),

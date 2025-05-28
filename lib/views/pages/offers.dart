@@ -385,220 +385,305 @@ class _ExpiredSystemsPageState extends State<ExpiredSystemsPage>
 
   Widget _buildClientCard(Client client, BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Card(
         color: Colors.white,
-        elevation: 8,
+        elevation: 3,
         shadowColor: Colors.blue.withOpacity(0.2),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(15),
           side: BorderSide(
-            color: Colors.blue.withOpacity(0.2),
+            color: Colors.blue.withOpacity(0.1),
             width: 1,
           ),
         ),
-        child: ExpansionTile(
-          backgroundColor: Colors.white,
-          collapsedBackgroundColor: Colors.white,
-          leading: CircleAvatar(
-            backgroundColor: Colors.blue.withOpacity(0.1),
-            radius: 25,
-            child: Icon(
-              Icons.person,
-              color: Colors.blue,
-              size: 30,
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            dividerColor: Colors.transparent,
+            colorScheme: ColorScheme.light(
+              primary: Colors.blue.shade700,
             ),
           ),
-          title: Text(
-            client.name!,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: Colors.black87,
-            ),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'عدد الأنظمة المنتهية: ${client.numbers!.fold<int>(0, (sum, number) => sum + number.getExpiredSystems().length)}',
-                style: TextStyle(color: Colors.black),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'تاريخ المتابعة: ${(client.expireDate != null && client.expireDate!.isBefore(DateTime.now())) ? fullExpressionArabicDate(client.expireDate!) : "لا يوجد"}',
-                      style: TextStyle(color: Colors.black),
-                    ),
+          child: ExpansionTile(
+            backgroundColor: Colors.white,
+            collapsedBackgroundColor: Colors.white,
+            leading: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [Colors.blue.shade100, Colors.blue.shade200],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
-            ],
-          ),
-          trailing: IconButton(
-            icon: Icon(Icons.edit_calendar, size: 20),
-            onPressed: () async {
-              final DateTime? picked = await showDatePicker(
-                context: context,
-                initialDate: client.expireDate ?? DateTime.now(),
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-              );
-              if (picked != null) {
-                try {
-                  // Update in Supabase
-                  await BackendServices.instance.clientRepository
-                      .updateClientInSupabase(client.id.toString(),
-                          {'expire_date': picked.toIso8601String()});
-
-                  // Update the client locally first
-                  client.expireDate = picked;
-
-                  // Refresh both local states
-                  await controller.fetchClients();
-
-                  // Also update the main controller's state using the correct method
-                  final mainController = Get.find<AccountClientInfo>();
-                  await mainController
-                      .getClients(); // Changed from refreshData() to getClients
-
-                  Get.snackbar(
-                    'تم التحديث',
-                    'تم تحديث تاريخ المتابعة بنجاح',
-                    snackPosition: SnackPosition.BOTTOM,
-                  );
-                } catch (e) {
-                  Get.snackbar(
-                    'خطأ',
-                    'حدث خطأ أثناء تحديث التاريخ',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: Colors.red[100],
-                  );
-                  print('Error updating expire date: $e');
-                }
-              }
-            },
-          ),
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              margin: EdgeInsets.all(12),
-              child: Column(
-                children: client.numbers!.map((number) {
-                  final systems = number.systems ?? [];
-                  if (systems.isEmpty) return SizedBox.shrink();
-
-                  return Container(
-                    margin: EdgeInsets.all(8),
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 5,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.phone_android, color: Colors.blue),
-                            SizedBox(width: 8),
-                            Text(
-                              number.phoneNumber ?? '',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.blue,
-                              ),
-                            ),
-                            Spacer(),
-                            IconButton(
-                              icon: Icon(Icons.copy, color: Colors.blue),
-                              onPressed: () {
-                                if (number.phoneNumber != null) {
-                                  Clipboard.setData(
-                                      ClipboardData(text: number.phoneNumber!));
-                                  Get.snackbar(
-                                    'تم النسخ',
-                                    'تم نسخ الرقم بنجاح',
-                                    snackPosition: SnackPosition.BOTTOM,
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                        Divider(height: 20),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: systems.map((system) {
-                            if (system.type!.category ==
-                                SystemCategory.mobileInternet) {
-                              if (system.createdAt != null) {
-                                final collectionDay =
-                                    AccountClientInfo.to.currentAccount.day;
-                                final nextCollection = DateTime(
-                                  system.createdAt!.month == 12
-                                      ? system.createdAt!.year + 1
-                                      : system.createdAt!.year,
-                                  system.createdAt!.month == 12
-                                      ? 1
-                                      : system.createdAt!.month + 1,
-                                  collectionDay,
-                                );
-                                if (DateTime.now().isAfter(nextCollection)) {
-                                  return const SizedBox.shrink();
-                                }
-                              }
-                            }
-
-                            return Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(15),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    system.type!.name!,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(Icons.edit, size: 20),
-                                    onPressed: () =>
-                                        _showEditSystemDialog(system),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+              child: CircleAvatar(
+                backgroundColor: Colors.transparent,
+                radius: 25,
+                child: Icon(
+                  Icons.person,
+                  color: Colors.blue.shade700,
+                  size: 28,
+                ),
               ),
             ),
-          ],
+            title: Text(
+              client.name!,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 17,
+                color: Colors.blue.shade900,
+                letterSpacing: 0.3,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.system_update_alt,
+                        size: 16, color: Colors.orange.shade800),
+                    SizedBox(width: 4),
+                    Text(
+                      'الأنظمة المنتهية: ${client.numbers!.fold<int>(0, (sum, number) => sum + number.getExpiredSystems().length)}',
+                      style: TextStyle(
+                        color: Colors.orange.shade800,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(Icons.event, size: 16, color: Colors.grey.shade700),
+                    SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'تاريخ المتابعة: ${(client.expireDate != null && client.expireDate!.isBefore(DateTime.now())) ? fullExpressionArabicDate(client.expireDate!) : "لا يوجد"}',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            trailing: Container(
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                icon: Icon(Icons.edit_calendar,
+                    color: Colors.blue.shade700, size: 20),
+                onPressed: () async {
+                  final DateTime? picked = await showDatePicker(
+                    context: context,
+                    initialDate: client.expireDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (picked != null) {
+                    try {
+                      // Update in Supabase
+                      await BackendServices.instance.clientRepository
+                          .updateClientInSupabase(client.id.toString(),
+                              {'expire_date': picked.toIso8601String()});
+
+                      // Update the client locally first
+                      client.expireDate = picked;
+
+                      // Refresh both local states
+                      await controller.fetchClients();
+
+                      // Also update the main controller's state using the correct method
+                      final mainController = Get.find<AccountClientInfo>();
+                      await mainController
+                          .getClients(); // Changed from refreshData() to getClients
+
+                      Get.snackbar(
+                        'تم التحديث',
+                        'تم تحديث تاريخ المتابعة بنجاح',
+                        snackPosition: SnackPosition.BOTTOM,
+                      );
+                    } catch (e) {
+                      Get.snackbar(
+                        'خطأ',
+                        'حدث خطأ أثناء تحديث التاريخ',
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: Colors.red[100],
+                      );
+                      print('Error updating expire date: $e');
+                    }
+                  }
+                },
+              ),
+            ),
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.grey.shade50,
+                      Colors.white,
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                margin: EdgeInsets.all(12),
+                child: Column(
+                  children: client.numbers!.map((number) {
+                    final systems = number.systems ?? [];
+                    if (systems.isEmpty) return SizedBox.shrink();
+
+                    return Container(
+                      margin: EdgeInsets.all(8),
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 10,
+                            spreadRadius: 0,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: Colors.blue.shade100,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(Icons.phone_android,
+                                    color: Colors.blue.shade700, size: 20),
+                              ),
+                              SizedBox(width: 12),
+                              Text(
+                                number.phoneNumber ?? '',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.blue.shade700,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              Spacer(),
+                              IconButton(
+                                icon: Icon(Icons.copy,
+                                    color: Colors.blue.shade400),
+                                onPressed: () {
+                                  if (number.phoneNumber != null) {
+                                    Clipboard.setData(ClipboardData(
+                                        text: number.phoneNumber!));
+                                    Get.snackbar(
+                                      'تم النسخ',
+                                      'تم نسخ الرقم بنجاح',
+                                      snackPosition: SnackPosition.BOTTOM,
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          Divider(height: 20, color: Colors.blue.shade50),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: systems.map((system) {
+                              if (system.type!.category ==
+                                  SystemCategory.mobileInternet) {
+                                if (system.createdAt != null) {
+                                  final collectionDay =
+                                      AccountClientInfo.to.currentAccount.day;
+                                  final nextCollection = DateTime(
+                                    system.createdAt!.month == 12
+                                        ? system.createdAt!.year + 1
+                                        : system.createdAt!.year,
+                                    system.createdAt!.month == 12
+                                        ? 1
+                                        : system.createdAt!.month + 1,
+                                    collectionDay,
+                                  );
+                                  if (DateTime.now().isAfter(nextCollection)) {
+                                    return const SizedBox.shrink();
+                                  }
+                                }
+                              }
+
+                              return Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.blue.shade50,
+                                      Colors.blue.shade100,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.blue.shade200,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      system.type!.name!,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.blue.shade900,
+                                      ),
+                                    ),
+                                    SizedBox(width: 4),
+                                    IconButton(
+                                      icon: Icon(Icons.edit,
+                                          size: 18,
+                                          color: Colors.blue.shade700),
+                                      onPressed: () =>
+                                          _showEditSystemDialog(system),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
