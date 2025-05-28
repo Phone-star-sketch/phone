@@ -237,141 +237,152 @@ class _ClientCardState extends State<ClientCard>
                         : [Colors.white, Colors.grey.shade50],
                   ),
                 ),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () async {
-                    final controller = Get.put(ClientBottomSheetController());
-                    controller.setClient(widget.client);
-                    await showClientInfoSheet(context, widget.client);
-                    Get.delete<ClientBottomSheetController>(force: true);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundColor: Colors.blue.shade100,
-                                    child: Text(
-                                      widget.client.name
-                                              ?.substring(0, 1)
-                                              .toUpperCase() ??
-                                          '',
-                                      style: const TextStyle(
-                                        color: Colors.blue,
-                                        fontWeight: FontWeight.bold,
+                child: Stack(
+                  children: [
+                    // Background logo positioned at the top
+                    Positioned(
+                      top: -8,
+                      left: 0,
+                      right: 0,
+                      child: Opacity(
+                        opacity: 0.05,
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          height: 100,
+                          fit: BoxFit.fitHeight,
+                        ),
+                      ),
+                    ),
+                    // Main content
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      backgroundColor: Colors.blue.shade100,
+                                      child: Text(
+                                        widget.client.name
+                                                ?.substring(0, 1)
+                                                .toUpperCase() ??
+                                            '',
+                                        style: const TextStyle(
+                                          color: Colors.blue,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          widget.client.name ?? '',
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            widget.client.name ?? '',
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          phoneNumber,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey.shade600,
+                                          Text(
+                                            phoneNumber,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey.shade600,
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  if (SupabaseAuthentication.myUser!.role !=
+                                      UserRoles.assistant.index)
+                                    IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      color: Colors.blue,
+                                      onPressed: () async {
+                                        await clientEditModelSheet(context,
+                                            client: widget.client);
+                                      },
+                                    ),
+                                  IconButton(
+                                    icon: const Icon(Icons.copy),
+                                    color: Colors.green,
+                                    onPressed: () {
+                                      if (phoneNumber.isNotEmpty) {
+                                        Clipboard.setData(
+                                            ClipboardData(text: phoneNumber));
+                                        Get.showSnackbar(
+                                          const GetSnackBar(
+                                            message: 'تم نسخ رقم الهاتف',
+                                            duration: Duration(seconds: 1),
+                                          ),
+                                        );
+                                      }
+                                    },
                                   ),
                                 ],
                               ),
-                            ),
-                            Row(
-                              children: [
-                                if (SupabaseAuthentication.myUser!.role !=
-                                    UserRoles.assistant.index)
-                                  IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    color: Colors.blue,
-                                    onPressed: () async {
-                                      await clientEditModelSheet(context,
-                                          client: widget.client);
-                                    },
-                                  ),
-                                IconButton(
-                                  icon: const Icon(Icons.copy),
-                                  color: Colors.green,
-                                  onPressed: () {
-                                    if (phoneNumber.isNotEmpty) {
-                                      Clipboard.setData(
-                                          ClipboardData(text: phoneNumber));
-                                      Get.showSnackbar(
-                                        const GetSnackBar(
-                                          message: 'تم نسخ رقم الهاتف',
-                                          duration: Duration(seconds: 1),
-                                        ),
-                                      );
-                                    }
-                                  },
+                            ],
+                          ),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color:
+                                  getWarningColorState(clientCash.toDouble()),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: getWarningColorState(
+                                          clientCash.toDouble())
+                                      .withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: getWarningColorState(clientCash.toDouble()),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    getWarningColorState(clientCash.toDouble())
-                                        .withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                "المبلغ المطلوب:",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  "المبلغ المطلوب:",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                requiredCash == 0
-                                    ? "لا يوجد مستحقات"
-                                    : "$requiredCash جنيهاً",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                Text(
+                                  requiredCash == 0
+                                      ? "لا يوجد مستحقات"
+                                      : "$requiredCash جنيهاً",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),

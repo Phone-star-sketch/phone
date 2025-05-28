@@ -22,20 +22,26 @@ class ClientBottomSheetController extends GetxController {
   final isLoading = false.obs;
   final dateSelected = DateTime.now().obs;
 
-  void setClient(Client client) async {
+  Future<void> setClient(Client client) async {
     _client = client.obs;
     _client.value = client;
 
+    // Clear previous data
+    _logs.clear();
+    _systems.clear();
+
+    // Load types first
     _types =
         await BackendServices.instance.systemTypeRepository.getAllTypes(true);
 
+    // Set up streams
     BackendServices.instance.clientRepository
         .bindStreamToClientLogsChanges(client, (data) {
       _logs.clear();
       _logs.addAll(
           data.map((logJsonObject) => Log.fromJson(logJsonObject)).toList());
-
       _logsLength = _logs.length;
+      update(); // Trigger UI update
     });
 
     BackendServices.instance.clientRepository
@@ -50,6 +56,7 @@ class ClientBottomSheetController extends GetxController {
         _systems.clear();
         _systems.addAll(systems);
         _systemsLength = _systems.length;
+        update(); // Trigger UI update
       } catch (e) {
         print(e);
       }
@@ -60,14 +67,22 @@ class ClientBottomSheetController extends GetxController {
       (payload) {
         try {
           print(payload);
-
           final data = payload[0];
           _client.value.totalCash = data[Client.totalCashColumns];
+          update(); // Trigger UI update
         } catch (e) {
           print(e);
         }
       },
     );
+  }
+
+  @override
+  void onClose() {
+    // Clean up streams and data
+    _logs.clear();
+    _systems.clear();
+    super.onClose();
   }
 
   void updateClient() {

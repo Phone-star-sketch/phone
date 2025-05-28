@@ -40,14 +40,14 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
   // Define the two companies
   final List<Company> _companies = [
     Company(
-      name: " محمد السيد عبد الحميد",
+      name: " محمد السيد عبد المجيد",
       taxNumber: "477-466-478",
-      ownerName: "محمد السيد عبد الحميد",
+      ownerName: "محمد السيد عبد المجيد",
     ),
     Company(
-      name: "  مواهب حسن علي محمد",
+      name: "مواهب حسن علي محمد",
       taxNumber: "799-499-418",
-      ownerName: "حسن علي محمد",
+      ownerName: "مواهب حسن علي محمد" ,
     ),
   ];
 

@@ -27,6 +27,7 @@ import 'package:phone_system_app/views/pages/system_list.dart';
 import 'package:phone_system_app/views/pages/create_user_page.dart';
 import 'package:phone_system_app/pages/user_management_page.dart'; // Add this import
 import 'package:phone_system_app/views/pages/letter_of_waiver.dart';
+import 'package:phone_system_app/views/pages/filter_systems.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'animated_profile_avatar.dart';
 import 'package:image_picker/image_picker.dart';
@@ -109,6 +110,20 @@ class AccountDetails extends StatelessWidget {
           color: Colors.black54,
         ),
         title: "الربح و الاحصاء",
+      ),
+    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+      Page(
+        roles: [UserRoles.manager],
+        content: Container(
+          color: Colors.white,
+          constraints: const BoxConstraints.expand(),
+          child: FilterSystemsPage(),
+        ),
+        icon: const Icon(
+          Icons.assessment,
+          color: Colors.black54,
+        ),
+        title: "احصاء الانظمة",
       ),
     Page(
       roles: [UserRoles.manager, UserRoles.assistant],
