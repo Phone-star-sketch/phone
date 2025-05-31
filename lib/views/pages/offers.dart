@@ -14,6 +14,7 @@ import 'package:phone_system_app/views/pages/dues_management.dart';
 import 'package:intl/intl.dart';
 import 'package:phone_system_app/utils/arabic_normalizer.dart';
 import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
+import 'package:phone_system_app/views/widgets/custom_toolbar.dart';
 
 class OfferManagement extends StatelessWidget {
   final controller = Get.find<AccountClientInfo>();
@@ -78,37 +79,114 @@ class OfferManagement extends StatelessWidget {
       return Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.9),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(32),
+                bottomRight: Radius.circular(32),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
               children: [
-                Expanded(
-                  child: Text(
-                    "العملاء الذين انتهت عروضهم خلال العشرة أيام الماضية فقط",
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.orange.shade100,
+                              Colors.orange.shade50
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orange.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "العملاء المنتهية عروضهم",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Text(
+                                  "${clients.length}",
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                                const Text(
+                                  " عميل",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        _navigateToExpiredSystems(
+                            context, expiredSystemsClients);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.orange,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      icon: const Icon(Icons.card_giftcard_rounded),
+                      label: const Text(
+                        "العروض المطلوبة",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                CustomDataColumn(
-                  title: "العدد",
-                  value: "${clients.length}",
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    _navigateToExpiredSystems(context, expiredSystemsClients);
-                  },
-                  icon: Icon(Icons.card_giftcard_rounded,
-                      color: Colors.black), // Icon added here
-                  label: Text(
-                    "العروض المطلوبة",
-                    style: TextStyle(color: Colors.black),
-                  ),
+                const SizedBox(height: 20),
+                CustomToolbar(
+                  controller: controller,
+                  printingClients: printingClients,
                 ),
               ],
             ),
           ),
-          CutsomToolBar(
-              controller: controller, printingClients: printingClients),
           Expanded(
               child: ClientListView(
             data: clients,
