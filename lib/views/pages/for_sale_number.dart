@@ -123,6 +123,7 @@ class ForSaleController extends GetxController {
     await clientEditModelSheet(
       context,
       initialPhoneNumber: assigned.phoneNumber,
+      phonePrice: assigned.price, // Pass the phone price
       onSuccess: () async {
         try {
           isLoading.value = true;

@@ -5,7 +5,14 @@ import 'package:phone_system_app/models/model.dart';
 enum TransactionType {
   moneyAdded,
   moneyDeducted,
-  transactionDone, deposit, income, expense, transfer,
+  transactionDone,
+  deposit,
+  income,
+  expense,
+  transfer,
+  payment,
+  addition,
+  debt, // Add this new type for phone purchases
 }
 
 extension Printing on TransactionType {
@@ -65,21 +72,21 @@ class Log extends Model {
   Object? createdBy;
   TransactionType transactionType;
 
-  Log(
-      {required super.id,
-      super.createdAt,
-      required this.systemType,
-      required this.price,
-      this.paid = 0.0,
-      this.reminder = 0.0,
-      this.year = 0,
-      this.month = 0,
-      required this.createdBy, 
-      required this.transactionType,
-      required this.clientId,
-      required this.phoneId,
-      
-      required this.accountId,});
+  Log({
+    required super.id,
+    super.createdAt,
+    required this.systemType,
+    required this.price,
+    this.paid = 0.0,
+    this.reminder = 0.0,
+    this.year = 0,
+    this.month = 0,
+    required this.createdBy,
+    required this.transactionType,
+    required this.clientId,
+    required this.phoneId,
+    required this.accountId,
+  });
 
   Log.fromJson(super.data)
       : price = data[priceColumnName].toDouble(),
@@ -88,7 +95,7 @@ class Log extends Model {
         month = data[monthColumnName].toInt(),
         accountId = data[accountIdColumnName],
         reminder = data[reminderColumnName].toDouble(),
-        createdBy = data[createdByColumnName], 
+        createdBy = data[createdByColumnName],
         transactionType =
             TransactionType.values[data[transactionTypeColumnName] as int],
         systemType = data[systemTypeDateColumnName].toString(),
@@ -109,8 +116,8 @@ class Log extends Model {
       Log.systemTypeDateColumnName: systemType,
       Log.transactionTypeColumnName: transactionType.index,
       Log.clientIdColumnName: clientId,
-      Log.phoneIdColumnName: phoneId, 
-      Log.createdByColumnName : createdBy
+      Log.phoneIdColumnName: phoneId,
+      Log.createdByColumnName: createdBy
     };
   }
 }
