@@ -23,58 +23,67 @@ class ClientBottomSheetController extends GetxController {
   final dateSelected = DateTime.now().obs;
 
   Future<void> setClient(Client client) async {
-    _client = client.obs;
-    _client.value = client;
+    try {
+      _client = client.obs;
+      _client.value = client;
 
-    // Clear previous data
-    _logs.clear();
-    _systems.clear();
-
-    // Load types first
-    _types =
-        await BackendServices.instance.systemTypeRepository.getAllTypes(true);
-
-    // Set up streams
-    BackendServices.instance.clientRepository
-        .bindStreamToClientLogsChanges(client, (data) {
+      // Clear previous data
       _logs.clear();
-      _logs.addAll(
-          data.map((logJsonObject) => Log.fromJson(logJsonObject)).toList());
-      _logsLength = _logs.length;
-      update(); // Trigger UI update
-    });
+      _systems.clear();
 
-    BackendServices.instance.clientRepository
-        .bindStreamToClientSystemsChanges(client, (data) async {
-      try {
-        final systems = (data as List).map((systemJsonObject) {
-          SystemType t = _types.firstWhere(
-              (type) => type.id == systemJsonObject['type_id'] as Object);
-          systemJsonObject['system_type'] = t.toJson();
-          return System.fromJson(systemJsonObject);
-        }).toList();
-        _systems.clear();
-        _systems.addAll(systems);
-        _systemsLength = _systems.length;
+      // Load types first
+      _types =
+          await BackendServices.instance.systemTypeRepository.getAllTypes(true);
+
+      // Set up streams
+      BackendServices.instance.clientRepository
+          .bindStreamToClientLogsChanges(client, (data) {
+        _logs.clear();
+        _logs.addAll(
+            data.map((logJsonObject) => Log.fromJson(logJsonObject)).toList());
+        _logsLength = _logs.length;
         update(); // Trigger UI update
-      } catch (e) {
-        print(e);
-      }
-    });
+      });
 
-    BackendServices.instance.clientRepository.bindStreamToClientChanges(
-      client,
-      (payload) {
-        try {
-          print(payload);
-          final data = payload[0];
-          _client.value.totalCash = data[Client.totalCashColumns];
+      BackendServices.instance.clientRepository
+          .bindStreamToClientSystemsChanges(
+        client,
+        (payload) {
+          if (payload.isEmpty) {
+            _systems.clear();
+          } else {
+            final systems = payload.map((systemJsonObject) {
+              SystemType t = _types.firstWhere(
+                  (type) => type.id == systemJsonObject['type_id'] as Object);
+              systemJsonObject['system_type'] = t.toJson();
+              return System.fromJson(systemJsonObject);
+            }).toList();
+            _systems.clear();
+            _systems.addAll(systems);
+          }
+          _systemsLength = _systems.length;
           update(); // Trigger UI update
-        } catch (e) {
-          print(e);
-        }
-      },
-    );
+        },
+      );
+
+      BackendServices.instance.clientRepository.bindStreamToClientChanges(
+        client,
+        (payload) {
+          try {
+            print(payload);
+            final data = payload[0];
+            _client.value.totalCash = data[Client.totalCashColumns];
+            update(); // Trigger UI update
+          } catch (e) {
+            print(e);
+          }
+        },
+      );
+    } catch (e) {
+      print('Error in setClient: $e');
+      _systems.clear(); // Initialize with empty list on error
+      update();
+    }
   }
 
   @override

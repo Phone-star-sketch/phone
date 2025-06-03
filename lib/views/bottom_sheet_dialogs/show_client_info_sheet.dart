@@ -21,6 +21,7 @@ import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/views/client_list_view.dart';
 import 'package:phone_system_app/views/print_clients_receipts.dart';
+import 'package:phone_system_app/views/pages/all_clinets_page.dart';
 
 Future showClientInfoSheet(
   BuildContext context,
@@ -160,14 +161,14 @@ class ClientDataWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<ClientBottomSheetController>(builder: (controller) {
-      final client = controller.getClient();
-      final systems = controller.getClientSystems() ?? []; // Add null check
-      final logs =
-          List<Log>.from(controller.getClientLogs() ?? []) // Add null check
-            ..sort((a, b) => (a.createdAt!.isAfter(b.createdAt!)) ? -1 : 1);
+      // Get client data from controller, fallback to provided client if null
+      final currentClient = controller.getClient() ?? client;
+      final systems = controller.getClientSystems() ?? [];
+      final logs = List<Log>.from(controller.getClientLogs() ?? [])
+        ..sort((a, b) => (a.createdAt!.isAfter(b.createdAt!)) ? -1 : 1);
 
-      // Change loading condition to check for client
-      if (client == null) {
+      // Use loading indicator only if both controller client and provided client are null
+      if (currentClient == null) {
         return const Center(
           child: CircularProgressIndicator(),
         );
@@ -206,7 +207,7 @@ class ClientDataWidget extends StatelessWidget {
                     radius: 40,
                     backgroundColor: Colors.white,
                     child: Text(
-                      client.name![0].toUpperCase(),
+                      currentClient.name?[0].toUpperCase() ?? 'N/A',
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -216,7 +217,7 @@ class ClientDataWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    client.name!,
+                    currentClient.name ?? 'غير محدد',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 24,
@@ -243,14 +244,14 @@ class ClientDataWidget extends StatelessWidget {
                 ],
               ),
               child: MoneyDisplay(
-                value: client.totalCash,
+                value: currentClient.totalCash,
                 title: "صافي مستحقات و ديون العميل",
                 onAdd: () async {
-                  await showMoneyDialog(context, client, true);
+                  await showMoneyDialog(context, currentClient, true);
                   Get.find<AccountClientInfo>().updateCurrnetClinets();
                 },
                 onSubtraction: () async {
-                  await showMoneyDialog(context, client, false);
+                  await showMoneyDialog(context, currentClient, false);
                   Get.find<AccountClientInfo>().updateCurrnetClinets();
                 },
               ),
@@ -391,10 +392,7 @@ class ClientDataWidget extends StatelessWidget {
                           _buildInfoRow(
                             icon: Icons.phone_android,
                             title: 'رقم الخط',
-                            value: client.numbers?.isNotEmpty == true
-                                ? (client.numbers![0].phoneNumber ??
-                                    'غير متوفر')
-                                : 'غير متوفر',
+                            value: client.getFormattedPhoneNumber(),
                             iconColor: Colors.green[700]!,
                           ),
                           if (client.expireDate != null) ...[
@@ -872,6 +870,11 @@ class LogCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Determine text color based on transaction type
+    final priceColor = currentLog.transactionType == TransactionType.addition
+        ? Colors.red
+        : Colors.black87;
+
     return Card(
       child: Container(
         padding: const EdgeInsets.all(10),
@@ -924,7 +927,11 @@ class LogCardWidget extends StatelessWidget {
                     ),
                     Text(
                       "${currentLog.price} جنيه",
-                      style: const TextStyle(fontSize: 12),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: priceColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),

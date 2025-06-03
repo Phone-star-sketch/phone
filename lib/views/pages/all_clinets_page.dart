@@ -14,6 +14,16 @@ import 'package:flutter/services.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/widget_models/clientCreationModelSheet.dart';
 
+// Add this extension at the top of the file, after imports
+extension ClientPhoneHelper on Client {
+  String getFormattedPhoneNumber() {
+    if (numbers == null || numbers!.isEmpty) return 'غير متوفر';
+    final phoneNumber = numbers![0].phoneNumber;
+    if (phoneNumber == null || phoneNumber.isEmpty) return 'غير متوفر';
+    return phoneNumber;
+  }
+}
+
 class AllClientsPage extends StatefulWidget {
   const AllClientsPage({super.key});
 
@@ -608,10 +618,7 @@ class ModernClientPrintCard extends StatelessWidget {
                                     const SizedBox(width: 4),
                                     Flexible(
                                       child: Text(
-                                        client.numbers?.isNotEmpty == true
-                                            ? (client.numbers![0].phoneNumber ??
-                                                'غير متوفر')
-                                            : 'غير متوفر',
+                                        client.getFormattedPhoneNumber(),
                                         style: const TextStyle(
                                           color: Color(0xFF3B82F6),
                                           fontSize: 14,
@@ -964,15 +971,8 @@ class _ModernClientCardState extends State<ModernClientCard>
                                                 const SizedBox(width: 4),
                                                 Flexible(
                                                   child: Text(
-                                                    widget.client.numbers
-                                                                ?.isNotEmpty ==
-                                                            true
-                                                        ? (widget
-                                                                .client
-                                                                .numbers![0]
-                                                                .phoneNumber ??
-                                                            'غير متوفر')
-                                                        : 'غير متوفر',
+                                                    widget.client
+                                                        .getFormattedPhoneNumber(),
                                                     style: const TextStyle(
                                                       color: Color(0xFF3B82F6),
                                                       fontSize: 14,
@@ -996,13 +996,14 @@ class _ModernClientCardState extends State<ModernClientCard>
                                           Icons.copy,
                                           const Color(0xFF10B981),
                                           () {
-                                            Clipboard.setData(ClipboardData(
-                                              text: widget.client.numbers?[0]
-                                                      .phoneNumber ??
-                                                  '',
-                                            ));
-                                            _showSuccessSnackbar(
-                                                'تم نسخ رقم الهاتف');
+                                            final phoneNumber = widget.client
+                                                .getFormattedPhoneNumber();
+                                            if (phoneNumber != 'غير متوفر') {
+                                              Clipboard.setData(ClipboardData(
+                                                  text: phoneNumber));
+                                              _showSuccessSnackbar(
+                                                  'تم نسخ رقم الهاتف');
+                                            }
                                           },
                                         ),
                                         const SizedBox(height: 8),

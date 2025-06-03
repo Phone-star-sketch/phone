@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/controllers/money_display_loading.dart';
 import 'package:phone_system_app/models/client.dart';
+import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/phone_number.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -15,6 +16,7 @@ Future clientEditModelSheet(
   BuildContext context, {
   Client? client,
   String? initialPhoneNumber,
+  double? phonePrice, // Add this parameter
   Function()? onSuccess,
 }) async {
   final controller = Get.put(ClientBottomSheetController());
@@ -68,7 +70,7 @@ Future clientEditModelSheet(
         final newClient = Client(
           id: -1,
           createdAt: selectedDate,
-          totalCash: 0,
+          totalCash: phonePrice ?? 0, // Initialize with phone price as dues
           name: nameField.text,
           nationalId: nationalIdField.text,
           address: addressField.text,
@@ -90,12 +92,32 @@ Future clientEditModelSheet(
 
         await BackendServices.instance.phoneRepository.create(phone);
 
+        // Create a log entry for the phone price if it exists
+        if (phonePrice != null && phonePrice! > 0) {
+          final log = Log(
+            id: -1,
+            createdAt: DateTime.now(),
+            clientId: clientId,
+            price: phonePrice!,
+            transactionType: TransactionType
+                .addition, // Use an existing type temporarily until debt is added
+            systemType: '', // Add required parameter
+            createdBy: accountController.currentAccount.name ??
+                '', // Add required parameter
+            phoneId: phone.id, // Add required parameter
+            accountId:
+                accountController.currentAccount.id, // Add required parameter
+          );
+          await BackendServices.instance.logRepository.create(log);
+        }
+
         print('Finished creating new client');
       } else {
         final updatedClient = Client(
           id: client.id,
           createdAt: selectedDate,
-          totalCash: client.totalCash,
+          totalCash: (client.totalCash ?? 0) +
+              (phonePrice ?? 0), // Add phone price to existing total
           name: nameField.text,
           nationalId: nationalIdField.text,
           address: addressField.text,
