@@ -161,11 +161,13 @@ class ClientDataWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetBuilder<ClientBottomSheetController>(builder: (controller) {
       final client = controller.getClient();
-      final systems = controller.getClientSystems();
-      final logs = List<Log>.from(controller.getClientLogs())
-        ..sort((a, b) => (a.createdAt!.isAfter(b.createdAt!)) ? -1 : 1);
+      final systems = controller.getClientSystems() ?? []; // Add null check
+      final logs =
+          List<Log>.from(controller.getClientLogs() ?? []) // Add null check
+            ..sort((a, b) => (a.createdAt!.isAfter(b.createdAt!)) ? -1 : 1);
 
-      if (systems.isEmpty && logs.isEmpty) {
+      // Change loading condition to check for client
+      if (client == null) {
         return const Center(
           child: CircularProgressIndicator(),
         );
@@ -389,8 +391,10 @@ class ClientDataWidget extends StatelessWidget {
                           _buildInfoRow(
                             icon: Icons.phone_android,
                             title: 'رقم الخط',
-                            value:
-                                client.numbers![0].phoneNumber ?? 'غير متوفر',
+                            value: client.numbers?.isNotEmpty == true
+                                ? (client.numbers![0].phoneNumber ??
+                                    'غير متوفر')
+                                : 'غير متوفر',
                             iconColor: Colors.green[700]!,
                           ),
                           if (client.expireDate != null) ...[

@@ -73,6 +73,8 @@ Future clientEditModelSheet(
           nationalId: nationalIdField.text,
           address: addressField.text,
           accountId: accountController.currentAccount.id,
+          numbers: [], // Initialize empty list
+          logs: [], // Initialize empty list
         );
 
         final clientId =
