@@ -327,7 +327,7 @@ class SupabaseClientRepository extends ClientRepository
     try {
       final response = await supabase
           .from('clients')
-          .select('*, numbers(*), systems(*)')
+          .select('*, phone(*), system(*)')
           .eq('id', clientId)
           .single();
 

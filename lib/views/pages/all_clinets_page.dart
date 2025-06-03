@@ -284,6 +284,14 @@ class ModernToolBar extends StatelessWidget {
               },
             ),
             const Spacer(),
+            // Add User Button
+            _buildActionButton(
+              icon: Icons.person_add,
+              color: const Color(0xFF10B981),
+              onPressed: () => clientEditModelSheet(context),
+              tooltip: 'إضافة عميل',
+            ),
+            const SizedBox(width: 8),
             // Print Button
             _buildActionButton(
               icon: FontAwesomeIcons.print,
