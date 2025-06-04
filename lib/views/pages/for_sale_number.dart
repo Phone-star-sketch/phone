@@ -296,10 +296,13 @@ class ForSaleNumbers extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 20),
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: crossAxisCount,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 1.2,
+                              childAspectRatio: 1.5, // Adjusted ratio
+                              crossAxisCount:
+                                  MediaQuery.of(context).size.width > 800
+                                      ? 4
+                                      : 2,
+                              mainAxisSpacing: 10,
+                              crossAxisSpacing: 10,
                             ),
                             itemCount: numbers.length,
                             itemBuilder: (context, index) {
