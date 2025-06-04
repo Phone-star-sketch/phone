@@ -224,14 +224,26 @@ class AccountDetails extends StatelessWidget {
     return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA), // Modern light background
         appBar: AppBar(
-          backgroundColor: Colors.lightBlue[300], // Changed to light sky blue
+          backgroundColor: const Color(0xFF1a237e), // Dark blue
           elevation: 0,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF1a237e), // Dark blue
+                  Color(0xFF0d47a1), // Slightly lighter blue
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
           leading: (MediaQuery.of(context).size.width < 1200)
               ? Builder(
                   builder: (BuildContext context) {
                     return IconButton(
                       icon: const Icon(Icons.menu,
-                          color: Color(0xFF2C3E50)), // Darker icon color
+                          color: Colors.white), // Updated color
                       onPressed: () {
                         Scaffold.of(context).openDrawer();
                       },
@@ -243,13 +255,11 @@ class AccountDetails extends StatelessWidget {
             Text(
               "${AccountClientInfo.to.currentAccount.day}",
               style: const TextStyle(
-                  color: Color(0xFF2C3E50), // Darker text color
+                  color: Colors.white, // Updated color
                   fontWeight: FontWeight.bold,
                   fontSize: 22),
             ),
-            const SizedBox(
-              width: 5,
-            ),
+            const SizedBox(width: 5),
             IconButton(
                 tooltip: "يوم التحصيل الشهري",
                 onPressed: () async {
@@ -270,12 +280,12 @@ class AccountDetails extends StatelessWidget {
                   }
                 },
                 icon: const Icon(Icons.calendar_today,
-                    color: Color(0xFF2C3E50))), // Darker icon color
+                    color: Colors.white)), // Updated color
             Builder(
               builder: (BuildContext context) {
                 return IconButton(
                   icon: const Icon(Icons.keyboard_arrow_left,
-                      color: Color(0xFF2C3E50)), // Darker icon color
+                      color: Colors.white), // Updated color
                   onPressed: () {
                     Get.delete<AccountDetailsController>(force: true);
                     Get.delete<AccountClientInfo>(force: true);
@@ -326,17 +336,21 @@ class AccountDetails extends StatelessWidget {
             : null,
         bottomNavigationBar: isMobile
             ? Obx(() {
-                // Cache the index
                 final currentIndex = pageController.selectedIndex.value;
 
                 return Container(
-                  // Use const for decoration
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF1a237e), // Dark blue
+                        Color(0xFF0d47a1), // Slightly lighter blue
+                      ],
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Color(0x33000000),
-                        blurRadius: 8,
-                        offset: Offset(0, -2),
+                        color: Colors.black26,
+                        blurRadius: 12,
+                        offset: const Offset(0, -4),
                       ),
                     ],
                   ),
@@ -345,18 +359,21 @@ class AccountDetails extends StatelessWidget {
                     index: currentIndex,
                     height: 65.0,
                     items: filteredPages
-                        .map((page) => Icon(
-                              (page.icon as Icon).icon!,
-                              size: 33,
-                              color: Colors.white,
+                        .map((page) => Container(
+                              padding: const EdgeInsets.all(8),
+                              child: Icon(
+                                (page.icon as Icon).icon!,
+                                size: 28,
+                                color: Colors.white,
+                              ),
                             ))
                         .toList(),
-                    color: const Color(0xFF00BFFF),
-                    buttonBackgroundColor: const Color(0xFF1E90FF),
+                    color: const Color(0xFF1a237e), // Dark blue
+                    buttonBackgroundColor:
+                        const Color(0xFF2196F3), // Accent blue for selected
                     backgroundColor: Colors.transparent,
                     animationCurve: Curves.easeInOutCubic,
-                    animationDuration: const Duration(
-                        milliseconds: 300), // Slightly faster animation
+                    animationDuration: const Duration(milliseconds: 300),
                     onTap: (index) =>
                         pageController.selectedIndex.value = index,
                     letIndexChange: (_) => true,
@@ -451,7 +468,6 @@ class SideBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Get.theme.colorScheme;
-    print('page icons number is ${pages.length}');
     List<String> titles = pages.map((e) => e.title).toList();
     List<Widget> icons = pages.map((e) => e.icon).toList();
 
@@ -461,14 +477,14 @@ class SideBar extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.lightBlue[300]!,
-            Colors.lightBlue[200]!,
+            const Color(0xFF1a237e), // Dark blue
+            const Color(0xFF0d47a1), // Slightly lighter blue
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.lightBlue.withOpacity(0.2),
-            blurRadius: 15,
+            color: Colors.black26,
+            blurRadius: 20,
             offset: const Offset(5, 0),
           ),
         ],
@@ -476,65 +492,162 @@ class SideBar extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            height: 200,
+            height: 220,
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: GestureDetector(
-              onTap: () => controller.uploadNewImage(),
-              child: SizedBox(
-                width: 120,
-                height: 120,
-                child: Stack(
-                  children: [
-                    Obx(() {
-                      final images = controller.userImages;
-                      final latestImage =
-                          images.isNotEmpty ? images.last : null;
-
-                      return AnimatedProfileAvatar(
-                        imagePath: latestImage ?? 'assets/images/owner.png',
-                        isNetworkImage: latestImage != null,
-                      );
-                    }),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.lightBlue,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.add_photo_alternate,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+            padding: const EdgeInsets.symmetric(vertical: 25),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF1a237e).withOpacity(0.95),
+                  const Color(0xFF0d47a1).withOpacity(0.90),
+                ],
               ),
             ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Decorative circle background
+                Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.blue[300]!.withOpacity(0.2),
+                        Colors.blue[400]!.withOpacity(0.1),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.1),
+                      width: 2,
+                    ),
+                  ),
+                ),
+                // Main avatar container
+                GestureDetector(
+                  onTap: () => controller.uploadNewImage(),
+                  child: Container(
+                    width: 130,
+                    height: 130,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.blue[400]!,
+                          Colors.blue[600]!,
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                        BoxShadow(
+                          color: Colors.blue[300]!.withOpacity(0.5),
+                          blurRadius: 30,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        // Avatar image
+                        Obx(() {
+                          final images = controller.userImages;
+                          final latestImage =
+                              images.isNotEmpty ? images.last : null;
+
+                          return Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 3,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(65),
+                              child: AnimatedProfileAvatar(
+                                imagePath:
+                                    latestImage ?? 'assets/images/owner.png',
+                                isNetworkImage: latestImage != null,
+                              ),
+                            ),
+                          );
+                        }),
+                        // Edit button with animated hover effect
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  const Color(0xFF2196f3),
+                                  const Color(0xFF1976d2),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.blue[400]!.withOpacity(0.5),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.add_photo_alternate,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ).addHover,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
           const Text(
             'كابتن / إسلام النني',
             style: TextStyle(
-              color: Color(0xFF2C3E50),
+              color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: 18,
+              fontSize: 20,
               letterSpacing: 0.5,
             ),
           ),
-          Divider(
-            indent: 20,
-            endIndent: 20,
-            color: Colors.lightBlue[700]!.withOpacity(0.2),
-            thickness: 1,
+          const SizedBox(height: 5),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+            height: 2,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0.1),
+                  Colors.white.withOpacity(0.3),
+                  Colors.white.withOpacity(0.1),
+                ],
+              ),
+            ),
           ),
           Expanded(
             child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: titles.length,
               itemBuilder: (context, index) {
                 return TweenAnimationBuilder(
@@ -545,94 +658,110 @@ class SideBar extends StatelessWidget {
                       offset: Offset(50 * (1 - value), 0),
                       child: Opacity(
                         opacity: value,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 8, // Reduced horizontal padding
-                          ),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
                           child: Obx(() {
                             final isSelected =
                                 controller.selectedIndex.value == index;
-                            return MouseRegion(
-                              onEnter: (_) {},
-                              onExit: (_) {},
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                transform: Matrix4.identity()
-                                  ..scale(isSelected ? 1.02 : 1.0),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? Colors.lightBlue[400]
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: Colors.lightBlue[300]!
-                                                .withOpacity(0.3),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 4),
-                                          )
-                                        ]
-                                      : null,
-                                ),
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(12),
-                                    onTap: () {
-                                      controller.selectedIndex.value = index;
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                        horizontal:
-                                            12, // Reduced horizontal padding
-                                      ),
-                                      child: Row(
-                                        mainAxisSize:
-                                            MainAxisSize.min, // Added this
-                                        children: [
-                                          SizedBox(
-                                            width: 24, // Fixed width for icon
-                                            child: AnimatedContainer(
-                                              duration: const Duration(
-                                                  milliseconds: 300),
-                                              transform: Matrix4.identity()
-                                                ..scale(isSelected ? 1.2 : 1.0),
-                                              child: icons[index],
-                                            ),
-                                          ),
-                                          const SizedBox(
-                                              width: 8), // Reduced spacing
-                                          Expanded(
-                                            child: Text(
-                                              titles[index],
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                color: isSelected
-                                                    ? Colors.white
-                                                    : const Color(0xFF2C3E50),
-                                                fontSize: isSelected
-                                                    ? 15
-                                                    : 14, // Slightly reduced font size
-                                              ),
-                                              overflow: TextOverflow
-                                                  .ellipsis, // Added this
-                                            ),
-                                          ),
-                                          if (isSelected)
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  left: 4),
-                                              child: Icon(
-                                                Icons.chevron_right,
-                                                color: Colors.white,
-                                                size: 20, // Reduced icon size
-                                              ),
-                                            ),
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                gradient: isSelected
+                                    ? LinearGradient(
+                                        colors: [
+                                          const Color(0xFF4FC3F7),
+                                          const Color(0xFF2196F3),
                                         ],
-                                      ),
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                      )
+                                    : null,
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: const Color(0xFF2196F3)
+                                              .withOpacity(0.3),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        )
+                                      ]
+                                    : null,
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  onTap: () =>
+                                      controller.selectedIndex.value = index,
+                                  hoverColor: Colors.white.withOpacity(0.1),
+                                  splashColor: Colors.white.withOpacity(0.2),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 16,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        AnimatedContainer(
+                                          duration:
+                                              const Duration(milliseconds: 200),
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? Colors.white.withOpacity(0.2)
+                                                : Colors.white.withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          padding: const EdgeInsets.all(8),
+                                          child: IconTheme(
+                                            data: IconThemeData(
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : Colors.white70,
+                                              size: 22,
+                                            ),
+                                            child: icons[index],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                titles[index],
+                                                style: TextStyle(
+                                                  color: isSelected
+                                                      ? Colors.white
+                                                      : Colors.white70,
+                                                  fontWeight: isSelected
+                                                      ? FontWeight.bold
+                                                      : FontWeight.w500,
+                                                  fontSize:
+                                                      isSelected ? 15 : 14,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (isSelected)
+                                          Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  Colors.white.withOpacity(0.2),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: const Icon(
+                                              Icons.arrow_forward_ios_rounded,
+                                              color: Colors.white,
+                                              size: 14,
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
                                 ),
