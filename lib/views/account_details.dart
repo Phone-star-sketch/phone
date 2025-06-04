@@ -28,6 +28,7 @@ import 'package:phone_system_app/views/pages/create_user_page.dart';
 import 'package:phone_system_app/pages/user_management_page.dart'; // Add this import
 import 'package:phone_system_app/views/pages/letter_of_waiver.dart';
 import 'package:phone_system_app/views/pages/filter_systems.dart';
+import 'package:phone_system_app/views/pages/create_subscription_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'animated_profile_avatar.dart';
 import 'package:image_picker/image_picker.dart';
@@ -178,6 +179,16 @@ class AccountDetails extends StatelessWidget {
           color: Colors.black54,
         ),
         title: "خطاب تنازل",
+      ),
+    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+      Page(
+        roles: [UserRoles.manager],
+        content: const CreateSubscriptionPage(),
+        icon: const Icon(
+          Icons.add_circle_outline,
+          color: Colors.black54,
+        ),
+        title: "اشتراك جديد",
       ),
   ];
 
