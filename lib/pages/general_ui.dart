@@ -16,78 +16,112 @@ class _WelcomePageState extends State<WelcomePage>
   late AnimationController _backgroundController;
   late AnimationController _floatingController;
   late AnimationController _supermanController;
+  late AnimationController _morphController;
+  late AnimationController _sparkleController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<Offset> _supermanSlideAnimation;
   late Animation<double> _supermanScaleAnimation;
+  late Animation<double> _morphAnimation;
+  late Animation<double> _sparkleAnimation;
   final AudioPlayer _audioPlayer = AudioPlayer();
-  final List<Particle> _particles = [];
+  final List<FloatingOrb> _orbs = [];
+  final List<SparkleParticle> _sparkles = [];
   bool _showSuperman = false;
 
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
-    _generateParticles();
+    _generateOrbs();
+    _generateSparkles();
   }
 
   void _initializeAnimations() {
     _controller = AnimationController(
-        duration: Duration(milliseconds: 1500), vsync: this);
+        duration: Duration(milliseconds: 2000), vsync: this);
 
     _backgroundController =
-        AnimationController(duration: Duration(seconds: 10), vsync: this)
+        AnimationController(duration: Duration(seconds: 15), vsync: this)
           ..repeat();
 
     _floatingController =
-        AnimationController(duration: Duration(seconds: 2), vsync: this)
+        AnimationController(duration: Duration(seconds: 3), vsync: this)
           ..repeat(reverse: true);
 
     _supermanController = AnimationController(
-      duration: Duration(milliseconds: 1500),
+      duration: Duration(milliseconds: 1800),
       vsync: this,
     );
 
+    _morphController = AnimationController(
+      duration: Duration(seconds: 8),
+      vsync: this,
+    )..repeat();
+
+    _sparkleController = AnimationController(
+      duration: Duration(milliseconds: 2500),
+      vsync: this,
+    )..repeat();
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
 
     _slideAnimation = Tween<Offset>(
-      begin: Offset(0, 0.5),
+      begin: Offset(0, 0.8),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: Interval(0.3, 0.8, curve: Curves.easeOut),
+      curve: Interval(0.2, 0.8, curve: Curves.easeOutBack),
     ));
 
     _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(0.1, 0.7, curve: Curves.elasticOut),
+      ),
     );
 
     _supermanSlideAnimation = Tween<Offset>(
-      begin: Offset(-1, 0.5), // Updated start position
-      end: Offset(1.5, -0.5), // Updated end position
+      begin: Offset(-1.2, 0.3),
+      end: Offset(1.8, -0.7),
     ).animate(CurvedAnimation(
       parent: _supermanController,
-      curve: Curves.easeInOut,
+      curve: Curves.easeInOutCubic,
     ));
 
     _supermanScaleAnimation = Tween<double>(
-      begin: 1.2, // Increased starting scale
-      end: 0.2, // Updated end scale
+      begin: 1.5,
+      end: 0.1,
     ).animate(CurvedAnimation(
       parent: _supermanController,
-      curve: Curves.easeIn,
+      curve: Curves.easeInCubic,
     ));
+
+    _morphAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _morphController, curve: Curves.easeInOut),
+    );
+
+    _sparkleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _sparkleController, curve: Curves.easeInOut),
+    );
 
     _controller.forward();
   }
 
-  void _generateParticles() {
+  void _generateOrbs() {
     final random = math.Random();
-    for (int i = 0; i < 20; i++) {
-      _particles.add(Particle(random));
+    for (int i = 0; i < 8; i++) {
+      _orbs.add(FloatingOrb(random));
+    }
+  }
+
+  void _generateSparkles() {
+    final random = math.Random();
+    for (int i = 0; i < 15; i++) {
+      _sparkles.add(SparkleParticle(random));
     }
   }
 
@@ -103,22 +137,31 @@ class _WelcomePageState extends State<WelcomePage>
     _backgroundController.dispose();
     _floatingController.dispose();
     _supermanController.dispose();
+    _morphController.dispose();
+    _sparkleController.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
 
   Future<void> _playButtonSound() async {
-    await _audioPlayer.play(AssetSource('sounds/button_click.wav'));
+    try {
+      await _audioPlayer.play(AssetSource('sounds/button_click.wav'));
+    } catch (e) {
+      // Handle audio error silently
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    
     return Scaffold(
       body: AnimatedBuilder(
-        animation: _backgroundController,
+        animation: Listenable.merge([_backgroundController, _morphController, _sparkleController]),
         builder: (context, child) {
           return Stack(
             children: [
+              // Dynamic gradient background
               Container(
                 width: double.infinity,
                 height: double.infinity,
@@ -127,77 +170,153 @@ class _WelcomePageState extends State<WelcomePage>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(0xFF87CEEB), // Light sky blue
-                      Color(0xFF00BFFF), // Deep sky blue
-                      Color(0xFF1E90FF), // Dodger blue
+                      Color(0xFF667eea),
+                      Color(0xFF764ba2),
+                      Color(0xFF6B73FF),
+                      Color(0xFF000DFF),
+                    ],
+                    stops: [
+                      0.0,
+                      _morphAnimation.value * 0.5,
+                      0.7 + _morphAnimation.value * 0.2,
+                      1.0,
                     ],
                     transform: GradientRotation(
-                        _backgroundController.value * 2 * math.pi),
+                        _backgroundController.value * 2 * math.pi * 0.3),
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    ..._particles.map((particle) {
-                      final progress =
-                          (_backgroundController.value + particle.offset) % 1.0;
-                      return Positioned(
-                        left: particle.x * MediaQuery.of(context).size.width,
-                        top: particle.y * MediaQuery.of(context).size.height,
-                        child: Transform.scale(
-                          scale: progress,
-                          child: Opacity(
-                            opacity: 1 - progress,
-                            child: Container(
-                              width: particle.size,
-                              height: particle.size,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.8),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ],
+              ),
+
+              // Mesh gradient overlay
+              Container(
+                width: double.infinity,
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(
+                      math.sin(_morphAnimation.value * 2 * math.pi) * 0.3,
+                      math.cos(_morphAnimation.value * 2 * math.pi) * 0.3,
+                    ),
+                    radius: 1.5,
+                    colors: [
+                      Colors.cyan.withOpacity(0.1),
+                      Colors.purple.withOpacity(0.05),
+                      Colors.transparent,
+                    ],
+                  ),
                 ),
               ),
+
+              // Floating orbs
+              ..._orbs.asMap().entries.map((entry) {
+                final i = entry.key;
+                final orb = entry.value;
+                final progress = (_backgroundController.value + orb.offset) % 1.0;
+                final float = math.sin((progress + i * 0.3) * 2 * math.pi) * 20;
+                
+                return Positioned(
+                  left: orb.x * size.width + math.sin(progress * 2 * math.pi + i) * 50,
+                  top: orb.y * size.height + float,
+                  child: Transform.scale(
+                    scale: 0.5 + math.sin(progress * math.pi) * 0.5,
+                    child: Container(
+                      width: orb.size,
+                      height: orb.size,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            orb.color.withOpacity(0.3),
+                            orb.color.withOpacity(0.1),
+                            Colors.transparent,
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: orb.color.withOpacity(0.2),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+
+              // Sparkle particles
+              ..._sparkles.map((sparkle) {
+                final progress = (_sparkleAnimation.value + sparkle.offset) % 1.0;
+                final opacity = math.sin(progress * math.pi);
+                
+                return Positioned(
+                  left: sparkle.x * size.width,
+                  top: sparkle.y * size.height,
+                  child: Transform.rotate(
+                    angle: progress * 4 * math.pi,
+                    child: Opacity(
+                      opacity: opacity * 0.8,
+                      child: Icon(
+                        Icons.auto_awesome,
+                        color: Colors.white,
+                        size: sparkle.size,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+
+              // Main content
               Center(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.0),
+                  padding: EdgeInsets.symmetric(horizontal: 32.0),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      // Floating logo with glassmorphism
                       AnimatedBuilder(
                         animation: _floatingController,
                         builder: (context, child) {
                           return Transform.translate(
                             offset: Offset(
                                 0,
-                                10 *
-                                    math.sin(
-                                        _floatingController.value * math.pi)),
+                                15 * math.sin(_floatingController.value * math.pi)),
                             child: ScaleTransition(
                               scale: _scaleAnimation,
                               child: Container(
-                                height: 150,
-                                width: 150,
+                                height: 180,
+                                width: 180,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
                                   shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Colors.white.withOpacity(0.2),
+                                      Colors.white.withOpacity(0.1),
+                                    ],
+                                  ),
                                   border: Border.all(
-                                      color: Colors.white.withOpacity(0.5)),
+                                    color: Colors.white.withOpacity(0.3),
+                                    width: 2,
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.white.withOpacity(0.2),
-                                      blurRadius: 20,
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 30,
                                       spreadRadius: 5,
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.white.withOpacity(0.1),
+                                      blurRadius: 20,
+                                      spreadRadius: 2,
+                                      offset: Offset(-5, -5),
                                     ),
                                   ],
                                 ),
                                 child: Icon(
-                                  Icons.phone_android,
-                                  size: 80,
+                                  Icons.smartphone,
+                                  size: 90,
                                   color: Colors.white,
                                 ),
                               ),
@@ -205,51 +324,71 @@ class _WelcomePageState extends State<WelcomePage>
                           );
                         },
                       ),
-                      SizedBox(height: 48),
+
+                      SizedBox(height: 60),
+
+                      // Title with premium typography
                       SlideTransition(
                         position: _slideAnimation,
                         child: FadeTransition(
                           opacity: _fadeAnimation,
                           child: Column(
                             children: [
-                              Text(
-                                'مرحباً بك',
-                                style: TextStyle(
-                                  fontSize: 42,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black26,
-                                      blurRadius: 10,
-                                      offset: Offset(0, 5),
-                                    ),
+                              ShaderMask(
+                                shaderCallback: (bounds) => LinearGradient(
+                                  colors: [
+                                    Colors.white,
+                                    Colors.white70,
+                                    Colors.white,
                                   ],
+                                  stops: [0.0, 0.5, 1.0],
+                                ).createShader(bounds),
+                                child: Text(
+                                  'مرحباً بك',
+                                  style: TextStyle(
+                                    fontSize: 48,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: -1,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black.withOpacity(0.3),
+                                        blurRadius: 20,
+                                        offset: Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              SizedBox(height: 16),
+                              SizedBox(height: 20),
                               Text(
-                                'نظام إدارة الهواتف',
+                                'نظام إدارة الهواتف المتطور',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 24,
-                                  color: Colors.white.withOpacity(0.9),
-                                  letterSpacing: 1.2,
+                                  fontSize: 22,
+                                  color: Colors.white.withOpacity(0.85),
+                                  letterSpacing: 0.5,
+                                  fontWeight: FontWeight.w300,
+                                  height: 1.4,
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                      SizedBox(height: 48),
+
+                      SizedBox(height: 80),
+
+                      // Premium buttons
                       SlideTransition(
                         position: _slideAnimation,
                         child: FadeTransition(
                           opacity: _fadeAnimation,
                           child: Column(
                             children: [
-                              _buildGlassButton(
-                                'ابدأ الآن',
+                              _buildPremiumButton(
+                                'ابدأ رحلتك',
+                                primary: true,
                                 onPressed: () async {
                                   await _playButtonSound();
                                   _startSupermanAnimation();
@@ -259,8 +398,9 @@ class _WelcomePageState extends State<WelcomePage>
                                 },
                               ),
                               SizedBox(height: 24),
-                              _buildTextButton(
-                                'لديك حساب بالفعل؟ سجل دخول',
+                              _buildPremiumButton(
+                                'لديك حساب؟ سجل دخول',
+                                primary: false,
                                 onPressed: () async {
                                   await _playButtonSound();
                                   _controller.reverse().then((_) {
@@ -276,39 +416,54 @@ class _WelcomePageState extends State<WelcomePage>
                   ),
                 ),
               ),
+
+              // Superman/Logo animation
               if (_showSuperman)
                 AnimatedBuilder(
                   animation: _supermanController,
                   builder: (context, child) {
-                    final size = MediaQuery.of(context).size;
                     return Positioned(
-                      left: size.width * 0.5 - 150, // Center horizontally
-                      top: size.height * 0.4, // Position from top
+                      left: size.width * 0.5 - 100,
+                      top: size.height * 0.4,
                       child: Transform.translate(
-                        offset:
-                            _supermanSlideAnimation.value * size.width * 0.5,
+                        offset: _supermanSlideAnimation.value * size.width * 0.4,
                         child: Transform.scale(
                           scale: _supermanScaleAnimation.value,
                           child: Opacity(
-                            opacity: 1 - (_supermanController.value * 0.7),
-                            child: Image.asset(
-                              'assets/images/logo.png', // Correct asset path
-                              width: 150,
-                              height: 150,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                print('Error loading image: $error');
-                                return Container(
-                                  width: 300,
-                                  height: 300,
-                                  child: Icon(
-                                    Icons
-                                        .rocket_launch, // Changed to a rocket icon as fallback
-                                    color: Colors.white,
-                                    size: 80,
+                            opacity: 1 - (_supermanController.value * 0.8),
+                            child: Container(
+                              width: 200,
+                              height: 200,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(
+                                  colors: [
+                                    Colors.cyan.withOpacity(0.3),
+                                    Colors.blue.withOpacity(0.2),
+                                    Colors.transparent,
+                                  ],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.cyan.withOpacity(0.3),
+                                    blurRadius: 30,
+                                    spreadRadius: 10,
                                   ),
-                                );
-                              },
+                                ],
+                              ),
+                              child: Image.asset(
+                                'assets/images/logo.png',
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(
+                                    Icons.rocket_launch_rounded,
+                                    color: Colors.white,
+                                    size: 100,
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ),
@@ -323,63 +478,92 @@ class _WelcomePageState extends State<WelcomePage>
     );
   }
 
-  Widget _buildGlassButton(String text, {required VoidCallback onPressed}) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onPressed,
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            color: Colors.white.withOpacity(0.2),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 20,
-                spreadRadius: 5,
+  Widget _buildPremiumButton(String text, {required bool primary, required VoidCallback onPressed}) {
+    return Container(
+      width: double.infinity,
+      height: 65,
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 200),
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primary 
+                ? Colors.white.withOpacity(0.15)
+                : Colors.transparent,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(35),
+              side: BorderSide(
+                color: Colors.white.withOpacity(primary ? 0.4 : 0.2),
+                width: primary ? 2 : 1,
               ),
-            ],
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 40, vertical: 18),
+          ).copyWith(
+            overlayColor: MaterialStateProperty.all(
+              Colors.white.withOpacity(0.1),
+            ),
           ),
-          child: Text(
-            text,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+          child: Container(
+            decoration: primary ? BoxDecoration(
+              borderRadius: BorderRadius.circular(35),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0.1),
+                  Colors.white.withOpacity(0.05),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ) : null,
+            child: Center(
+              child: Text(
+                text,
+                style: TextStyle(
+                  fontSize: primary ? 20 : 16,
+                  fontWeight: primary ? FontWeight.bold : FontWeight.w500,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
   }
-
-  Widget _buildTextButton(String text, {required VoidCallback onPressed}) {
-    return TextButton(
-      onPressed: onPressed,
-      child: Text(
-        text,
-        style: TextStyle(
-          color: Colors.white.withOpacity(0.9),
-          fontSize: 16,
-          decoration: TextDecoration.underline,
-          decorationColor: Colors.white.withOpacity(0.5),
-        ),
-      ),
-    );
-  }
 }
 
-class Particle {
+class FloatingOrb {
+  final double x;
+  final double y;
+  final double size;
+  final double offset;
+  final Color color;
+
+  FloatingOrb(math.Random random)
+      : x = random.nextDouble(),
+        y = random.nextDouble(),
+        size = random.nextDouble() * 80 + 40,
+        offset = random.nextDouble(),
+        color = [
+          Colors.cyan,
+          Colors.purple,
+          Colors.pink,
+          Colors.blue,
+          Colors.indigo,
+        ][random.nextInt(5)];
+}
+
+class SparkleParticle {
   final double x;
   final double y;
   final double size;
   final double offset;
 
-  Particle(math.Random random)
+  SparkleParticle(math.Random random)
       : x = random.nextDouble(),
         y = random.nextDouble(),
-        size = random.nextDouble() * 4 + 2,
+        size = random.nextDouble() * 16 + 8,
         offset = random.nextDouble();
 }

@@ -702,30 +702,8 @@ class ClientDataWidget extends StatelessWidget {
                                           itemBuilder: (context, index) {
                                             final system = systems[index];
                                             // Don't show expired other services but keep their price in total
-                                            if (system.type!.category ==
-                                                SystemCategory.mobileInternet) {
-                                              if (system.createdAt != null) {
-                                                final collectionDay =
-                                                    AccountClientInfo
-                                                        .to.currentAccount.day;
-                                                final nextCollection = DateTime(
-                                                  system.createdAt!.month == 12
-                                                      ? system.createdAt!.year +
-                                                          1
-                                                      : system.createdAt!.year,
-                                                  system.createdAt!.month == 12
-                                                      ? 1
-                                                      : system.createdAt!
-                                                              .month +
-                                                          1,
-                                                  collectionDay,
-                                                );
-                                                if (DateTime.now()
-                                                    .isAfter(nextCollection)) {
-                                                  return const SizedBox
-                                                      .shrink();
-                                                }
-                                              }
+                                            if (!shouldShowSystem(system)) {
+                                              return const SizedBox.shrink();
                                             }
 
                                             return Stack(
@@ -1547,4 +1525,22 @@ Future<void> showDiscountDialog(BuildContext context, Client client) async {
           ),
         ),
       ));
+}
+
+// Add this function at the top level of the file
+bool shouldShowSystem(System system) {
+  if (system.type!.category == SystemCategory.mobileInternet) {
+    if (system.createdAt != null) {
+      final collectionDay = AccountClientInfo.to.currentAccount.day;
+      final nextCollection = DateTime(
+        system.createdAt!.month == 12
+            ? system.createdAt!.year + 1
+            : system.createdAt!.year,
+        system.createdAt!.month == 12 ? 1 : system.createdAt!.month + 1,
+        collectionDay,
+      );
+      return !DateTime.now().isAfter(nextCollection);
+    }
+  }
+  return true;
 }
