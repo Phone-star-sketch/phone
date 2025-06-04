@@ -180,636 +180,654 @@ class ClientDataWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           color: Colors.grey[50],
         ),
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            // Header Section
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue[700]!, Colors.blue[900]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue[200]!.withOpacity(0.5),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.white,
-                    child: Text(
-                      currentClient.name?[0].toUpperCase() ?? 'N/A',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue[900],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return ListView(
+              shrinkWrap: true,
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                // Header Section
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue[700]!, Colors.blue[900]!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blue[200]!.withOpacity(0.5),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    currentClient.name ?? 'غير محدد',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Money Display Section with enhanced styling
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey[300]!,
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: MoneyDisplay(
-                value: currentClient.totalCash,
-                title: "صافي مستحقات و ديون العميل",
-                onAdd: () async {
-                  await showMoneyDialog(context, currentClient, true);
-                  Get.find<AccountClientInfo>().updateCurrnetClinets();
-                },
-                onSubtraction: () async {
-                  await showMoneyDialog(context, currentClient, false);
-                  Get.find<AccountClientInfo>().updateCurrnetClinets();
-                },
-              ),
-            ),
-
-            // For assistants, don't show anything else
-            if (SupabaseAuthentication.myUser!.role !=
-                UserRoles.assistant.index)
-              Column(
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        shape: const StadiumBorder(),
-                        backgroundColor: Colors.red[900],
-                        padding: const EdgeInsets.all(10)),
-                    onPressed: () async {
-                      await showDangerDialog("حذف عميل",
-                          "هل أنت متأكد من أنك تريد محو بيانات العميل ${client.name}؟",
-                          () async {
-                        await BackendServices.instance.clientRepository
-                            .delete(client);
-                        AccountClientInfo.to.updateCurrnetClinets();
-                        Get.back(); // Close the dialog
-                        Get.back(); // Close the bottom sheet
-                      });
-                    },
-                    child: const Text(
-                      "حذف",
-                      style: TextStyle(
-                          color: Colors.white,
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          currentClient.name?[0].toUpperCase() ?? 'N/A',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[900],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        currentClient.name ?? 'غير محدد',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          fontSize: 16),
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        shape: const StadiumBorder(),
-                        backgroundColor: Colors.green[900],
-                        padding: const EdgeInsets.all(10)),
-                    onPressed: () async {
-                      final firstDate =
-                          DateTime.now().subtract(const Duration(days: 50));
-                      DateTime lastDate = DateTime(firstDate.year + 10);
-
-                      final data = await showDatePicker(
-                          context: context,
-                          firstDate: firstDate,
-                          lastDate: lastDate);
-
-                      if (data != null) {
-                        client.expireDate = data;
-                        await BackendServices.instance.clientRepository
-                            .update(client);
-                        AccountClientInfo.to.updateCurrnetClinets();
-                        Get.back();
-                      }
-                    },
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.date_range,
                           color: Colors.white,
                         ),
-                        SizedBox(
-                          width: 10,
-                        ),
-                        Text(
-                          "تغيير تاريخ انتهاء العرض",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 10,
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        shape: const StadiumBorder(),
-                        backgroundColor: Colors.orange[900],
-                        padding: const EdgeInsets.all(10)),
-                    onPressed: () async {
-                      await showDiscountDialog(context, client);
-                    },
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.discount,
-                          color: Colors.white,
-                        ),
-                        SizedBox(
-                          width: 10,
-                        ),
-                        Text(
-                          "إضافة خصم",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Client Details Card Moved Here
-                  Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildInfoRow(
-                            icon: Icons.credit_card,
-                            title: 'الرقم القومي',
-                            value: client.nationalId ?? 'غير متوفر',
-                            iconColor: Colors.blue[700]!,
-                          ),
-                          const Divider(height: 24),
-                          _buildInfoRow(
-                            icon: Icons.location_on,
-                            title: 'العنوان',
-                            value: client.address ?? 'غير متوفر',
-                            iconColor: Colors.red[700]!,
-                          ),
-                          const Divider(height: 24),
-                          _buildInfoRow(
-                            icon: Icons.phone_android,
-                            title: 'رقم الخط',
-                            value: client.getFormattedPhoneNumber(),
-                            iconColor: Colors.green[700]!,
-                          ),
-                          if (client.expireDate != null) ...[
-                            const Divider(height: 24),
-                            _buildInfoRow(
-                              icon: Icons.event,
-                              title: 'تاريخ انتهاء العرض',
-                              value:
-                                  fullExpressionArabicDate(client.expireDate!),
-                              iconColor: Colors.orange[700]!,
-                            ),
-                          ],
-                          if (client.discountPercentage != null) ...[
-                            const Divider(height: 24),
-                            _buildInfoRow(
-                              icon: Icons.discount,
-                              title: 'الخصم الحالي',
-                              value:
-                                  "${client.discountPercentage}% حتى ${fullExpressionArabicDate(client.discountEndDate!)}",
-                              iconColor: Colors.purple[700]!,
-                            ),
-                          ],
-                          const Divider(height: 24),
-                          _buildInfoRow(
-                            icon: Icons.calendar_today,
-                            title: 'تاريخ الأشتراك',
-                            value: fullExpressionArabicDate(client.createdAt!),
-                            iconColor: Colors.teal[700]!,
-                          ),
-                        ],
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
+                ),
+                const SizedBox(height: 24),
 
+                // Money Display Section with enhanced styling
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(15),
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey[300]!,
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: MoneyDisplay(
+                    value: currentClient.totalCash,
+                    title: "صافي مستحقات و ديون العميل",
+                    onAdd: () async {
+                      await showMoneyDialog(context, currentClient, true);
+                      Get.find<AccountClientInfo>().updateCurrnetClinets();
+                    },
+                    onSubtraction: () async {
+                      await showMoneyDialog(context, currentClient, false);
+                      Get.find<AccountClientInfo>().updateCurrnetClinets();
+                    },
+                  ),
+                ),
+
+                // For assistants, don't show anything else
+                if (SupabaseAuthentication.myUser!.role !=
+                    UserRoles.assistant.index)
                   Column(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.all(6.0),
-                        child: Container(
-                          //height: double.maxFinite,
-                          decoration: BoxDecoration(
-                              color: colors.primary,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(style: BorderStyle.solid)),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            shape: const StadiumBorder(),
+                            backgroundColor: Colors.red[900],
+                            padding: const EdgeInsets.all(10)),
+                        onPressed: () async {
+                          await showDangerDialog("حذف عميل",
+                              "هل أنت متأكد من أنك تريد محو بيانات العميل ${client.name}؟",
+                              () async {
+                            await BackendServices.instance.clientRepository
+                                .delete(client);
+                            AccountClientInfo.to.updateCurrnetClinets();
+                            Get.back(); // Close the dialog
+                            Get.back(); // Close the bottom sheet
+                          });
+                        },
+                        child: const Text(
+                          "حذف",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16),
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 15,
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            shape: const StadiumBorder(),
+                            backgroundColor: Colors.green[900],
+                            padding: const EdgeInsets.all(10)),
+                        onPressed: () async {
+                          final firstDate =
+                              DateTime.now().subtract(const Duration(days: 50));
+                          DateTime lastDate = DateTime(firstDate.year + 10);
+
+                          final data = await showDatePicker(
+                              context: context,
+                              firstDate: firstDate,
+                              lastDate: lastDate);
+
+                          if (data != null) {
+                            client.expireDate = data;
+                            await BackendServices.instance.clientRepository
+                                .update(client);
+                            AccountClientInfo.to.updateCurrnetClinets();
+                            Get.back();
+                          }
+                        },
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.date_range,
+                              color: Colors.white,
+                            ),
+                            SizedBox(
+                              width: 10,
+                            ),
+                            Text(
+                              "تغيير تاريخ انتهاء العرض",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 10,
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            shape: const StadiumBorder(),
+                            backgroundColor: Colors.orange[900],
+                            padding: const EdgeInsets.all(10)),
+                        onPressed: () async {
+                          await showDiscountDialog(context, client);
+                        },
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.discount,
+                              color: Colors.white,
+                            ),
+                            SizedBox(
+                              width: 10,
+                            ),
+                            Text(
+                              "إضافة خصم",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Client Details Card Moved Here
+                      Card(
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 16, horizontal: 20),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.blue[700] ?? Colors.blue,
-                                      Colors.blue[900] ?? Colors.blue,
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(20),
-                                    topRight: Radius.circular(20),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                        child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.start,
-                                      textDirection: TextDirection.rtl,
-                                      children: [
-                                        const Icon(
-                                          Icons.history,
-                                          color: Colors.white,
-                                          size: 24,
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Flexible(
-                                          child: Text(
-                                            'سجل التعاملات المالية',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    )),
-                                    const SizedBox(width: 8),
-                                    ElevatedButton.icon(
-                                      icon: Icon(
-                                        Icons.print_rounded,
-                                        color: Colors.blue[900],
-                                        size: 20,
-                                      ),
-                                      label: Text(
-                                        'طباعة',
-                                        style: TextStyle(
-                                          color: Colors.blue[900],
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.white,
-                                        elevation: 3,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 8,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(30),
-                                        ),
-                                      ),
-                                      onPressed: () async {
-                                        Get.to(PrintClientsReceipts(
-                                          clients: [client],
-                                        ));
-                                      },
-                                    ),
-                                  ],
-                                ),
+                              _buildInfoRow(
+                                icon: Icons.credit_card,
+                                title: 'الرقم القومي',
+                                value: client.nationalId ?? 'غير متوفر',
+                                iconColor: Colors.blue[700]!,
                               ),
-                              Padding(
-                                padding: const EdgeInsets.all(10.0),
-                                child: SingleChildScrollView(
-                                  child: SizedBox(
-                                    height: 0.5 * height,
-                                    child: ListView.builder(
-                                      itemCount: controller.getLogLength(),
-                                      itemBuilder: (context, index) {
-                                        final currentLog = logs[index];
-                                        return LogCardWidget(
-                                          currentLog: currentLog,
-                                          currentClient: client,
-                                        );
-                                      },
-                                    ),
-                                  ),
+                              const Divider(height: 24),
+                              _buildInfoRow(
+                                icon: Icons.location_on,
+                                title: 'العنوان',
+                                value: client.address ?? 'غير متوفر',
+                                iconColor: Colors.red[700]!,
+                              ),
+                              const Divider(height: 24),
+                              _buildInfoRow(
+                                icon: Icons.phone_android,
+                                title: 'رقم الخط',
+                                value: client.getFormattedPhoneNumber(),
+                                iconColor: Colors.green[700]!,
+                              ),
+                              if (client.expireDate != null) ...[
+                                const Divider(height: 24),
+                                _buildInfoRow(
+                                  icon: Icons.event,
+                                  title: 'تاريخ انتهاء العرض',
+                                  value: fullExpressionArabicDate(
+                                      client.expireDate!),
+                                  iconColor: Colors.orange[700]!,
                                 ),
+                              ],
+                              const Divider(height: 24),
+                              _buildInfoRow(
+                                icon: Icons.calendar_today,
+                                title: 'تاريخ البداية',
+                                value:
+                                    fullExpressionArabicDate(client.createdAt!),
+                                iconColor: Colors.teal[700]!,
+                              ),
+                              const Divider(height: 24),
+                              _buildInfoRow(
+                                icon: Icons.event_available,
+                                title: 'تاريخ نهاية الاشتراك',
+                                value: systems.isNotEmpty &&
+                                        systems.first.endDate != null
+                                    ? fullExpressionArabicDate(
+                                        systems.first.endDate!)
+                                    : 'غير محدد',
+                                iconColor: Colors.purple[700]!,
                               ),
                             ],
                           ),
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(6.0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                              color: colors.primary,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(style: BorderStyle.solid)),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(10.0),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 16, horizontal: 20),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.blue[700] ?? Colors.blue,
-                                        Colors.blue[900] ?? Colors.blue,
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
+                      const SizedBox(height: 16),
+
+                      Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(6.0),
+                            child: Container(
+                              //height: double.maxFinite,
+                              decoration: BoxDecoration(
+                                  color: colors.primary,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(style: BorderStyle.solid)),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16, horizontal: 20),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.blue[700] ?? Colors.blue,
+                                          Colors.blue[900] ?? Colors.blue,
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(20),
+                                        topRight: Radius.circular(20),
+                                      ),
                                     ),
-                                    borderRadius: const BorderRadius.only(
-                                      topLeft: Radius.circular(20),
-                                      topRight: Radius.circular(20),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        textDirection: TextDirection.rtl,
-                                        children: [
-                                          const Icon(
-                                            Icons.verified_outlined,
-                                            color: Colors.white,
-                                            size: 24,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Text(
-                                            "الخدمات المقدمة",
-                                            style: TextStyle(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                            child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.start,
+                                          textDirection: TextDirection.rtl,
+                                          children: [
+                                            const Icon(
+                                              Icons.history,
                                               color: Colors.white,
-                                              fontSize: 20,
+                                              size: 24,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Flexible(
+                                              child: Text(
+                                                'سجل التعاملات المالية',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        )),
+                                        const SizedBox(width: 8),
+                                        ElevatedButton.icon(
+                                          icon: Icon(
+                                            Icons.print_rounded,
+                                            color: Colors.blue[900],
+                                            size: 20,
+                                          ),
+                                          label: Text(
+                                            'طباعة',
+                                            style: TextStyle(
+                                              color: Colors.blue[900],
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Column(
-                                        children: [
-                                          Text(
-                                            "التكلفة الكلية للخدمات المقدمة",
-                                            style: TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 14,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.white,
+                                            elevation: 3,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 8,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(30),
                                             ),
                                           ),
-                                          const SizedBox(height: 4),
+                                          onPressed: () async {
+                                            Get.to(PrintClientsReceipts(
+                                              clients: [client],
+                                            ));
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(10.0),
+                                    child: SingleChildScrollView(
+                                      child: SizedBox(
+                                        height: 0.5 * height,
+                                        child: ListView.builder(
+                                          itemCount: controller.getLogLength(),
+                                          itemBuilder: (context, index) {
+                                            final currentLog = logs[index];
+                                            return LogCardWidget(
+                                              currentLog: currentLog,
+                                              currentClient: client,
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(6.0),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                  color: colors.primary,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(style: BorderStyle.solid)),
+                              child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(10.0),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16, horizontal: 20),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.blue[700] ?? Colors.blue,
+                                            Colors.blue[900] ?? Colors.blue,
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: const BorderRadius.only(
+                                          topLeft: Radius.circular(20),
+                                          topRight: Radius.circular(20),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
                                           Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
+                                            textDirection: TextDirection.rtl,
                                             children: [
-                                              Icon(
-                                                Icons.paid_rounded,
+                                              const Icon(
+                                                Icons.verified_outlined,
                                                 color: Colors.white,
-                                                size: 18,
+                                                size: 24,
                                               ),
-                                              const SizedBox(width: 8),
+                                              const SizedBox(width: 12),
                                               Text(
-                                                "${(systems.isNotEmpty) ? systems.map((e) => e.type!.price!).reduce((value, element) => value + element) : 0} جنيهاً",
+                                                "الخدمات المقدمة",
                                                 style: TextStyle(
                                                   color: Colors.white,
-                                                  fontSize: 18,
+                                                  fontSize: 20,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
                                             ],
                                           ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 12),
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green[600],
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12, horizontal: 20),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    elevation: 4,
-                                  ),
-                                  onPressed: () => showSystemAddDialog(client),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.add_circle_outline,
-                                        color: Colors.white,
-                                        size: 22,
-                                      ),
-                                      SizedBox(width: 10),
-                                      Text(
-                                        'إضافة باقة جديدة',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(10.0),
-                                child: SingleChildScrollView(
-                                  child: SizedBox(
-                                    height: height * 0.5,
-                                    child: GridView.builder(
-                                      itemCount: systems.length,
-                                      gridDelegate:
-                                          SliverGridDelegateWithFixedCrossAxisCount(
-                                        childAspectRatio: 1.2,
-                                        crossAxisCount:
-                                            MediaQuery.of(context).size.width >
-                                                    600
-                                                ? 3
-                                                : 2,
-                                        crossAxisSpacing: 10,
-                                        mainAxisSpacing: 10,
-                                      ),
-                                      itemBuilder: (context, index) {
-                                        final system = systems[index];
-                                        // Don't show expired other services but keep their price in total
-                                        if (system.type!.category ==
-                                            SystemCategory.mobileInternet) {
-                                          if (system.createdAt != null) {
-                                            final collectionDay =
-                                                AccountClientInfo
-                                                    .to.currentAccount.day;
-                                            final nextCollection = DateTime(
-                                              system.createdAt!.month == 12
-                                                  ? system.createdAt!.year + 1
-                                                  : system.createdAt!.year,
-                                              system.createdAt!.month == 12
-                                                  ? 1
-                                                  : system.createdAt!.month + 1,
-                                              collectionDay,
-                                            );
-                                            if (DateTime.now()
-                                                .isAfter(nextCollection)) {
-                                              return const SizedBox.shrink();
-                                            }
-                                          }
-                                        }
-
-                                        return Stack(
-                                          children: [
-                                            Positioned.fill(
-                                              child: Card(
-                                                margin: const EdgeInsets.all(0),
-                                                child: Container(
-                                                  decoration: BoxDecoration(
-                                                      image: DecorationImage(
-                                                          opacity: 0.1,
-                                                          image: systems[index]
-                                                                      .type!
-                                                                      .image !=
-                                                                  null
-                                                              ? NetworkImage(
-                                                                  systems[index]
-                                                                      .type!
-                                                                      .image!,
-                                                                ) as ImageProvider
-                                                              : AssetImage(
-                                                                  systems[index]
-                                                                      .type!
-                                                                      .category!
-                                                                      .icon(),
-                                                                ),
-                                                          fit: BoxFit.contain)),
-                                                  width: 150,
-                                                  child: Center(
-                                                      child: Column(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    children: [
-                                                      Text(
-                                                        systems[index]
-                                                            .type!
-                                                            .name!,
-                                                        style: const TextStyle(
-                                                            fontSize: 18,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .bold),
-                                                      ),
-                                                      Text(
-                                                        "${systems[index].type!.price!} جنيه",
-                                                        style: const TextStyle(
-                                                          fontSize: 14,
-                                                        ),
-                                                      ),
-                                                      IconButton(
-                                                        icon: const Icon(
-                                                            Icons.edit),
-                                                        onPressed: () =>
-                                                            showEditSystemDialog(
-                                                                systems[index]),
-                                                      ),
-                                                    ],
-                                                  )),
+                                          const SizedBox(height: 8),
+                                          Column(
+                                            children: [
+                                              Text(
+                                                "التكلفة الكلية للخدمات المقدمة",
+                                                style: TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 14,
                                                 ),
                                               ),
-                                            ),
-                                            Positioned(
-                                                top: 5,
-                                                left: 5,
-                                                child: IconButton(
-                                                  onPressed: () async {
-                                                    await showDangerDialog(
-                                                        "الغاء اشتراك باقة",
-                                                        "هل حقاً تريد الغاء اشتراك باقة العميل من نوع ${systems[index].name} ؟",
-                                                        () async {
-                                                      await BackendServices
-                                                          .instance
-                                                          .systemRepository
-                                                          .delete(
-                                                              systems[index]);
-                                                    });
-                                                  },
-                                                  icon: const Icon(
-                                                      Icons.remove_circle,
-                                                      color: Colors.red),
-                                                )),
-                                          ],
-                                        );
-                                      },
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.paid_rounded,
+                                                    color: Colors.white,
+                                                    size: 18,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    "${(systems.isNotEmpty) ? systems.map((e) => e.type!.price!).reduce((value, element) => value + element) : 0} جنيهاً",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 18,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 12),
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green[600],
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12, horizontal: 20),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        elevation: 4,
+                                      ),
+                                      onPressed: () =>
+                                          showSystemAddDialog(client),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.add_circle_outline,
+                                            color: Colors.white,
+                                            size: 22,
+                                          ),
+                                          SizedBox(width: 10),
+                                          Text(
+                                            'إضافة باقة جديدة',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(10.0),
+                                    child: SingleChildScrollView(
+                                      child: SizedBox(
+                                        height: height * 0.5,
+                                        child: GridView.builder(
+                                          itemCount: systems.length,
+                                          gridDelegate:
+                                              SliverGridDelegateWithFixedCrossAxisCount(
+                                            childAspectRatio: 1.2,
+                                            crossAxisCount:
+                                                MediaQuery.of(context)
+                                                            .size
+                                                            .width >
+                                                        600
+                                                    ? 3
+                                                    : 2,
+                                            crossAxisSpacing: 10,
+                                            mainAxisSpacing: 10,
+                                          ),
+                                          itemBuilder: (context, index) {
+                                            final system = systems[index];
+                                            // Don't show expired other services but keep their price in total
+                                            if (system.type!.category ==
+                                                SystemCategory.mobileInternet) {
+                                              if (system.createdAt != null) {
+                                                final collectionDay =
+                                                    AccountClientInfo
+                                                        .to.currentAccount.day;
+                                                final nextCollection = DateTime(
+                                                  system.createdAt!.month == 12
+                                                      ? system.createdAt!.year +
+                                                          1
+                                                      : system.createdAt!.year,
+                                                  system.createdAt!.month == 12
+                                                      ? 1
+                                                      : system.createdAt!
+                                                              .month +
+                                                          1,
+                                                  collectionDay,
+                                                );
+                                                if (DateTime.now()
+                                                    .isAfter(nextCollection)) {
+                                                  return const SizedBox
+                                                      .shrink();
+                                                }
+                                              }
+                                            }
+
+                                            return Stack(
+                                              children: [
+                                                Positioned.fill(
+                                                  child: Card(
+                                                    margin:
+                                                        const EdgeInsets.all(0),
+                                                    child: Container(
+                                                      decoration: BoxDecoration(
+                                                          image: DecorationImage(
+                                                              opacity: 0.1,
+                                                              image: systems[index].type!.image != null
+                                                                  ? NetworkImage(
+                                                                      systems[index]
+                                                                          .type!
+                                                                          .image!,
+                                                                    ) as ImageProvider
+                                                                  : AssetImage(
+                                                                      systems[index]
+                                                                          .type!
+                                                                          .category!
+                                                                          .icon(),
+                                                                    ),
+                                                              fit: BoxFit.contain)),
+                                                      width: 150,
+                                                      child: Center(
+                                                          child: Column(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .center,
+                                                        children: [
+                                                          Text(
+                                                            systems[index]
+                                                                .type!
+                                                                .name!,
+                                                            style: const TextStyle(
+                                                                fontSize: 18,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold),
+                                                          ),
+                                                          Text(
+                                                            "${systems[index].type!.price!} جنيه",
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 14,
+                                                            ),
+                                                          ),
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                                Icons.edit),
+                                                            onPressed: () =>
+                                                                showEditSystemDialog(
+                                                                    systems[
+                                                                        index]),
+                                                          ),
+                                                        ],
+                                                      )),
+                                                    ),
+                                                  ),
+                                                ),
+                                                Positioned(
+                                                    top: 5,
+                                                    left: 5,
+                                                    child: IconButton(
+                                                      onPressed: () async {
+                                                        await showDangerDialog(
+                                                            "الغاء اشتراك باقة",
+                                                            "هل حقاً تريد الغاء اشتراك باقة العميل من نوع ${systems[index].name} ؟",
+                                                            () async {
+                                                          await BackendServices
+                                                              .instance
+                                                              .systemRepository
+                                                              .delete(systems[
+                                                                  index]);
+                                                        });
+                                                      },
+                                                      icon: const Icon(
+                                                          Icons.remove_circle,
+                                                          color: Colors.red),
+                                                    )),
+                                              ],
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(
+                                    height: 10,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          )
+                        ],
                       )
                     ],
                   )
-                ],
-              )
-          ],
+              ],
+            );
+          },
         ),
       );
     });
