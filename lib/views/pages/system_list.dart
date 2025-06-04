@@ -34,7 +34,7 @@ class SystemList extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                color: const Color(0xFF00BFFF),
+                color: const Color(0xFF0d47a1),
                 child: const TabBar(
                   tabs: [
                     Tab(
@@ -119,9 +119,9 @@ class SystemListTab extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: numberOfElements,
-              childAspectRatio: 1.2,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
+              childAspectRatio: 0.85, // Changed from 1.2 to make cards taller
+              mainAxisSpacing: 16, // Increased from 10
+              crossAxisSpacing: 16, // Increased from 10
             ),
             itemBuilder: (context, index) {
               SystemType currentSystem = allSystems[index];
