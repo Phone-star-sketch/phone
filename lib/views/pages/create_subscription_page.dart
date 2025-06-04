@@ -99,8 +99,8 @@ class _CreateSubscriptionPageState extends State<CreateSubscriptionPage>
     // Calculate daily rate
     final dailyRate = monthlyPrice / 30;
 
-    // Calculate total price based on days
-    calculatedPrice.value = dailyRate * days;
+    // Calculate total price based on days and round to nearest integer
+    calculatedPrice.value = (dailyRate * days).roundToDouble();
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {

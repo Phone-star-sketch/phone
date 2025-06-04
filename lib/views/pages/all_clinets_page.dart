@@ -903,6 +903,25 @@ class _ModernClientCardState extends State<ModernClientCard>
                               : showClientInfoSheet(context, widget.client),
                       child: Stack(
                         children: [
+                          // Background Logo
+                          Positioned(
+                            top: 10, // Move up from center
+                            right: 0,
+                            left: 0,
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              child: SizedBox(
+                                height: 110, // Make logo smaller
+                                child: Opacity(
+                                  opacity: 0.05,
+                                  child: Image.asset(
+                                    'assets/images/logo.png',
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
