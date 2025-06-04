@@ -687,7 +687,8 @@ class ClientDataWidget extends StatelessWidget {
                                           itemCount: systems.length,
                                           gridDelegate:
                                               SliverGridDelegateWithFixedCrossAxisCount(
-                                            childAspectRatio: 1.2,
+                                            childAspectRatio:
+                                                1.5, // Adjusted ratio
                                             crossAxisCount:
                                                 MediaQuery.of(context)
                                                             .size

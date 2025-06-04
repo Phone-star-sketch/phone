@@ -118,10 +118,10 @@ class SystemListTab extends StatelessWidget {
           child: GridView.builder(
             padding: const EdgeInsets.all(16),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 1 / 1.4,
               crossAxisCount: numberOfElements,
+              childAspectRatio: 1.2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
             ),
             itemBuilder: (context, index) {
               SystemType currentSystem = allSystems[index];

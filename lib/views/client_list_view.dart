@@ -69,7 +69,7 @@ class ClientListView extends StatelessWidget {
                             crossAxisCount: screenWidth > 1200
                                 ? 3
                                 : (screenWidth > 800 ? 2 : 1),
-                            childAspectRatio: 2,
+                            childAspectRatio: 3.5, // Adjusted for better fit
                             crossAxisSpacing: 16,
                             mainAxisSpacing: 16,
                           ),
