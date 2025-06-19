@@ -106,13 +106,15 @@ class _DuesManagementState extends State<DuesManagement>
                   ),
                   child: SafeArea(
                     child: Padding(
-                      padding: const EdgeInsets.all(20.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 12.0), // reduced padding
                       child: Column(
                         children: [
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(12),
+                                padding:
+                                    const EdgeInsets.all(6), // reduced from 8
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
                                     colors: [
@@ -120,20 +122,21 @@ class _DuesManagementState extends State<DuesManagement>
                                       Color(0xFFDC2626)
                                     ],
                                   ),
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(
+                                      8), // reduced from 12
                                 ),
                                 child: const Icon(
                                   FontAwesomeIcons.moneyBillWave,
                                   color: Colors.white,
-                                  size: 24,
+                                  size: 16, // reduced from 20
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 8), // reduced from 12
                               const Expanded(
                                 child: Text(
                                   'إدارة المستحقات',
                                   style: TextStyle(
-                                    fontSize: 28,
+                                    fontSize: 18, // reduced from 22
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF1E293B),
                                   ),
@@ -142,7 +145,7 @@ class _DuesManagementState extends State<DuesManagement>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 12), // reduced from 20
                           // Add Statistics Cards here
                           Row(
                             children: [
@@ -173,12 +176,12 @@ class _DuesManagementState extends State<DuesManagement>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 12), // reduced from 20
                           ModernSearchField(
                             controller: controller.searchController,
                             onChanged: controller.searchQueryChanged,
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12), // reduced from 16
                           Row(
                             children: [
                               GetBuilder<AccountClientInfo>(
@@ -488,14 +491,14 @@ class _DuesManagementState extends State<DuesManagement>
     required List<Color> gradient,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12), // reduced from 16
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [gradient[0].withOpacity(0.1), gradient[1].withOpacity(0.05)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16), // reduced from 20
         border: Border.all(
           color: gradient[0].withOpacity(0.1),
         ),
@@ -506,31 +509,31 @@ class _DuesManagementState extends State<DuesManagement>
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6), // reduced from 8
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: gradient),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8), // reduced from 12
                 ),
                 child: Icon(
                   icon,
                   color: Colors.white,
-                  size: 16,
+                  size: 14, // reduced from 16
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8), // reduced from 12
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
                     color: gradient[0],
                     fontWeight: FontWeight.w500,
-                    fontSize: 14,
+                    fontSize: 12, // reduced from 14
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12), // reduced from 16
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -540,7 +543,7 @@ class _DuesManagementState extends State<DuesManagement>
                 style: TextStyle(
                   color: gradient[0],
                   fontWeight: FontWeight.bold,
-                  fontSize: 24,
+                  fontSize: 20, // reduced from 24
                 ),
               ),
               const SizedBox(width: 4),
@@ -549,7 +552,7 @@ class _DuesManagementState extends State<DuesManagement>
                 style: TextStyle(
                   color: gradient[0].withOpacity(0.8),
                   fontWeight: FontWeight.w500,
-                  fontSize: 14,
+                  fontSize: 12, // reduced from 14
                 ),
               ),
             ],

@@ -47,6 +47,7 @@ dependencies:
   timezone: ^0.9.2
   lottie: ^2.7.0
   path_provider: ^2.1.1
+  google_fonts: ^5.1.0
   
 
 dev_dependencies:
@@ -93,3 +94,5 @@ flutter:
     - assets/images/instapay_icon.png
     - assets/images/whatsapp_icon.png  # Changed from WhatsApp_icon.png to whatsapp_icon.png
     - assets/images/logo.png
+    - assets/images/Company.png
+
