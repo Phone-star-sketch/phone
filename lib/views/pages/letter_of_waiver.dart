@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -47,7 +48,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
     Company(
       name: "مواهب حسن علي محمد",
       taxNumber: "799-499-418",
-      ownerName: "مواهب حسن علي محمد" ,
+      ownerName: "مواهب حسن علي محمد",
     ),
   ];
 
@@ -416,12 +417,34 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
     return input;
   }
 
+  String fixArabicText(String text) {
+    // Split text into words to handle each word separately
+    List<String> words = text.split(' ');
+
+    // Process each word
+    words = words.map((word) {
+      // If word ends with ي, replace it with ى
+      if (word.endsWith('ي')) {
+        return word.substring(0, word.length - 1) + 'ى';
+      }
+      // If word contains Persian ی, replace it with ى
+      if (word.contains('ی')) {
+        return word.replaceAll('ی', 'ى');
+      }
+      // Return unchanged word if no replacements needed
+      return word;
+    }).toList();
+
+    // Join words back together and trim any extra spaces
+    return words.join(' ').trim();
+  }
+
   Future<void> _generatePDF() async {
     final pdf = pw.Document();
-    final arabicFont = await PdfGoogleFonts.cairoRegular();
-    final arabicBoldFont = await PdfGoogleFonts.cairoBold();
 
-    // Get the selected company
+    // Change font to Cairo
+    final font = await PdfGoogleFonts.cairoRegular();
+
     Company selectedCompany = _companies[_selectedCompanyIndex];
 
     pdf.addPage(
@@ -430,31 +453,30 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
         build: (pw.Context context) {
           return pw.Directionality(
             textDirection: pw.TextDirection.rtl,
-            child: pw.Padding(
+            child: pw.Container(
               padding: const pw.EdgeInsets.all(20),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                 children: [
-                  // Header
-                  pw.Align(
-                    alignment: pw.Alignment.centerRight,
-                    child: pw.Container(
-                      width: 200, // Fixed width for the underline
-                      padding: const pw.EdgeInsets.only(bottom: 2),
-                      decoration: const pw.BoxDecoration(
-                        border: pw.Border(
-                          bottom: pw.BorderSide(width: 1),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.start,
+                    children: [
+                      pw.Container(
+                        padding: const pw.EdgeInsets.only(bottom: 2),
+                        decoration: const pw.BoxDecoration(
+                          border: pw.Border(
+                            bottom: pw.BorderSide(width: 1),
+                          ),
+                        ),
+                        child: pw.Text(
+                          fixArabicText('السادة / شركـة فودافـون'),
+                          style: pw.TextStyle(
+                            font: font,
+                            fontSize: 18,
+                          ),
                         ),
                       ),
-                      child: pw.Text(
-                        'السادة / شركـة فودافـون',
-                        style: pw.TextStyle(
-                          font: arabicBoldFont,
-                          fontSize: 18,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
+                    ],
                   ),
                   pw.SizedBox(height: 20),
 
@@ -462,26 +484,27 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.Center(
                     child: pw.Text(
                       'تحية طيبه وبعد ،،،',
-                      style: pw.TextStyle(font: arabicBoldFont, fontSize: 16),
+                      style: pw.TextStyle(font: font, fontSize: 16),
                     ),
                   ),
                   pw.SizedBox(height: 20),
 
                   // Body content with consistent spacing
                   pw.Text(
-                    'يرجي التكرم الإحاطة بالعلم بأننا شركة : ${selectedCompany.name}',
-                    style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
+                    fixArabicText(
+                        'يرجي التكرم الإحاطة بالعلم بأننا شركة : ${selectedCompany.name}'),
+                    style: pw.TextStyle(font: font, fontSize: 14),
                   ),
                   pw.SizedBox(height: 10),
                   pw.Row(
                     children: [
                       pw.Text(
                         'المشهرة بسجل ضريبي رقم : ',
-                        style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
+                        style: pw.TextStyle(font: font, fontSize: 14),
                       ),
                       pw.Text(
                         convertToArabicNumbers(selectedCompany.taxNumber),
-                        style: pw.TextStyle(font: arabicFont, fontSize: 14),
+                        style: pw.TextStyle(font: font, fontSize: 14),
                         textAlign: pw.TextAlign.left,
                       ),
                     ],
@@ -489,28 +512,28 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.SizedBox(height: 10),
                   pw.Text(
                     'و المالكـة للخــط رقم : ${convertToArabicNumbers(_phoneNumberController.text)}',
-                    style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
+                    style: pw.TextStyle(font: font, fontSize: 14),
                   ),
                   pw.SizedBox(height: 10),
                   pw.Text(
-                    'بأننا قد فوضنا السيد - ة / ${_recipientNameController.text}',
-                    style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
+                    'بأننا قد فوضنا السيد - ة / ${fixArabicText(_recipientNameController.text)}',
+                    style: pw.TextStyle(font: font, fontSize: 14),
                   ),
                   pw.SizedBox(height: 10),
                   pw.Text(
                     'بطاقة رقم قومي : ${convertToArabicNumbers(_nationalIdController.text)}',
-                    style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
+                    style: pw.TextStyle(font: font, fontSize: 14),
                   ),
                   pw.SizedBox(height: 10),
                   pw.Text(
                     'للتنازل عن الخط رقم : ${convertToArabicNumbers(_waivedPhoneController.text)}',
-                    style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
+                    style: pw.TextStyle(font: font, fontSize: 14),
                   ),
                   pw.SizedBox(height: 20),
                   pw.Text(
                     'لنفسه و كمـا تقرر الشركة بأنها قـد قامت بسداد جميع المستحقات المتعلقة بالخط المذكور عاليه قبل تاريخ هذا الإقرار كما نقر  بموافقتنا علي الأعمال السابق ذكرها وأنه لا يجوز لنا الرجوع في اى عمـل مــن الأعمال المتضمنة في هذا الإقرار.',
                     style: pw.TextStyle(
-                      font: arabicBoldFont,
+                      font: font,
                       fontSize: 14,
                       letterSpacing: 0.5,
                       wordSpacing: 2.0,
@@ -524,7 +547,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                     children: [
                       pw.Text(
                         'إسم المفوض الأصلي :  ',
-                        style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
+                        style: pw.TextStyle(font: font, fontSize: 14),
                       ),
                       pw.SizedBox(height: 10),
                       pw.Row(
@@ -533,29 +556,26 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                           pw.Container(
                             child: pw.Text(
                               'التوقيع : إسلام محمد عبد الرسول النني               ',
-                              style: pw.TextStyle(
-                                  font: arabicBoldFont, fontSize: 14),
+                              style: pw.TextStyle(font: font, fontSize: 14),
                             ),
                           ),
                           pw.Text(
                             'توقيع المفوض بموجب هذا الإقرار ،،،',
-                            style: pw.TextStyle(
-                                font: arabicBoldFont, fontSize: 14),
+                            style: pw.TextStyle(font: font, fontSize: 14),
                           ),
                         ],
                       ),
                       pw.SizedBox(height: 10),
                       pw.Text(
                         'التاريخ     /      /    ${convertToArabicNumbers(DateTime.now().year.toString())}',
-                        style: pw.TextStyle(font: arabicBoldFont, fontSize: 14),
+                        style: pw.TextStyle(font: font, fontSize: 14),
                       ),
                       pw.SizedBox(height: 10),
                       pw.Align(
                         alignment: pw.Alignment.centerRight,
                         child: pw.Text(
                           'خاتم الشركه المفوضة:',
-                          style:
-                              pw.TextStyle(font: arabicBoldFont, fontSize: 14),
+                          style: pw.TextStyle(font: font, fontSize: 14),
                         ),
                       ),
                     ],
