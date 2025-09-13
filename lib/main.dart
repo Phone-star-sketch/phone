@@ -24,7 +24,6 @@ import 'package:get/get.dart';
 import 'package:phone_system_app/views/pages/auth_wrapper.dart'; // Update import
 import 'package:phone_system_app/theme/welcome_theme_selector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 @pragma('vm:entry-point')
 Future<void> main() async {
@@ -72,11 +71,15 @@ Future<void> main() async {
 
   // Initialize notification service and background service early
   if (!kIsWeb) {
-    // Initialize the notification service
-    await TransactionNotificationService.instance.initialize();
-    
+    // Initialize the notification service with error handling
+    try {
+      await TransactionNotificationService.instance.initialize();
+    } catch (e) {
+      print('Notification service initialization failed: $e');
+      // Continue without notifications if initialization fails
+    }
+
     // Make sure the background service is started
-    
   }
 
   // Initialize theme controller

@@ -1,6 +1,7 @@
 import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/model.dart';
 import 'package:phone_system_app/models/phone_number.dart';
+import 'package:phone_system_app/models/system.dart';
 import 'package:phone_system_app/views/pages/system_list.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -26,6 +27,7 @@ class Client extends Model {
   DateTime? expireDate;
   double? discountPercentage;
   DateTime? discountEndDate;
+  double? totalServicesPrice; // Add this field
 
   Client(
       {required super.id,
@@ -39,7 +41,8 @@ class Client extends Model {
       this.numbers,
       this.expireDate,
       this.discountPercentage,
-      this.discountEndDate});
+      this.discountEndDate,
+      this.totalServicesPrice}); // Add to constructor
 
   double systemsCost() {
     if (numbers?.isEmpty ?? true) return 0.0;
@@ -87,6 +90,8 @@ class Client extends Model {
         logs = (data[logsTable] != null)
             ? (data[logsTable] as List).map((e) => Log.fromJson(e)).toList()
             : [],
+        totalServicesPrice =
+            (data['totalServicesPrice'] as num?)?.toDouble(), // Add this
         super.fromJson();
 
   @override
@@ -102,6 +107,7 @@ class Client extends Model {
       discountPercentageColumn: discountPercentage,
       discountEndDateColumn:
           (discountEndDate != null) ? discountEndDate.toString() : null,
+      'totalServicesPrice': totalServicesPrice, // Add this
     };
   }
 
@@ -138,5 +144,11 @@ class Client extends Model {
     }
 
     return stats;
+  }
+
+  // Add the missing systems getter
+  List<System>? get systems {
+    if (numbers?.isEmpty ?? true) return null;
+    return numbers![0].systems;
   }
 }

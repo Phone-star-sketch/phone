@@ -22,6 +22,8 @@ import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/views/client_list_view.dart';
 import 'package:phone_system_app/views/print_clients_receipts.dart';
 import 'package:phone_system_app/views/pages/all_clinets_page.dart';
+import 'package:phone_system_app/views/bottom_sheet_dialogs/other_services_exclude_price.dart';
+import 'package:phone_system_app/views/pages/system_choice.dart';
 
 Future showClientInfoSheet(
   BuildContext context,
@@ -34,6 +36,14 @@ Future showClientInfoSheet(
   // Remove any existing controller
   if (Get.isRegistered<ClientBottomSheetController>()) {
     Get.delete<ClientBottomSheetController>(force: true);
+  }
+
+  // Initialize excluded systems manager
+  if (!Get.isRegistered<ExcludedSystemsManager>()) {
+    Get.put(ExcludedSystemsManager());
+  } else {
+    // Clear previous exclusions when opening new client sheet
+    Get.find<ExcludedSystemsManager>().clearExclusions();
   }
 
   // Create and initialize the controller
@@ -53,17 +63,22 @@ Future showClientInfoSheet(
     context: context,
     builder: (context) {
       return GetBuilder<ClientBottomSheetController>(
-        builder: (controller) => ClientDataWidget(
-          colors: colors,
-          height: height,
-          client: client,
-          controller: controller, // Pass controller explicitly
+        builder: (controller) => GetBuilder<ExcludedSystemsManager>(
+          builder: (excludedManager) => ClientDataWidget(
+            colors: colors,
+            height: height,
+            client: client,
+            controller: controller, // Pass controller explicitly
+          ),
         ),
       );
     },
   ).whenComplete(() {
     if (Get.isRegistered<ClientBottomSheetController>()) {
       Get.delete<ClientBottomSheetController>(force: true);
+    }
+    if (Get.isRegistered<ExcludedSystemsManager>()) {
+      Get.delete<ExcludedSystemsManager>(force: true);
     }
   });
 }
@@ -467,61 +482,107 @@ class ClientDataWidget extends StatelessWidget {
                                           MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
-                                            child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.start,
-                                          textDirection: TextDirection.rtl,
-                                          children: [
-                                            const Icon(
-                                              Icons.history,
-                                              color: Colors.white,
-                                              size: 24,
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Flexible(
-                                              child: Text(
-                                                'سجل التعاملات المالية',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.start,
+                                            textDirection: TextDirection.rtl,
+                                            children: [
+                                              const Icon(
+                                                Icons.history,
+                                                color: Colors.white,
+                                                size: 24,
                                               ),
-                                            ),
-                                          ],
-                                        )),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: Text(
+                                                  'سجل التعاملات المالية',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                         const SizedBox(width: 8),
-                                        ElevatedButton.icon(
-                                          icon: Icon(
-                                            Icons.print_rounded,
-                                            color: Colors.blue[900],
-                                            size: 20,
+                                        Flexible(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              ElevatedButton.icon(
+                                                icon: Icon(
+                                                  Icons.print_rounded,
+                                                  color: Colors.blue[900],
+                                                  size: 18,
+                                                ),
+                                                label: Text(
+                                                  'طباعة',
+                                                  style: TextStyle(
+                                                    color: Colors.blue[900],
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.white,
+                                                  elevation: 2,
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            20),
+                                                  ),
+                                                ),
+                                                onPressed: () async {
+                                                  Get.to(PrintClientsReceipts(
+                                                    clients: [client],
+                                                  ));
+                                                },
+                                              ),
+                                              const SizedBox(height: 4),
+                                              ElevatedButton.icon(
+                                                icon: Icon(
+                                                  Icons.view_list,
+                                                  color: Colors.blue[900],
+                                                  size: 18,
+                                                ),
+                                                label: Text(
+                                                  'الباقات',
+                                                  style: TextStyle(
+                                                    color: Colors.blue[900],
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.white,
+                                                  elevation: 2,
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            20),
+                                                  ),
+                                                ),
+                                                onPressed: () async {
+                                                  await showModernSystemChoiceSheet(
+                                                      context, currentClient);
+                                                },
+                                              ),
+                                            ],
                                           ),
-                                          label: Text(
-                                            'طباعة',
-                                            style: TextStyle(
-                                              color: Colors.blue[900],
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.white,
-                                            elevation: 3,
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 8,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(30),
-                                            ),
-                                          ),
-                                          onPressed: () async {
-                                            Get.to(PrintClientsReceipts(
-                                              clients: [client],
-                                            ));
-                                          },
                                         ),
                                       ],
                                     ),
@@ -624,7 +685,8 @@ class ClientDataWidget extends StatelessWidget {
                                                   ),
                                                   const SizedBox(width: 8),
                                                   Text(
-                                                    "${(systems.isNotEmpty) ? systems.map((e) => e.type!.price!).reduce((value, element) => value + element) : 0} جنيهاً",
+                                                    // Always show saved totalServicesPrice if available, else fallback to calculated
+                                                    "${(currentClient.totalServicesPrice ?? _calculateTotalServicesPrice(systems)).toStringAsFixed(0)} جنيهاً",
                                                     style: TextStyle(
                                                       color: Colors.white,
                                                       fontSize: 18,
@@ -633,6 +695,40 @@ class ClientDataWidget extends StatelessWidget {
                                                     ),
                                                   ),
                                                 ],
+                                              ),
+                                              const SizedBox(height: 8),
+                                              ElevatedButton.icon(
+                                                onPressed: () {
+                                                  showOtherServicesExcludeSheet(
+                                                      context, systems);
+                                                },
+                                                icon: Icon(
+                                                  Icons.visibility_off,
+                                                  size: 16,
+                                                  color: Colors.blue[900],
+                                                ),
+                                                label: Text(
+                                                  'استبعاد خدمات',
+                                                  style: TextStyle(
+                                                    color: Colors.blue[900],
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.white,
+                                                  elevation: 2,
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 4,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            20),
+                                                  ),
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -684,11 +780,12 @@ class ClientDataWidget extends StatelessWidget {
                                       child: SizedBox(
                                         height: height * 0.5,
                                         child: GridView.builder(
-                                          itemCount: systems.length,
+                                          itemCount:
+                                              _getVisibleSystemsCount(systems),
                                           gridDelegate:
                                               SliverGridDelegateWithFixedCrossAxisCount(
                                             childAspectRatio:
-                                                1.5, // Adjusted ratio
+                                                1.8, // Increased ratio for more height
                                             crossAxisCount:
                                                 MediaQuery.of(context)
                                                             .size
@@ -696,15 +793,17 @@ class ClientDataWidget extends StatelessWidget {
                                                         600
                                                     ? 3
                                                     : 2,
-                                            crossAxisSpacing: 10,
-                                            mainAxisSpacing: 10,
+                                            crossAxisSpacing: 8,
+                                            mainAxisSpacing: 8,
                                           ),
                                           itemBuilder: (context, index) {
-                                            final system = systems[index];
-                                            // Don't show expired other services but keep their price in total
-                                            if (!shouldShowSystem(system)) {
+                                            final visibleSystems =
+                                                _getVisibleSystems(systems);
+                                            if (index >= visibleSystems.length)
                                               return const SizedBox.shrink();
-                                            }
+
+                                            final system =
+                                                visibleSystems[index];
 
                                             return Stack(
                                               children: [
@@ -716,75 +815,157 @@ class ClientDataWidget extends StatelessWidget {
                                                       decoration: BoxDecoration(
                                                           image: DecorationImage(
                                                               opacity: 0.1,
-                                                              image: systems[index].type!.image != null
+                                                              image: system.type!.image != null
                                                                   ? NetworkImage(
-                                                                      systems[index]
+                                                                      system
                                                                           .type!
                                                                           .image!,
                                                                     ) as ImageProvider
                                                                   : AssetImage(
-                                                                      systems[index]
+                                                                      system
                                                                           .type!
                                                                           .category!
                                                                           .icon(),
                                                                     ),
                                                               fit: BoxFit.contain)),
                                                       width: 150,
-                                                      child: Center(
-                                                          child: Column(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              4),
+                                                      child: Column(
                                                         mainAxisAlignment:
                                                             MainAxisAlignment
                                                                 .center,
                                                         children: [
-                                                          Text(
-                                                            systems[index]
-                                                                .type!
-                                                                .name!,
-                                                            style: const TextStyle(
-                                                                fontSize: 18,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold),
-                                                          ),
-                                                          Text(
-                                                            "${systems[index].type!.price!} جنيه",
-                                                            style:
-                                                                const TextStyle(
-                                                              fontSize: 14,
+                                                          Flexible(
+                                                            child: Text(
+                                                              system
+                                                                  .type!.name!,
+                                                              style: const TextStyle(
+                                                                  fontSize: 14,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold),
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              maxLines: 2,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
                                                             ),
                                                           ),
-                                                          IconButton(
-                                                            icon: const Icon(
-                                                                Icons.edit),
-                                                            onPressed: () =>
-                                                                showEditSystemDialog(
-                                                                    systems[
-                                                                        index]),
+                                                          const SizedBox(
+                                                              height: 2),
+                                                          Text(
+                                                            "${system.type!.price!} جنيه",
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 12,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 2),
+                                                          Flexible(
+                                                            child: Row(
+                                                              mainAxisAlignment:
+                                                                  MainAxisAlignment
+                                                                      .center,
+                                                              children: [
+                                                                Flexible(
+                                                                  child:
+                                                                      IconButton(
+                                                                    icon: const Icon(
+                                                                        Icons
+                                                                            .edit,
+                                                                        size:
+                                                                            18),
+                                                                    onPressed: () =>
+                                                                        showEditSystemDialog(
+                                                                            system),
+                                                                    padding:
+                                                                        EdgeInsets
+                                                                            .zero,
+                                                                    constraints:
+                                                                        const BoxConstraints(
+                                                                      minWidth:
+                                                                          32,
+                                                                      minHeight:
+                                                                          32,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                                // Add payment button for other services
+                                                                if (system.type!
+                                                                        .category ==
+                                                                    SystemCategory
+                                                                        .mobileInternet)
+                                                                  Flexible(
+                                                                    child:
+                                                                        IconButton(
+                                                                      icon:
+                                                                          Icon(
+                                                                        _isSystemPaid(system)
+                                                                            ? Icons.paid
+                                                                            : Icons.payment,
+                                                                        color: _isSystemPaid(system)
+                                                                            ? Colors.green
+                                                                            : Colors.orange,
+                                                                        size:
+                                                                            18,
+                                                                      ),
+                                                                      onPressed:
+                                                                          () =>
+                                                                              _toggleSystemPayment(system),
+                                                                      tooltip: _isSystemPaid(
+                                                                              system)
+                                                                          ? "مدفوع"
+                                                                          : "غير مدفوع",
+                                                                      padding:
+                                                                          EdgeInsets
+                                                                              .zero,
+                                                                      constraints:
+                                                                          const BoxConstraints(
+                                                                        minWidth:
+                                                                            32,
+                                                                        minHeight:
+                                                                            32,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                              ],
+                                                            ),
                                                           ),
                                                         ],
-                                                      )),
+                                                      ),
                                                     ),
                                                   ),
                                                 ),
                                                 Positioned(
-                                                    top: 5,
-                                                    left: 5,
+                                                    top: 2,
+                                                    left: 2,
                                                     child: IconButton(
                                                       onPressed: () async {
                                                         await showDangerDialog(
                                                             "الغاء اشتراك باقة",
-                                                            "هل حقاً تريد الغاء اشتراك باقة العميل من نوع ${systems[index].name} ؟",
+                                                            "هل حقاً تريد الغاء اشتراك باقة العميل من نوع ${system.name} ؟",
                                                             () async {
                                                           await BackendServices
                                                               .instance
                                                               .systemRepository
-                                                              .delete(systems[
-                                                                  index]);
+                                                              .delete(system);
                                                         });
                                                       },
                                                       icon: const Icon(
                                                           Icons.remove_circle,
-                                                          color: Colors.red),
+                                                          color: Colors.red,
+                                                          size: 20),
+                                                      padding: EdgeInsets.zero,
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                        minWidth: 24,
+                                                        minHeight: 24,
+                                                      ),
                                                     )),
                                               ],
                                             );
@@ -853,6 +1034,127 @@ class ClientDataWidget extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  // Add these helper methods at the end of the ClientDataWidget class
+  double _calculateTotalServicesPrice(List<System> systems) {
+    double total = 0;
+
+    print("Calculating total price for ${systems.length} systems");
+
+    // Get excluded systems from manager if available
+    List<System> excludedSystems = [];
+    try {
+      if (Get.isRegistered<ExcludedSystemsManager>()) {
+        excludedSystems =
+            Get.find<ExcludedSystemsManager>().getExcludedSystems();
+      }
+    } catch (e) {
+      print("Error getting excluded systems: $e");
+      excludedSystems = [];
+    }
+
+    for (var system in systems) {
+      print(
+          "System: ${system.type!.name}, Category: ${system.type!.category}, Name: ${system.name}, Price: ${system.type!.price}");
+
+      if (system.type!.category == SystemCategory.mobileInternet) {
+        // Skip excluded systems (temporarily hidden, not deleted)
+        if (excludedSystems.any((excluded) => excluded.id == system.id)) {
+          print("Skipped excluded service: ${system.type!.name}");
+          continue;
+        }
+
+        // For other services, only add to total if not paid
+        bool isPaid = _isSystemPaid(system);
+        print("Is paid: $isPaid");
+        if (!isPaid) {
+          total += system.type!.price ?? 0;
+          print("Added ${system.type!.price} to total");
+        } else {
+          print("Skipped paid service: ${system.type!.name}");
+        }
+      } else {
+        // For flex systems, always add to total
+        total += system.type!.price ?? 0;
+        print("Added flex system ${system.type!.price} to total");
+      }
+    }
+
+    print("Final total: $total");
+    return total;
+  }
+
+  List<System> _getVisibleSystems(List<System> systems) {
+    return systems.where((system) {
+      if (system.type!.category == SystemCategory.mobileInternet) {
+        // Show other services only if not paid and within collection period
+        bool isPaid = _isSystemPaid(system);
+        bool shouldShow = shouldShowSystem(system);
+        return !isPaid && shouldShow;
+      }
+      // Always show flex systems
+      return true;
+    }).toList();
+  }
+
+  int _getVisibleSystemsCount(List<System> systems) {
+    return _getVisibleSystems(systems).length;
+  }
+
+  bool _isSystemPaid(System system) {
+    // Check if system is marked as paid
+    bool isPaid = system.name?.contains('[مدفوع]') ?? false;
+    print(
+        "Checking payment status for ${system.type!.name}: $isPaid (name: ${system.name})");
+    return isPaid;
+  }
+
+  void _toggleSystemPayment(System system) async {
+    try {
+      bool wasPayd = _isSystemPaid(system);
+
+      if (wasPayd) {
+        // Mark as unpaid - remove [مدفوع] from name
+        system.name = system.name?.replaceAll('[مدفوع]', '').trim();
+        if (system.name?.isEmpty ?? true) {
+          system.name = null;
+        }
+      } else {
+        // Mark as paid - add [مدفوع] to name
+        String currentName = system.name?.trim() ?? '';
+        system.name = currentName.isEmpty ? '[مدفوع]' : '$currentName [مدفوع]';
+      }
+
+      await BackendServices.instance.systemRepository.update(system);
+
+      // Force complete rebuild of the widget
+      controller.update();
+
+      // Also trigger update in the parent controller
+      Get.find<ClientBottomSheetController>().updateClient();
+      Get.find<AccountClientInfo>().updateCurrnetClinets();
+
+      final message = _isSystemPaid(system)
+          ? 'تم تسجيل الدفع بنجاح'
+          : 'تم إلغاء تسجيل الدفع';
+
+      Get.snackbar(
+        'نجاح',
+        message,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green[100],
+        colorText: Colors.green[900],
+      );
+    } catch (e) {
+      Get.snackbar(
+        'خطأ',
+        'حدث خطأ أثناء تحديث حالة الدفع: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[900],
+      );
+    }
   }
 }
 

@@ -7,6 +7,10 @@ import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/controllers/account_profit_controller.dart';
 import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/models/log.dart';
+import 'package:phone_system_app/models/system.dart';
+import 'package:phone_system_app/models/system_type.dart';
+import 'package:phone_system_app/views/bottom_sheet_dialogs/other_services_exclude_price.dart'
+    as exclude_price;
 import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_sheet.dart';
 import 'package:printing/printing.dart';
 
@@ -14,9 +18,17 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class PrintClientsReceipts extends StatelessWidget {
-  List<Client> clients;
+  final List<Client> clients;
   PrintClientsReceipts({super.key, required this.clients});
   final controller = Get.find<AccountClientInfo>();
+
+  // Use the existing ExcludedSystemsManager instance if available
+  exclude_price.ExcludedSystemsManager get excludedManager {
+    if (Get.isRegistered<exclude_price.ExcludedSystemsManager>()) {
+      return Get.find<exclude_price.ExcludedSystemsManager>();
+    }
+    return Get.put(exclude_price.ExcludedSystemsManager());
+  }
 
   String _getAppropriateMonthName() {
     final now = DateTime.now();
@@ -40,13 +52,13 @@ class PrintClientsReceipts extends StatelessWidget {
       'يناير',
       'فبراير',
       'مارس',
-      'إبريل',
+      'إبريل',
       'مايو',
       'يونيو',
       'يوليو',
-      'أغسطس',
+      'أغسطس',
       'سبتمبر',
-      'أكتوبر',
+      'أكتوبر',
       'نوفمبر',
       'ديسمبر'
     ];
@@ -67,11 +79,12 @@ class PrintClientsReceipts extends StatelessWidget {
   }
 
   bool hasPaymentForMonth(Client client, int month, int year) {
-    return client.logs!.any((log) =>
-        log.createdAt!.year == year &&
-        log.createdAt!.month == month &&
-        log.systemType == "تسديد" &&
-        log.price > 0);
+    return client.logs?.any((log) =>
+            log.createdAt?.year == year &&
+            log.createdAt?.month == month &&
+            log.systemType == "تسديد" &&
+            log.price > 0) ??
+        false;
   }
 
   @override
@@ -99,13 +112,13 @@ class PrintClientsReceipts extends StatelessWidget {
       body: PdfPreview(
         pdfFileName: "فاتورة شهر $calculatedMonthName.pdf",
         build: _createPdf,
-        loadingWidget: CustomIndicator(),
+        loadingWidget: const CircularProgressIndicator(),
         onError: (context, error) {
           Get.showSnackbar(GetSnackBar(
             title: "مشكلة الطباعة",
             message: error.toString(),
           ));
-          return const Text("Error");
+          return Text("Error: ${error.toString()}");
         },
       ),
     );
@@ -171,7 +184,7 @@ class PrintClientsReceipts extends StatelessWidget {
           build: (context) {
             return pw.Stack(
               children: [
-                buildBackground(backgroundImage), // Changed this line
+                buildBackground(backgroundImage),
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                   children: [
@@ -183,8 +196,7 @@ class PrintClientsReceipts extends StatelessWidget {
                     ),
                     pw.SizedBox(height: 20),
                     pw.Divider(color: PdfColors.red),
-                    pw.Expanded(
-                        child: pw.Container()), // Add this to push footer down
+                    pw.Expanded(child: pw.Container()),
                     buildFooter(
                         vCashIcon, instaPayIcon, whatsappIcon, cairoBold),
                   ],
@@ -200,60 +212,57 @@ class PrintClientsReceipts extends StatelessWidget {
       int pageNumber = 0;
 
       for (Client c in clients) {
-        if (!hasPaymentForMonth(c, month, year) && c.totalCash < 0) {
-          final logs = c.logs!
-              .where((log) =>
-                  log.createdAt!.year == year &&
-                  log.createdAt!.month == month &&
-                  log.systemType != "تسديد" &&
-                  log.transactionType != TransactionType.moneyAdded)
-              .toList();
+        // Fixed: Added null safety checks
+        final logs = (c.logs ?? [])
+            .where((log) =>
+                log.createdAt?.year == year &&
+                log.createdAt?.month == month &&
+                log.systemType != "تسديد" &&
+                log.transactionType != TransactionType.moneyAdded)
+            .toList();
 
-          if (logs.isNotEmpty) {
-            pageNumber++;
-            document.addPage(
-              pw.Page(
-                pageFormat: pageFormat,
-                build: (context) {
-                  return pw.Stack(
-                    children: [
-                      buildBackground(backgroundImage), // Changed this line
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-                        children: [
-                          buildHeader(logo, cairoBold,
-                              extraBoldFont: cairoExtraBold),
-                          pw.SizedBox(height: 20),
-                          pw.Row(
-                            mainAxisAlignment: pw.MainAxisAlignment.center,
-                            children: [
-                              makeText(c.name!, cairoBold, 16.0),
-                              makeText(
-                                  "  سجل المعاملات المالية الخاصة بالسيد/ ",
-                                  cairoRegular,
-                                  14.0),
-                            ],
-                          ),
-                          pw.SizedBox(height: 20),
-                          ...buildTableWithFlexibleHeight(
-                            c,
-                            logs,
-                            cairoBold,
-                            cairoRegular,
-                          ),
-                          pw.Expanded(
-                              child: pw
-                                  .Container()), // Add this to push footer down
-                          buildFooter(
-                              vCashIcon, instaPayIcon, whatsappIcon, cairoBold),
-                        ],
-                      ),
-                    ],
-                  );
-                },
-              ),
-            );
-          }
+        // Create page if client has transactions OR negative balance (even without payment)
+        if (logs.isNotEmpty ||
+            (!hasPaymentForMonth(c, month, year) && c.totalCash < 0)) {
+          pageNumber++;
+          document.addPage(
+            pw.Page(
+              pageFormat: pageFormat,
+              build: (context) {
+                return pw.Stack(
+                  children: [
+                    buildBackground(backgroundImage),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                      children: [
+                        buildHeader(logo, cairoBold,
+                            extraBoldFont: cairoExtraBold),
+                        pw.SizedBox(height: 20),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.center,
+                          children: [
+                            makeText(c.name ?? "غير محدد", cairoBold, 16.0),
+                            makeText("  سجل المعاملات المالية الخاصة بالسيد/ ",
+                                cairoRegular, 14.0),
+                          ],
+                        ),
+                        pw.SizedBox(height: 20),
+                        ...buildTableWithFlexibleHeight(
+                          c,
+                          logs,
+                          cairoBold,
+                          cairoRegular,
+                        ),
+                        pw.Expanded(child: pw.Container()),
+                        buildFooter(
+                            vCashIcon, instaPayIcon, whatsappIcon, cairoBold),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          );
         }
       }
     } catch (e) {
@@ -261,9 +270,72 @@ class PrintClientsReceipts extends StatelessWidget {
         title: 'Error',
         message: e.toString(),
       ));
+      rethrow;
     }
 
     return document.save();
+  }
+
+  // Helper method to check if a system type is excluded
+  bool _isSystemTypeExcluded(String systemTypeName) {
+    try {
+      return excludedManager.isSystemTypeExcluded(systemTypeName);
+    } catch (e) {
+      print("Error checking exclusion for $systemTypeName: $e");
+      return false;
+    }
+  }
+
+  // Helper method to get all systems for a client (including from numbers)
+  List<System> _getAllClientSystems(Client client) {
+    List<System> allSystems = [];
+
+    // Add systems from client.systems if available
+    if (client.systems != null) {
+      allSystems.addAll(client.systems!);
+    }
+
+    // Add systems from client.numbers if available
+    if (client.numbers != null) {
+      for (var number in client.numbers!) {
+        if (number.systems != null) {
+          allSystems.addAll(number.systems!);
+        }
+      }
+    }
+
+    return allSystems;
+  }
+
+  // Helper method to check if a system still exists (not permanently deleted)
+  bool _systemStillExists(System system, Client client) {
+    final allCurrentSystems = _getAllClientSystems(client);
+    return allCurrentSystems.any((s) => s.id == system.id);
+  }
+
+  // Helper method to calculate adjusted total cash considering exclusions and deletions
+  double _getAdjustedTotalCash(Client client) {
+    // Use the updated totalCash from client which should already reflect permanent deletions
+    if (client.totalCash >= 0) return 0;
+
+    double originalAmount = -client.totalCash;
+    double excludedAmount = 0;
+
+    // Calculate excluded amount only from existing systems (not permanently deleted)
+    final currentSystems = _getAllClientSystems(client);
+    for (var system in currentSystems) {
+      if (_isSystemTypeExcluded(system.type?.name ?? '')) {
+        // Only count unpaid mobile internet services
+        if (system.type?.category == SystemCategory.mobileInternet) {
+          bool isPaid = system.name?.contains('[مدفوع]') ?? false;
+          if (!isPaid) {
+            excludedAmount += system.type?.price ?? 0;
+          }
+        }
+      }
+    }
+
+    return originalAmount - excludedAmount;
   }
 
   List<pw.Widget> buildTableWithFlexibleHeight(
@@ -272,17 +344,43 @@ class PrintClientsReceipts extends StatelessWidget {
     pw.Font boldFont,
     pw.Font regularFont,
   ) {
-    final filteredItems = items
-        .where((item) =>
-            item.systemType != "تسديد" &&
-            item.transactionType != TransactionType.moneyAdded)
-        .toList();
+    // Get currently assigned systems only
+    final currentSystems = _getAllClientSystems(client);
 
-    double totalPrice = (client.totalCash < 0) ? -client.totalCash : 0;
-    String number = client.numbers![0].phoneNumber!;
+    // Filter to get only visible/active systems
+    final visibleSystems = currentSystems.where((system) {
+      // Apply the same filtering logic as in the client info sheet
+      if (system.type?.category == SystemCategory.mobileInternet) {
+        // For mobile internet services, check if paid and within collection period
+        bool isPaid = system.name?.contains('[مدفوع]') ?? false;
+        bool shouldShow = _shouldShowSystem(system);
+        return !isPaid && shouldShow;
+      }
+      // Always show flex systems
+      return true;
+    }).toList();
 
-    // Calculate flexible row height based on number of items
-    final double rowHeight = 25.0; // Base height for each row
+    // Filter out excluded systems
+    final finalVisibleSystems = visibleSystems.where((system) {
+      return !_isSystemTypeExcluded(system.type?.name ?? '');
+    }).toList();
+
+    // Group systems by type to avoid duplicates
+    final Map<String, System> uniqueSystems = {};
+    for (var system in finalVisibleSystems) {
+      final key = system.type?.name ?? 'غير محدد';
+      // Keep the first occurrence of each system type
+      if (!uniqueSystems.containsKey(key)) {
+        uniqueSystems[key] = system;
+      }
+    }
+
+    final uniqueSystemsList = uniqueSystems.values.toList();
+
+    double totalPrice = _getAdjustedTotalCash(client);
+    String number = (client.numbers != null && client.numbers!.isNotEmpty)
+        ? client.numbers![0].phoneNumber ?? "غير محدد"
+        : "غير محدد";
 
     return [
       // Table title and info
@@ -292,7 +390,7 @@ class PrintClientsReceipts extends StatelessWidget {
         boldFont,
         regularFont,
         'رقم الهاتف',
-        'المطلوب سداده',
+        'المبلغ المطلوب',
         totalPrice,
         number,
       ),
@@ -302,33 +400,83 @@ class PrintClientsReceipts extends StatelessWidget {
         child: pw.Table(
           defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
           border: pw.TableBorder.all(width: 1, color: PdfColors.black),
-          columnWidths: {
-            0: const pw.FlexColumnWidth(2), // Time
-            1: const pw.FlexColumnWidth(2), // Date
-            2: const pw.FlexColumnWidth(1.5), // Amount
-            3: const pw.FlexColumnWidth(2), // Type
+          columnWidths: const {
+            0: pw.FlexColumnWidth(2), // Date
+            1: pw.FlexColumnWidth(1.5), // Amount
+            2: pw.FlexColumnWidth(1.5), // Price
+            3: pw.FlexColumnWidth(2), // Type
           },
           children: [
             buildTableHead(
-              ["الوقت", "تاريخ تجديد الباقة", "المبلغ", "نوع الباقة"],
+              ["تاريخ الاشتراك", "المبلغ الكلي", "سعر الباقة", "نوع الباقة"],
               boldFont,
               12,
             ),
-            ...filteredItems.map((item) => buildRow(
-                  [
-                    formatTimeToString(item.createdAt!, "ar"),
-                    formatDateToString(item.createdAt!),
-                    item.price.toString(),
-                    item.systemType,
-                  ],
-                  regularFont,
-                  11.0,
-                )),
+            // Show unique systems only (no duplicates)
+            ...uniqueSystemsList.asMap().entries.map((entry) {
+              final index = entry.key;
+              final system = entry.value;
+
+              return buildRow(
+                [
+                  system.createdAt != null
+                      ? formatDateToString(system.createdAt!)
+                      : "غير محدد",
+                  // Show total amount only in first row, empty for others
+                  index == 0 ? totalPrice.toStringAsFixed(2) : "",
+                  "${system.type?.price?.toStringAsFixed(0) ?? '0'} جنيه",
+                  system.type?.name ?? "غير محدد"
+                ],
+                regularFont,
+                11.0,
+              );
+            }).toList(),
+            // Add a row if no visible systems to show
+            if (uniqueSystemsList.isEmpty)
+              pw.TableRow(
+                children: [
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(10),
+                    child: pw.Center(
+                        child:
+                            makeText("لا توجد باقات للعرض", regularFont, 12.0)),
+                  ),
+                  // Show total amount even when no systems
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(10),
+                    child: pw.Center(
+                        child: makeText(
+                            totalPrice.toStringAsFixed(2), regularFont, 12.0)),
+                  ),
+                  pw.Container(),
+                  pw.Container(),
+                ],
+              ),
           ],
         ),
       ),
     ];
   }
+
+  // Add helper method to check if system should be shown (same logic as client info sheet)
+  bool _shouldShowSystem(System system) {
+    if (system.type?.category == SystemCategory.mobileInternet) {
+      if (system.createdAt != null) {
+        final collectionDay = AccountClientInfo.to.currentAccount.day;
+        final nextCollection = DateTime(
+          system.createdAt!.month == 12
+              ? system.createdAt!.year + 1
+              : system.createdAt!.year,
+          system.createdAt!.month == 12 ? 1 : system.createdAt!.month + 1,
+          collectionDay,
+        );
+        return !DateTime.now().isAfter(nextCollection);
+      }
+    }
+    return true;
+  }
+
+  // (Removed duplicate _createPdf method)
 
   static pw.Widget makeText(String text, pw.Font font, double fontSize,
       [PdfColor color = PdfColors.black]) {
@@ -405,26 +553,24 @@ class PrintClientsReceipts extends StatelessWidget {
           child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                makeText(field, fieldFont, 16,
-                    PdfColors.blue900), // Increased font size
+                makeText(field, fieldFont, 16, PdfColors.blue900),
                 pw.SizedBox(height: 8),
-                makeText(value, fieldFont, 15,
-                    PdfColors.red900), // Changed to fieldFont for bold
+                makeText(value, fieldFont, 15, PdfColors.red900),
               ]));
     }
 
     return [
       pw.Align(
         alignment: pw.Alignment.center,
-        child: makeText(tableTitle, titleFont, 18), // Increased font size
+        child: makeText(tableTitle, titleFont, 18),
       ),
       pw.SizedBox(height: 15),
       pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.center,
         children: [
-          titleValue(fs, number.toString()),
+          titleValue(ss, '${totalPrice.toStringAsFixed(2)} جنيه'),
           pw.SizedBox(width: 50),
-          titleValue(ss, '$totalPrice جنيه'),
+          titleValue(fs, number),
         ],
       ),
       pw.SizedBox(height: 15),
@@ -448,74 +594,18 @@ class PrintClientsReceipts extends StatelessWidget {
     }
   }
 
-  List<pw.Widget> buildTable(
-    String tableTitle,
-    Client client,
-    List<Log> items,
-    List<String> header,
-    pw.Font titleFont,
-    pw.Font fieldFont,
-    pw.Font valueFont,
-  ) {
-    List<List<String>> rows = [];
-
-    double totalPrice = (client.totalCash < 0) ? -client.totalCash : 0;
-    String number = client.numbers![0].phoneNumber!;
-
-    // Filter out تسديد transactions and only show financial transactions
-    final filteredItems = items
-        .where((item) =>
-            item.systemType != "تسديد" &&
-            item.transactionType != TransactionType.moneyAdded)
-        .toList();
-
-    for (final item in filteredItems) {
-      rows.add([
-        formatTimeToString(item.createdAt!),
-        formatDateToString(item.createdAt!),
-        item.price.toString(),
-        item.systemType,
-      ]);
-    }
-
-    return [
-      for (final w in buildTableTitle(tableTitle, titleFont, fieldFont,
-          valueFont, 'رقم الهاتف', 'المطلوب سداده', totalPrice, number))
-        w,
-      pw.Align(
-        alignment: pw.Alignment.center,
-        child: pw.Table(
-          border: pw.TableBorder.all(width: 1, color: PdfColors.black),
-          children: [
-            buildTableHead(header, fieldFont, 14), // Increased font size
-            ...rows.map(
-                (row) => buildRow(row, valueFont, 12.0)), // Increased font size
-          ],
-        ),
-      ),
-    ];
-  }
-
-  pw.Widget _buildStatBox(String label, String value, pw.Font font) {
-    return pw.Column(
-      mainAxisSize: pw.MainAxisSize.min,
-      children: [
-        makeText(label, font, 16.0, PdfColors.blue900),
-        pw.SizedBox(height: 8),
-        makeText(value, font, 15.0, PdfColors.red900),
-      ],
-    );
-  }
-
   (int clientCount, double totalAmount) calculateStats() {
     final (month, year) = getPreviousMonthAndYear();
     int count = 0;
     double total = 0.0;
 
     for (var client in clients) {
-      if (!hasPaymentForMonth(client, month, year) && client.totalCash < 0) {
-        count++;
-        total += -client.totalCash;
+      if (!hasPaymentForMonth(client, month, year)) {
+        double adjustedAmount = _getAdjustedTotalCash(client);
+        if (adjustedAmount > 0) {
+          count++;
+          total += adjustedAmount;
+        }
       }
     }
     return (count, total);
@@ -641,11 +731,13 @@ class PrintClientsReceipts extends StatelessWidget {
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.center,
             children: [
-              pw.Image(pw.MemoryImage(whatsappIcon), width: 20),
-              makeText("01017174149", font, 14.0, PdfColors.red900),
-              pw.SizedBox(width: 10),
+                pw.Image(pw.MemoryImage(whatsappIcon), width: 20),
+                pw.SizedBox(width: 8),
+                makeText("01017174149", font, 14.0, PdfColors.red900),
+              makeText("للاستفسار : ", font, 14.0, PdfColors.blue900),
+              //makeText("01017174149", font, 14.0, PdfColors.red900),
               pw.SizedBox(width: 5),
-              makeText("للاستفسار: ", font, 14.0, PdfColors.blue900),
+              pw.SizedBox(width: 5),
             ],
           ),
         ],
