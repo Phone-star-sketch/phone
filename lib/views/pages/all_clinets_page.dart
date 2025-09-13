@@ -210,7 +210,7 @@ class _AllClientsPageState extends State<AllClientsPage>
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),
                     child: (isLoading)
-                        ? const ModernLoadingIndicator()
+                        ? const SoundWaveIndicator()
                         : (Loaders.to.paymentIsLoading.value)
                             ? ModernPaymentLoadingWidget()
                             : ModernClientListView(
@@ -1339,98 +1339,111 @@ class ModernPaymentLoadingWidget extends StatelessWidget {
             );
           }),
           const SizedBox(height: 32),
-          const ModernLoadingIndicator(),
+          const SoundWaveIndicator(),
         ],
       ),
     );
   }
 }
 
-class ModernLoadingIndicator extends StatefulWidget {
-  const ModernLoadingIndicator({super.key});
+// NEW SOUND WAVE INDICATOR
+class SoundWaveIndicator extends StatefulWidget {
+  final Color color;
+  final double size;
+  final int numberOfWaves;
+
+  const SoundWaveIndicator({
+    super.key,
+    this.color = const Color(0xFF3B82F6),
+    this.size = 80,
+    this.numberOfWaves = 5,
+  });
 
   @override
-  State<ModernLoadingIndicator> createState() => _ModernLoadingIndicatorState();
+  State<SoundWaveIndicator> createState() => _SoundWaveIndicatorState();
 }
 
-class _ModernLoadingIndicatorState extends State<ModernLoadingIndicator>
+class _SoundWaveIndicatorState extends State<SoundWaveIndicator>
     with TickerProviderStateMixin {
-  late AnimationController _rotationController;
-  late AnimationController _scaleController;
-  late Animation<double> _rotationAnimation;
-  late Animation<double> _scaleAnimation;
+  late List<AnimationController> _controllers;
+  late List<Animation<double>> _animations;
 
   @override
   void initState() {
     super.initState();
+    _controllers = [];
+    _animations = [];
 
-    _rotationController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat();
+    for (int i = 0; i < widget.numberOfWaves; i++) {
+      final controller = AnimationController(
+        duration: Duration(milliseconds: 800 + (i * 100)),
+        vsync: this,
+      );
 
-    _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    )..repeat(reverse: true);
+      final animation = Tween<double>(
+        begin: 0.3,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: controller,
+        curve: Curves.easeInOut,
+      ));
 
-    _rotationAnimation = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(_rotationController);
+      _controllers.add(controller);
+      _animations.add(animation);
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.2,
-    ).animate(CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.easeInOut,
-    ));
+      // Start each animation with a delay
+      Future.delayed(Duration(milliseconds: i * 100), () {
+        if (mounted) {
+          controller.repeat(reverse: true);
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
-    _rotationController.dispose();
-    _scaleController.dispose();
+    for (final controller in _controllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([_rotationAnimation, _scaleAnimation]),
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _scaleAnimation.value,
-          child: Transform.rotate(
-            angle: _rotationAnimation.value * 2 * 3.14159,
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF3B82F6),
-                    Color(0xFF8B5CF6),
-                    Color(0xFF10B981),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: List.generate(widget.numberOfWaves, (index) {
+          return AnimatedBuilder(
+            animation: _animations[index],
+            builder: (context, child) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                width: widget.size / widget.numberOfWaves * 0.6,
+                height: widget.size * _animations[index].value,
+                decoration: BoxDecoration(
+                  color: widget.color.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(widget.size / 10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.color.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Icon(
-                Icons.refresh,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-          ),
-        );
-      },
+              );
+            },
+          );
+        }),
+      ),
     );
   }
 }
 
-// Custom Indicator Widget for compatibility
+// Keep the CustomIndicator for backward compatibility but use SoundWaveIndicator
 class CustomIndicator extends StatelessWidget {
   final String title;
 
@@ -1444,7 +1457,7 @@ class CustomIndicator extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const ModernLoadingIndicator(),
+        const SoundWaveIndicator(),
         if (title.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(

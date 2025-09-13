@@ -216,7 +216,7 @@ class FollowController extends GetxController {
       Loaders.to.followLoading.value = false;
     } catch (e) {
       print("Real-time update error: $e");
-      Get.snackbar("مشكلة اثناء التحميل", e.toString());
+      //Get.snackbar("مشكلة اثناء التحميل", e.toString());
       Loaders.to.followLoading.value = false;
     }
   }
