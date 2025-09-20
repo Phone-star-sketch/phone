@@ -4,12 +4,19 @@ set -e
 echo "Setting up build environment..."
 git config --global --add safe.directory '*' 2>/dev/null || true
 
-echo "Using system-installed Flutter..."
-# Make sure Flutter is in PATH
-if ! command -v flutter &> /dev/null
+echo "Checking for Flutter..."
+if command -v flutter &> /dev/null
 then
-    echo "❌ Flutter not found. Please install Flutter (>=3.32.5) and add it to PATH."
-    exit 1
+    echo "✅ Using system-installed Flutter"
+else
+    echo "⬇️  Flutter not found, downloading Flutter 3.32.5..."
+    if [ ! -d "flutter" ]; then
+        mkdir -p flutter_temp
+        curl -fsSL https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.32.5-stable.tar.xz | tar -xJ -C flutter_temp --strip-components=1
+        mv flutter_temp flutter
+    fi
+    export PATH="$PWD/flutter/bin:$PATH"
+    export FLUTTER_ROOT="$PWD/flutter"
 fi
 
 echo "Flutter version:"
