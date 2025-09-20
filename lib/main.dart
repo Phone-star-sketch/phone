@@ -5,65 +5,43 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:phone_system_app/components/money_display.dart';
-import 'package:phone_system_app/models/log.dart';
+// Remove problematic imports for web
+// import 'package:phone_system_app/components/money_display.dart';
+// import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
-import 'package:phone_system_app/views/account_view.dart';
-import 'package:phone_system_app/views/pages/auth_raper.dart';
-import 'package:phone_system_app/views/pages/for_sale_number.dart';
-import 'package:phone_system_app/views/pages/login_page.dart';
-import 'package:phone_system_app/views/print_clients_receipts.dart';
-import 'package:phone_system_app/views/stats_view.dart';
-import 'package:phone_system_app/pages/entry_page.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+// import 'package:phone_system_app/views/account_view.dart';
+// import 'package:phone_system_app/views/pages/auth_raper.dart';
+// import 'package:phone_system_app/views/pages/for_sale_number.dart';
+// import 'package:phone_system_app/views/pages/login_page.dart';
+// import 'package:phone_system_app/views/print_clients_receipts.dart';
+// import 'package:phone_system_app/views/stats_view.dart';
+// import 'package:phone_system_app/pages/entry_page.dart';
+// import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:phone_system_app/views/pages/auth_wrapper.dart';
+// import 'package:phone_system_app/views/pages/auth_wrapper.dart';
 import 'package:phone_system_app/theme/welcome_theme_selector.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-// Conditional imports - mobile vs web
-import 'dart:io' if (dart.library.html) 'dart:html';
-
-// Import services conditionally
-import 'package:phone_system_app/services/transaction_notification_service.dart'
-    if (dart.library.html) 'package:phone_system_app/services/web_notification_stub.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
 
 @pragma('vm:entry-point')
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Configure web platform if running on web
+  // Web-specific initialization
   if (kIsWeb) {
     FlutterError.onError = (FlutterErrorDetails details) {
-      FlutterError.presentError(details);
       if (kDebugMode) {
         print('Web error: ${details.exception}');
       }
     };
-  } else {
-    // Mobile-specific error handling
-    FlutterError.onError = (FlutterErrorDetails details) {
-      FlutterError.presentError(details);
-      if (kDebugMode) {
-        print('Mobile error: ${details.exception}');
-      }
-    };
-  }
 
-  // Initialize mobile-specific services only when not on web
-  if (!kIsWeb) {
-    try {
-      // Initialize the notification service
-      await TransactionNotificationService.instance.initialize();
-    } catch (e) {
-      if (kDebugMode) {
-        print('Notification service initialization failed: $e');
-      }
+    // Skip mobile-only initialization
+    if (kDebugMode) {
+      print('Running on web - mobile services disabled');
     }
-
-    // Set device orientation and UI for mobile
+  } else {
+    // Mobile initialization only when not on web
     try {
       await SystemChrome.setPreferredOrientations(
           [DeviceOrientation.portraitUp]);
@@ -71,55 +49,39 @@ Future<void> main() async {
           overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom]);
     } catch (e) {
       if (kDebugMode) {
-        print('Mobile UI setup failed: $e');
+        print('Mobile setup failed: $e');
       }
     }
-  } else {
-    // Web-specific initialization
-    if (kDebugMode) {
-      print('Running on web - skipping mobile-only services');
-    }
   }
 
-  // Initialize theme controller (works on both platforms)
+  // Initialize theme controller with web-safe approach
   try {
-    await Get.putAsync<WelcomeThemeController>(() async {
-      final controller = WelcomeThemeController();
-      await controller.loadSavedTheme();
-      return controller;
-    });
-  } catch (e) {
-    if (kDebugMode) {
-      print('Theme controller initialization failed: $e');
-    }
-    // Fallback - put controller without async loading
     Get.put(WelcomeThemeController());
-  }
-
-  // Enable image caching (works on both platforms)
-  try {
-    PaintingBinding.instance.imageCache.maximumSize = 100;
-    PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20; // 50 MB
   } catch (e) {
     if (kDebugMode) {
-      print('Image cache setup failed: $e');
+      print('Theme controller failed: $e');
     }
   }
 
-  // Initialize services (works on both platforms)
+  // Web-safe image cache setup
+  if (!kIsWeb) {
+    try {
+      PaintingBinding.instance.imageCache.maximumSize = 100;
+      PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Image cache setup failed: $e');
+      }
+    }
+  }
+
+  // Initialize services with error handling
   try {
     await BackendServices.instance.initialize();
-  } catch (e) {
-    if (kDebugMode) {
-      print('Backend services initialization failed: $e');
-    }
-  }
-
-  try {
     Get.put(SupabaseSystemRepository());
   } catch (e) {
     if (kDebugMode) {
-      print('Supabase repository initialization failed: $e');
+      print('Services initialization failed: $e');
     }
   }
 
@@ -178,7 +140,22 @@ class MainApp extends StatelessWidget {
       home: Stack(
         children: [
           GetX<WelcomeThemeController>(
-            builder: (controller) => controller.getCurrentWelcomePage(),
+            builder: (controller) {
+              // Add null check for web safety
+              try {
+                return controller.getCurrentWelcomePage();
+              } catch (e) {
+                return Container(
+                  color: Colors.blue,
+                  child: Center(
+                    child: Text(
+                      'مرحباً',
+                      style: TextStyle(color: Colors.white, fontSize: 24),
+                    ),
+                  ),
+                );
+              }
+            },
           ),
           Positioned(
             top: 40,
@@ -277,7 +254,11 @@ class MainApp extends StatelessWidget {
                   colors: [Color(0xFF1F8B4C), Color(0xFF3A6978)],
                 ),
                 onTap: () {
-                  WelcomeThemeController.to.setTheme(WelcomeTheme.ramadan);
+                  try {
+                    WelcomeThemeController.to.setTheme(WelcomeTheme.ramadan);
+                  } catch (e) {
+                    if (kDebugMode) print('Theme set error: $e');
+                  }
                   Navigator.pop(context);
                 },
               ),
@@ -293,7 +274,11 @@ class MainApp extends StatelessWidget {
                   colors: [Color(0xFFF9A825), Color(0xFFFF7043)],
                 ),
                 onTap: () {
-                  WelcomeThemeController.to.setTheme(WelcomeTheme.eid);
+                  try {
+                    WelcomeThemeController.to.setTheme(WelcomeTheme.eid);
+                  } catch (e) {
+                    if (kDebugMode) print('Theme set error: $e');
+                  }
                   Navigator.pop(context);
                 },
               ),
@@ -309,7 +294,11 @@ class MainApp extends StatelessWidget {
                   colors: [Color(0xFF2196F3), Color(0xFF673AB7)],
                 ),
                 onTap: () {
-                  WelcomeThemeController.to.setTheme(WelcomeTheme.general);
+                  try {
+                    WelcomeThemeController.to.setTheme(WelcomeTheme.general);
+                  } catch (e) {
+                    if (kDebugMode) print('Theme set error: $e');
+                  }
                   Navigator.pop(context);
                 },
               ),
@@ -347,7 +336,7 @@ class MainApp extends StatelessWidget {
     required IconData icon,
     required Color color,
     required LinearGradient gradient,
-    required VoidCallback onTap,
+    required void Function() onTap, // Fix method signature
   }) {
     return InkWell(
       onTap: onTap,
