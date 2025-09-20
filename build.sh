@@ -13,54 +13,48 @@ curl -fsSL https://storage.googleapis.com/flutter_infra_release/releases/stable/
 export PATH="$PWD/flutter/bin:$PATH"
 export FLUTTER_ROOT="$PWD/flutter"
 
+# Set Flutter environment variables for web builds
+export FLUTTER_WEB_USE_SKIA=false
+export PUB_CACHE="$PWD/.pub-cache"
+
 echo "Flutter version:"
 flutter --version
-
-echo "Running Flutter doctor to check setup..."
-flutter doctor -v || echo "Flutter doctor completed with warnings/errors"
 
 echo "Setting up Flutter..."
 # Accept Android licenses and setup
 flutter config --no-analytics
-flutter precache --web --verbose
+flutter precache --web
 
 echo "Cleaning previous builds..."
 flutter clean
 
-echo "Getting dependencies..."
-flutter pub get --verbose
-
-echo "Running pub deps to check for issues..."
-flutter pub deps || echo "Dependency check completed"
-
-echo "Building web app with platform compatibility..."
-# Add more verbose output and error handling
-set +e  # Temporarily disable exit on error
-flutter build web --release --web-renderer html --dart-define=FLUTTER_WEB_USE_SKIA=false --verbose
-
-if [ $? -ne 0 ]; then
-    echo "Build failed. Trying alternative build options..."
-    
-    # Try with canvas renderer
-    echo "Trying with canvaskit renderer..."
-    flutter build web --release --web-renderer canvaskit --verbose
-    
-    if [ $? -ne 0 ]; then
-        echo "Canvas build failed. Trying debug build..."
-        flutter build web --debug --web-renderer html --verbose
-        
-        if [ $? -ne 0 ]; then
-            echo "All build attempts failed. Checking for common issues..."
-            echo "Pub cache location: $PUB_CACHE"
-            echo "Flutter cache: $FLUTTER_ROOT"
-            ls -la build/ 2>/dev/null || echo "No build directory found"
+echo "Getting dependencies with retry mechanism..."
+# Add retry logic for pub get
+for i in {1..3}; do
+    echo "Attempt $i: Getting dependencies..."
+    if flutter pub get --verbose; then
+        echo "Dependencies resolved successfully"
+        break
+    else
+        echo "Attempt $i failed, retrying in 10 seconds..."
+        sleep 10
+        if [ $i -eq 3 ]; then
+            echo "Failed to resolve dependencies after 3 attempts"
             exit 1
         fi
     fi
-fi
+done
 
-set -e  # Re-enable exit on error
+echo "Building web app with optimized settings..."
+# Build with enhanced web optimizations
+flutter build web \
+    --release \
+    --web-renderer html \
+    --dart-define=FLUTTER_WEB_USE_SKIA=false \
+    --dart-define=FLUTTER_WEB_AUTO_DETECT=false \
+    --source-maps \
+    --tree-shake-icons \
+    --verbose
 
 echo "Build completed successfully!"
 echo "Output directory: build/web"
-ls -la build/web/ || echo "Could not list build output"
