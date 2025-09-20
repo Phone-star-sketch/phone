@@ -1,16 +1,14 @@
 buildscript {
-    ext.kotlin_version = '1.8.22' // Rollback to stable version for Flutter compatibility
+    ext.kotlin_version = '1.9.22' // Updated Kotlin version
     repositories {
         google()
         mavenCentral()
-        // Add JitPack for additional dependencies
-        maven { url 'https://jitpack.io' }
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.4.2' // Rollback for Flutter compatibility
+        classpath 'com.android.tools.build:gradle:8.3.2' // Updated Gradle Plugin
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'com.google.gms:google-services:4.4.0' // Updated Google Services
+        classpath 'com.google.gms:google-services:4.3.15'
     }
 }
 
@@ -18,18 +16,6 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        // Add Maven repository for Flutter web dependencies
-        maven { url 'https://storage.googleapis.com/download.flutter.io' }
-        // Add JitPack for additional dependencies
-        maven { url 'https://jitpack.io' }
-    }
-    
-    // Add web-specific configuration
-    configurations.all {
-        resolutionStrategy {
-            force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
-            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
-        }
     }
 }
 
@@ -43,11 +29,4 @@ subprojects {
 
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
-}
-
-// Add web build optimization
-gradle.projectsEvaluated {
-    tasks.withType(JavaCompile) {
-        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
-    }
 }
