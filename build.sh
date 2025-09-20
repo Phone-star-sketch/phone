@@ -4,25 +4,25 @@ set -e
 echo "Setting up build environment..."
 git config --global --add safe.directory '*' 2>/dev/null || true
 
-echo "Installing Flutter..."
-# Create directory first, then extract
-if [ ! -d "flutter" ]; then
-    mkdir -p flutter_temp
-    curl -fsSL https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.24.3-stable.tar.xz | tar -xJ -C flutter_temp --strip-components=1
-    mv flutter_temp flutter
+echo "Using system-installed Flutter..."
+# Make sure Flutter is in PATH
+if ! command -v flutter &> /dev/null
+then
+    echo "❌ Flutter not found. Please install Flutter (>=3.32.5) and add it to PATH."
+    exit 1
 fi
 
-export PATH="$PWD/flutter/bin:$PATH"
-export FLUTTER_ROOT="$PWD/flutter"
+echo "Flutter version:"
+flutter --version
 
 echo "Configuring Flutter..."
-flutter config --no-analytics 2>/dev/null || true
-flutter precache --web 2>/dev/null || true
+flutter config --no-analytics || true
+flutter precache --web || true
 
 echo "Getting dependencies..."
-flutter pub get 2>/dev/null || flutter pub get
+flutter pub get
 
 echo "Building for web..."
-flutter build web --release --web-renderer html 2>/dev/null || flutter build web --release
+flutter build web --release --web-renderer html || flutter build web --release
 
-echo "Build completed!"
+echo "✅ Build completed!"
