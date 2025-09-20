@@ -9,6 +9,10 @@ import 'package:open_file/open_file.dart';
 import 'dart:developer' as developer;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
+// Add web-specific import
+import 'dart:html' as html;
+import 'dart:typed_data';
 
 class SimpleExcelGenerator {
   static Future<void> generateClientsReceiptsExcel(List<Client> clients) async {
@@ -16,6 +20,8 @@ class SimpleExcelGenerator {
       developer.log('=== Starting Simple Excel Generation ===',
           name: 'SimpleExcelGenerator');
       developer.log('Input clients count: ${clients.length}',
+          name: 'SimpleExcelGenerator');
+      developer.log('Platform: ${kIsWeb ? "Web" : "Mobile"}',
           name: 'SimpleExcelGenerator');
 
       if (clients.isEmpty) {
@@ -39,18 +45,20 @@ class SimpleExcelGenerator {
       // Show progress
       _showProgressDialog();
 
-      // Check permissions
-      if (!await _requestPermissions()) {
-        if (Get.isDialogOpen == true) Get.back();
-        _showMessage('لم يتم منح الصلاحيات المطلوبة', Colors.red);
-        return;
+      // For web, skip permission check
+      if (!kIsWeb) {
+        if (!await _requestPermissions()) {
+          if (Get.isDialogOpen == true) Get.back();
+          _showMessage('لم يتم منح الصلاحيات المطلوبة', Colors.red);
+          return;
+        }
       }
 
-      // Create Excel with proper sheet handling - Fixed to avoid delete error
+      // Create Excel with proper sheet handling
       final excel = Excel.createExcel();
       const String sheetName = 'فواتير العملاء';
 
-      // Directly create the sheet with the desired name (no delete needed)
+      // Directly create the sheet with the desired name
       final Sheet sheet = excel[sheetName];
 
       // Add headers
@@ -62,8 +70,12 @@ class SimpleExcelGenerator {
       // Add summary
       _addSummary(sheet, validClients);
 
-      // Save file
-      await _saveAndShowFile(excel);
+      // Handle file saving based on platform
+      if (kIsWeb) {
+        await _downloadForWeb(excel);
+      } else {
+        await _saveAndShowFile(excel);
+      }
 
       developer.log('=== Excel Generation Completed ===',
           name: 'SimpleExcelGenerator');
@@ -74,7 +86,59 @@ class SimpleExcelGenerator {
     }
   }
 
+  // New method for web download
+  static Future<void> _downloadForWeb(Excel excel) async {
+    try {
+      final fileBytes = excel.save();
+      if (fileBytes == null) {
+        throw Exception('فشل في إنشاء بيانات Excel');
+      }
+
+      final fileName =
+          'فواتير_العملاء_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+
+      // Create blob and download for web
+      final blob = html.Blob([Uint8List.fromList(fileBytes)]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      // Create anchor element and trigger download
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+
+      // Clean up
+      html.Url.revokeObjectUrl(url);
+
+      // Close progress dialog
+      if (Get.isDialogOpen == true) Get.back();
+
+      developer.log('File downloaded successfully for web: $fileName',
+          name: 'SimpleExcelGenerator');
+
+      // Show success message
+      Get.showSnackbar(
+        GetSnackBar(
+          title: 'تم بنجاح ✅',
+          message: 'تم تحميل ملف Excel بنجاح',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.shade50,
+          duration: const Duration(seconds: 3),
+          icon: const Icon(Icons.check_circle, color: Colors.green),
+        ),
+      );
+    } catch (e) {
+      // Close progress dialog
+      if (Get.isDialogOpen == true) Get.back();
+      developer.log('Error downloading file for web: $e',
+          name: 'SimpleExcelGenerator');
+      throw Exception('فشل في تحميل الملف: ${e.toString()}');
+    }
+  }
+
   static Future<bool> _requestPermissions() async {
+    // Skip permission check for web
+    if (kIsWeb) return true;
+
     try {
       if (Platform.isAndroid) {
         final deviceInfo = DeviceInfoPlugin();
@@ -312,6 +376,9 @@ class SimpleExcelGenerator {
       final file = File(filePath);
       await file.writeAsBytes(fileBytes);
 
+      // Close progress dialog
+      if (Get.isDialogOpen == true) Get.back();
+
       developer.log('File saved successfully: $filePath',
           name: 'SimpleExcelGenerator');
 
@@ -341,12 +408,19 @@ class SimpleExcelGenerator {
         _showSuccessMessage(fileName, filePath);
       }
     } catch (e) {
+      // Close progress dialog
+      if (Get.isDialogOpen == true) Get.back();
       developer.log('Error saving file: $e', name: 'SimpleExcelGenerator');
       throw Exception('فشل في حفظ الملف: ${e.toString()}');
     }
   }
 
   static Future<Directory> _getStorageDirectory() async {
+    // Web doesn't use file system, but this method won't be called for web
+    if (kIsWeb) {
+      throw UnsupportedError('File system not supported on web');
+    }
+
     if (Platform.isAndroid) {
       try {
         // Try Downloads folder first
@@ -405,14 +479,15 @@ class SimpleExcelGenerator {
                 ),
               ],
             ),
-            child: const Column(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
                 Text(
-                  'جاري إنشاء ملف Excel...',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  kIsWeb ? 'جاري تحضير التحميل...' : 'جاري إنشاء ملف Excel...',
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
