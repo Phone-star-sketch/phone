@@ -35,6 +35,7 @@ dependencies:
   pie_chart: ^5.4.0
   flutter_svg: ^2.0.10+1
   auto_size_text: ^3.0.0
+  intl: ^0.20.2
   fl_chart: ^0.68.0
   pdf: ^3.10.8
   printing: ^5.12.0
@@ -53,6 +54,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+
+dependency_overrides:
+  intl: ^0.20.2  # Force the version your Flutter SDK needs
 
 flutter_launcher_icons:
   android: "launcher_icon"
