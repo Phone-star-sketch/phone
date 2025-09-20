@@ -3,6 +3,8 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        // Add JitPack for additional dependencies
+        maven { url 'https://jitpack.io' }
     }
 
     dependencies {
@@ -18,6 +20,16 @@ allprojects {
         mavenCentral()
         // Add Maven repository for Flutter web dependencies
         maven { url 'https://storage.googleapis.com/download.flutter.io' }
+        // Add JitPack for additional dependencies
+        maven { url 'https://jitpack.io' }
+    }
+    
+    // Add web-specific configuration
+    configurations.all {
+        resolutionStrategy {
+            force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
+            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
+        }
     }
 }
 
@@ -31,4 +43,11 @@ subprojects {
 
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
+}
+
+// Add web build optimization
+gradle.projectsEvaluated {
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    }
 }
