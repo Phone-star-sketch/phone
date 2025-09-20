@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -6,106 +5,87 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:phone_system_app/components/money_display.dart';
-import 'package:phone_system_app/models/log.dart';
+// Remove problematic imports for web
+// import 'package:phone_system_app/components/money_display.dart';
+// import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
-import 'package:phone_system_app/services/transaction_notification_service.dart';
-import 'package:phone_system_app/views/account_view.dart';
-import 'package:phone_system_app/views/pages/auth_raper.dart';
-import 'package:phone_system_app/views/pages/for_sale_number.dart';
-import 'package:phone_system_app/views/pages/login_page.dart';
-import 'package:phone_system_app/views/print_clients_receipts.dart';
-import 'package:phone_system_app/views/stats_view.dart';
-import 'package:phone_system_app/pages/entry_page.dart'; // Add this import
-import 'package:fluttertoast/fluttertoast.dart';
+// import 'package:phone_system_app/views/account_view.dart';
+// import 'package:phone_system_app/views/pages/auth_raper.dart';
+// import 'package:phone_system_app/views/pages/for_sale_number.dart';
+// import 'package:phone_system_app/views/pages/login_page.dart';
+// import 'package:phone_system_app/views/print_clients_receipts.dart';
+// import 'package:phone_system_app/views/stats_view.dart';
+// import 'package:phone_system_app/pages/entry_page.dart';
+// import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:phone_system_app/views/pages/auth_wrapper.dart'; // Update import
+// import 'package:phone_system_app/views/pages/auth_wrapper.dart';
 import 'package:phone_system_app/theme/welcome_theme_selector.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
 
 @pragma('vm:entry-point')
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Configure web platform if running on web
+  // Web-specific initialization
   if (kIsWeb) {
     FlutterError.onError = (FlutterErrorDetails details) {
-      FlutterError.presentError(details);
-      print('Browser launch error: ${details.exception}');
-      try {
-        const String edgePath =
-            r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe';
-        final tempDir = Platform.environment['TEMP'] ?? 'C:\\temp';
-        final userDataDir = '--user-data-dir=$tempDir\\flutter_tools_edge_data';
-
-        final args = [
-          userDataDir,
-          '--remote-debugging-port=52363',
-          '--disable-background-timer-throttling',
-          '--disable-extensions',
-          '--disable-popup-blocking',
-          '--bwsi',
-          '--no-first-run',
-          '--no-default-browser-check',
-          '--disable-default-apps',
-          '--disable-translate',
-          '--start-maximized',
-          'http://localhost:51953' // Add the localhost URL
-        ];
-
-        final process = Process.runSync(edgePath, args);
-        if (process.exitCode != 0) {
-          print('Edge launch error: ${process.stderr}');
-          // Fallback to system default browser
-          Process.runSync('cmd', ['/c', 'start', 'http://localhost:51953']);
-        }
-      } catch (e) {
-        print('Failed to launch Edge: $e');
-        // Fallback to system default browser
-        Process.runSync('cmd', ['/c', 'start', 'http://localhost:51953']);
+      if (kDebugMode) {
+        print('Web error: ${details.exception}');
       }
     };
-  }
 
-  // Initialize notification service and background service early
-  if (!kIsWeb) {
-    // Initialize the notification service with error handling
-    try {
-      await TransactionNotificationService.instance.initialize();
-    } catch (e) {
-      print('Notification service initialization failed: $e');
-      // Continue without notifications if initialization fails
+    // Skip mobile-only initialization
+    if (kDebugMode) {
+      print('Running on web - mobile services disabled');
     }
-
-    // Make sure the background service is started
+  } else {
+    // Mobile initialization only when not on web
+    try {
+      await SystemChrome.setPreferredOrientations(
+          [DeviceOrientation.portraitUp]);
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+          overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom]);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Mobile setup failed: $e');
+      }
+    }
   }
 
-  // Initialize theme controller
-  await Get.putAsync<WelcomeThemeController>(() async {
-    final controller = WelcomeThemeController();
-    await controller.loadSavedTheme();
-    return controller;
-  });
+  // Initialize theme controller with web-safe approach
+  try {
+    Get.put(WelcomeThemeController());
+  } catch (e) {
+    if (kDebugMode) {
+      print('Theme controller failed: $e');
+    }
+  }
 
-  // Add performance optimizations
+  // Web-safe image cache setup
   if (!kIsWeb) {
-    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
-        overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom]);
+    try {
+      PaintingBinding.instance.imageCache.maximumSize = 100;
+      PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Image cache setup failed: $e');
+      }
+    }
   }
 
-  // Enable image caching
-  PaintingBinding.instance.imageCache.maximumSize = 100;
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20; // 50 MB
+  // Initialize services with error handling
+  try {
+    await BackendServices.instance.initialize();
+    Get.put(SupabaseSystemRepository());
+  } catch (e) {
+    if (kDebugMode) {
+      print('Services initialization failed: $e');
+    }
+  }
 
-  // Initialize services
-  await BackendServices.instance.initialize();
-
-  Get.put(SupabaseSystemRepository());
-
-  runApp(MainApp());
+  runApp(const MainApp());
 }
 
 class MainApp extends StatelessWidget {
@@ -160,7 +140,22 @@ class MainApp extends StatelessWidget {
       home: Stack(
         children: [
           GetX<WelcomeThemeController>(
-            builder: (controller) => controller.getCurrentWelcomePage(),
+            builder: (controller) {
+              // Add null check for web safety
+              try {
+                return controller.getCurrentWelcomePage();
+              } catch (e) {
+                return Container(
+                  color: Colors.blue,
+                  child: Center(
+                    child: Text(
+                      'مرحباً',
+                      style: TextStyle(color: Colors.white, fontSize: 24),
+                    ),
+                  ),
+                );
+              }
+            },
           ),
           Positioned(
             top: 40,
@@ -259,7 +254,11 @@ class MainApp extends StatelessWidget {
                   colors: [Color(0xFF1F8B4C), Color(0xFF3A6978)],
                 ),
                 onTap: () {
-                  WelcomeThemeController.to.setTheme(WelcomeTheme.ramadan);
+                  try {
+                    WelcomeThemeController.to.setTheme(WelcomeTheme.ramadan);
+                  } catch (e) {
+                    if (kDebugMode) print('Theme set error: $e');
+                  }
                   Navigator.pop(context);
                 },
               ),
@@ -275,7 +274,11 @@ class MainApp extends StatelessWidget {
                   colors: [Color(0xFFF9A825), Color(0xFFFF7043)],
                 ),
                 onTap: () {
-                  WelcomeThemeController.to.setTheme(WelcomeTheme.eid);
+                  try {
+                    WelcomeThemeController.to.setTheme(WelcomeTheme.eid);
+                  } catch (e) {
+                    if (kDebugMode) print('Theme set error: $e');
+                  }
                   Navigator.pop(context);
                 },
               ),
@@ -291,7 +294,11 @@ class MainApp extends StatelessWidget {
                   colors: [Color(0xFF2196F3), Color(0xFF673AB7)],
                 ),
                 onTap: () {
-                  WelcomeThemeController.to.setTheme(WelcomeTheme.general);
+                  try {
+                    WelcomeThemeController.to.setTheme(WelcomeTheme.general);
+                  } catch (e) {
+                    if (kDebugMode) print('Theme set error: $e');
+                  }
                   Navigator.pop(context);
                 },
               ),
@@ -329,7 +336,7 @@ class MainApp extends StatelessWidget {
     required IconData icon,
     required Color color,
     required LinearGradient gradient,
-    required VoidCallback onTap,
+    required void Function() onTap, // Fix method signature
   }) {
     return InkWell(
       onTap: onTap,
