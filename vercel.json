@@ -1,0 +1,4 @@
+{
+  "buildCommand": "if [ -d flutter ]; then cd flutter && git pull && cd ..; else git clone --depth 1 --branch 3.22.2 https://github.com/flutter/flutter.git; fi && ls && flutter/bin/flutter doctor && flutter/bin/flutter clean && flutter/bin/flutter config --enable-web && flutter/bin/flutter build web",
+  "outputDirectory": "build/web"
+}
