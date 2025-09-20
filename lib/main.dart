@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -10,20 +9,26 @@ import 'package:phone_system_app/components/money_display.dart';
 import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
-import 'package:phone_system_app/services/transaction_notification_service.dart';
 import 'package:phone_system_app/views/account_view.dart';
 import 'package:phone_system_app/views/pages/auth_raper.dart';
 import 'package:phone_system_app/views/pages/for_sale_number.dart';
 import 'package:phone_system_app/views/pages/login_page.dart';
 import 'package:phone_system_app/views/print_clients_receipts.dart';
 import 'package:phone_system_app/views/stats_view.dart';
-import 'package:phone_system_app/pages/entry_page.dart'; // Add this import
+import 'package:phone_system_app/pages/entry_page.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:phone_system_app/views/pages/auth_wrapper.dart'; // Update import
+import 'package:phone_system_app/views/pages/auth_wrapper.dart';
 import 'package:phone_system_app/theme/welcome_theme_selector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+// Conditional imports - mobile vs web
+import 'dart:io' if (dart.library.html) 'dart:html' as platform;
+
+// Import services conditionally
+import 'package:phone_system_app/services/transaction_notification_service.dart'
+    if (dart.library.html) 'package:phone_system_app/services/web_notification_stub.dart';
 
 @pragma('vm:entry-point')
 Future<void> main() async {
@@ -33,11 +38,23 @@ Future<void> main() async {
   if (kIsWeb) {
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
-      print('Browser launch error: ${details.exception}');
+      if (kDebugMode) {
+        print('Web error: ${details.exception}');
+      }
+    };
+  } else {
+    // Mobile-specific error handling
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      if (kDebugMode) {
+        print('Mobile error: ${details.exception}');
+      }
+      
+      // Original Edge browser launch code (mobile only)
       try {
         const String edgePath =
             r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe';
-        final tempDir = Platform.environment['TEMP'] ?? 'C:\\temp';
+        final tempDir = platform.Platform.environment['TEMP'] ?? 'C:\\temp';
         final userDataDir = '--user-data-dir=$tempDir\\flutter_tools_edge_data';
 
         final args = [
@@ -52,56 +69,68 @@ Future<void> main() async {
           '--disable-default-apps',
           '--disable-translate',
           '--start-maximized',
-          'http://localhost:51953' // Add the localhost URL
+          'http://localhost:51953'
         ];
 
-        final process = Process.runSync(edgePath, args);
+        final process = platform.Process.runSync(edgePath, args);
         if (process.exitCode != 0) {
           print('Edge launch error: ${process.stderr}');
-          // Fallback to system default browser
-          Process.runSync('cmd', ['/c', 'start', 'http://localhost:51953']);
+          platform.Process.runSync('cmd', ['/c', 'start', 'http://localhost:51953']);
         }
       } catch (e) {
         print('Failed to launch Edge: $e');
-        // Fallback to system default browser
-        Process.runSync('cmd', ['/c', 'start', 'http://localhost:51953']);
+        platform.Process.runSync('cmd', ['/c', 'start', 'http://localhost:51953']);
       }
     };
   }
 
-  // Initialize notification service and background service early
+  // Initialize mobile-specific services only when not on web
   if (!kIsWeb) {
-    // Initialize the notification service with error handling
     try {
+      // Initialize the notification service
       await TransactionNotificationService.instance.initialize();
     } catch (e) {
-      print('Notification service initialization failed: $e');
-      // Continue without notifications if initialization fails
+      if (kDebugMode) {
+        print('Notification service initialization failed: $e');
+      }
     }
 
-    // Make sure the background service is started
+    // Set device orientation and UI for mobile
+    try {
+      await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+          overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom]);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Mobile UI setup failed: $e');
+      }
+    }
+  } else {
+    // Web-specific initialization
+    if (kDebugMode) {
+      print('Running on web - skipping mobile-only services');
+    }
   }
 
-  // Initialize theme controller
+  // Initialize theme controller (works on both platforms)
   await Get.putAsync<WelcomeThemeController>(() async {
     final controller = WelcomeThemeController();
     await controller.loadSavedTheme();
     return controller;
   });
 
-  // Add performance optimizations
-  if (!kIsWeb) {
-    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
-        overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom]);
-  }
-
-  // Enable image caching
+  // Enable image caching (works on both platforms)
   PaintingBinding.instance.imageCache.maximumSize = 100;
   PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20; // 50 MB
 
-  // Initialize services
-  await BackendServices.instance.initialize();
+  // Initialize services (works on both platforms)
+  try {
+    await BackendServices.instance.initialize();
+  } catch (e) {
+    if (kDebugMode) {
+      print('Backend services initialization failed: $e');
+    }
+  }
 
   Get.put(SupabaseSystemRepository());
 

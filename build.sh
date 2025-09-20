@@ -24,8 +24,9 @@ flutter precache --web
 echo "Getting dependencies..."
 flutter pub get
 
-echo "Building web app..."
-flutter build web --release --web-renderer html
+echo "Building web app with platform compatibility..."
+# Build with web-specific optimizations but keeping mobile packages
+flutter build web --release --web-renderer html --dart-define=FLUTTER_WEB_USE_SKIA=false
 
 echo "Build completed successfully!"
 echo "Output directory: build/web"
