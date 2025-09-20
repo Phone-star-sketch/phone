@@ -24,7 +24,7 @@ import 'package:phone_system_app/theme/welcome_theme_selector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Conditional imports - mobile vs web
-import 'dart:io' if (dart.library.html) 'dart:html' as platform;
+import 'dart:io' if (dart.library.html) 'dart:html';
 
 // Import services conditionally
 import 'package:phone_system_app/services/transaction_notification_service.dart'
@@ -49,38 +49,6 @@ Future<void> main() async {
       if (kDebugMode) {
         print('Mobile error: ${details.exception}');
       }
-      
-      // Original Edge browser launch code (mobile only)
-      try {
-        const String edgePath =
-            r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe';
-        final tempDir = platform.Platform.environment['TEMP'] ?? 'C:\\temp';
-        final userDataDir = '--user-data-dir=$tempDir\\flutter_tools_edge_data';
-
-        final args = [
-          userDataDir,
-          '--remote-debugging-port=52363',
-          '--disable-background-timer-throttling',
-          '--disable-extensions',
-          '--disable-popup-blocking',
-          '--bwsi',
-          '--no-first-run',
-          '--no-default-browser-check',
-          '--disable-default-apps',
-          '--disable-translate',
-          '--start-maximized',
-          'http://localhost:51953'
-        ];
-
-        final process = platform.Process.runSync(edgePath, args);
-        if (process.exitCode != 0) {
-          print('Edge launch error: ${process.stderr}');
-          platform.Process.runSync('cmd', ['/c', 'start', 'http://localhost:51953']);
-        }
-      } catch (e) {
-        print('Failed to launch Edge: $e');
-        platform.Process.runSync('cmd', ['/c', 'start', 'http://localhost:51953']);
-      }
     };
   }
 
@@ -97,7 +65,8 @@ Future<void> main() async {
 
     // Set device orientation and UI for mobile
     try {
-      await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+      await SystemChrome.setPreferredOrientations(
+          [DeviceOrientation.portraitUp]);
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
           overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom]);
     } catch (e) {
@@ -113,15 +82,29 @@ Future<void> main() async {
   }
 
   // Initialize theme controller (works on both platforms)
-  await Get.putAsync<WelcomeThemeController>(() async {
-    final controller = WelcomeThemeController();
-    await controller.loadSavedTheme();
-    return controller;
-  });
+  try {
+    await Get.putAsync<WelcomeThemeController>(() async {
+      final controller = WelcomeThemeController();
+      await controller.loadSavedTheme();
+      return controller;
+    });
+  } catch (e) {
+    if (kDebugMode) {
+      print('Theme controller initialization failed: $e');
+    }
+    // Fallback - put controller without async loading
+    Get.put(WelcomeThemeController());
+  }
 
   // Enable image caching (works on both platforms)
-  PaintingBinding.instance.imageCache.maximumSize = 100;
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20; // 50 MB
+  try {
+    PaintingBinding.instance.imageCache.maximumSize = 100;
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20; // 50 MB
+  } catch (e) {
+    if (kDebugMode) {
+      print('Image cache setup failed: $e');
+    }
+  }
 
   // Initialize services (works on both platforms)
   try {
@@ -132,9 +115,15 @@ Future<void> main() async {
     }
   }
 
-  Get.put(SupabaseSystemRepository());
+  try {
+    Get.put(SupabaseSystemRepository());
+  } catch (e) {
+    if (kDebugMode) {
+      print('Supabase repository initialization failed: $e');
+    }
+  }
 
-  runApp(MainApp());
+  runApp(const MainApp());
 }
 
 class MainApp extends StatelessWidget {
