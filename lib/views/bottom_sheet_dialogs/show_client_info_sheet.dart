@@ -24,6 +24,7 @@ import 'package:phone_system_app/views/print_clients_receipts.dart';
 import 'package:phone_system_app/views/pages/all_clinets_page.dart';
 import 'package:phone_system_app/views/bottom_sheet_dialogs/other_services_exclude_price.dart';
 import 'package:phone_system_app/views/pages/system_choice.dart';
+import 'package:phone_system_app/views/pages/successfull_payment.dart';
 
 Future showClientInfoSheet(
   BuildContext context,
@@ -1426,29 +1427,14 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                             Navigator.pop(context);
                           }
 
-                          // Then show the success snackbar directly
-                          Get.showSnackbar(
-                            GetSnackBar(
-                              message: message,
-                              title: 'نجاح',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: Colors.green[100]!,
-                              titleText: const Text(
-                                'نجاح',
-                                style: TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              messageText: Text(
-                                message,
-                                style: TextStyle(
-                                  color: Colors.green[900],
-                                ),
-                              ),
-                              duration: const Duration(seconds: 3),
-                            ),
-                          );
+                          // Navigate to successful payment page
+                          Get.to(() => SuccessfulPaymentPage(
+                                amount: '${controller.text} جنيه',
+                                transactionId:
+                                    'TXN${DateTime.now().millisecondsSinceEpoch}',
+                                paymentMethod:
+                                    adding ? 'إيداع نقدي' : 'تسديد نقدي',
+                              ));
                         } catch (e) {
                           Get.snackbar(
                             'خطأ',
