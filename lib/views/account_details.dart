@@ -29,6 +29,7 @@ import 'package:phone_system_app/pages/user_management_page.dart'; // Add this i
 import 'package:phone_system_app/views/pages/letter_of_waiver.dart';
 import 'package:phone_system_app/views/pages/filter_systems.dart';
 import 'package:phone_system_app/views/pages/create_subscription_page.dart';
+import 'package:phone_system_app/views/pages/clients_recets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'animated_profile_avatar.dart';
 import 'package:image_picker/image_picker.dart';
@@ -71,6 +72,17 @@ class AccountDetails extends StatelessWidget {
         title: "المستحقات",
         icon: const Icon(
           Icons.payment,
+          color: Colors.black54,
+        ),
+      ),
+    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
+        SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
+      Page(
+        roles: [UserRoles.manager, UserRoles.assistant],
+        content: const ClientsReceipts(),
+        title: "الفواتير الشهرية",
+        icon: const Icon(
+          Icons.receipt_long,
           color: Colors.black54,
         ),
       ),
