@@ -1,5 +1,5 @@
 {
-  "buildCommand": "./build.sh",
+  "buildCommand": "bash build.sh",
   "outputDirectory": "build/web",
   "installCommand": "echo 'Flutter will be installed in build script'"
 }
