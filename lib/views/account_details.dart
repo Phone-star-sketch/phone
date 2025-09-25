@@ -18,6 +18,7 @@ import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/views/client_list_view.dart';
 import 'package:phone_system_app/views/pages/account_management.dart';
 import 'package:phone_system_app/views/pages/all_clinets_page.dart';
+import 'package:phone_system_app/views/pages/dues.dart';
 import 'package:phone_system_app/views/pages/dues_management.dart';
 import 'package:phone_system_app/views/pages/follow.dart';
 import 'package:phone_system_app/views/pages/for_sale_number.dart';
@@ -83,6 +84,17 @@ class AccountDetails extends StatelessWidget {
         title: "الفواتير الشهرية",
         icon: const Icon(
           Icons.receipt_long,
+          color: Colors.black54,
+        ),
+      ),
+    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
+        SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
+      Page(
+        roles: [UserRoles.manager, UserRoles.assistant],
+        content: const DuesPage(),
+        title: "المديونات",
+        icon: const Icon(
+          Icons.attach_money_rounded,
           color: Colors.black54,
         ),
       ),

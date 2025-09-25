@@ -968,12 +968,12 @@ class _ModernAccountCardState extends State<ModernAccountCard>
                               ),
                               child: ClipOval(
                                 child: Image.asset(
-                                  'assets/images/Company.png',
+                                  'assets/images/logo1.png',
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
                                     return Icon(
                                       Icons.business,
-                                      size: 40,
+                                      size: 75,
                                       color: Colors.white.withOpacity(0.8),
                                     );
                                   },
