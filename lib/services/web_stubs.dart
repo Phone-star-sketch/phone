@@ -1,28 +1,43 @@
-// Stubs for web-specific APIs when not on web platform
+// Web stub implementations for non-web platforms
 
 class Blob {
-  Blob(List data);
+  Blob(List<dynamic> data);
 }
 
 class Url {
-  static String createObjectUrlFromBlob(Blob blob) => '';
-  static void revokeObjectUrl(String url) {}
+  static String createObjectUrlFromBlob(Blob blob) {
+    throw UnsupportedError('Web operations not supported on this platform');
+  }
+
+  static void revokeObjectUrl(String url) {
+    throw UnsupportedError('Web operations not supported on this platform');
+  }
 }
 
-class Element {
-  void appendChild(Element child) {}
-  void remove() {}
-}
+class AnchorElement {
+  AnchorElement({String? href});
 
-class AnchorElement extends Element {
-  String? href;
-  AnchorElement({this.href});
-  void setAttribute(String name, String value) {}
-  void click() {}
+  void setAttribute(String name, String value) {
+    throw UnsupportedError('Web operations not supported on this platform');
+  }
+
+  void click() {
+    throw UnsupportedError('Web operations not supported on this platform');
+  }
+
+  void remove() {
+    throw UnsupportedError('Web operations not supported on this platform');
+  }
 }
 
 class Document {
-  Element? body;
+  Body? get body => null;
 }
 
-Document document = Document();
+class Body {
+  void appendChild(dynamic element) {
+    throw UnsupportedError('Web operations not supported on this platform');
+  }
+}
+
+final document = Document();
