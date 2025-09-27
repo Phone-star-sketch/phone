@@ -1,43 +1,42 @@
-// Web stub implementations for non-web platforms
+// This file provides stub implementations for dart:html members.
+// It is used for conditional imports on non-web platforms.
 
+// A dummy class to stand in for html.Blob
 class Blob {
-  Blob(List<dynamic> data);
+  Blob(List<Object> parts, [String? type, String? endings]);
 }
 
+// A dummy class to stand in for html.Url
 class Url {
-  static String createObjectUrlFromBlob(Blob blob) {
-    throw UnsupportedError('Web operations not supported on this platform');
-  }
-
-  static void revokeObjectUrl(String url) {
-    throw UnsupportedError('Web operations not supported on this platform');
-  }
+  static String createObjectUrlFromBlob(Blob blob) => throw UnsupportedError(
+      'createObjectUrlFromBlob is only available on the web.');
+  static void revokeObjectUrl(String url) =>
+      throw UnsupportedError('revokeObjectUrl is only available on the web.');
 }
 
+// A dummy class to stand in for html.AnchorElement
 class AnchorElement {
-  AnchorElement({String? href});
+  String? href;
 
-  void setAttribute(String name, String value) {
-    throw UnsupportedError('Web operations not supported on this platform');
-  }
+  AnchorElement({this.href});
 
-  void click() {
-    throw UnsupportedError('Web operations not supported on this platform');
-  }
+  void setAttribute(String name, String value) {}
+  void click() {}
+  void remove() {}
+}
 
-  void remove() {
-    throw UnsupportedError('Web operations not supported on this platform');
+// A dummy class to stand in for html.document
+class _Document {
+  _Body? body;
+  _Document() {
+    body = _Body();
   }
 }
 
-class Document {
-  Body? get body => null;
+class _Body {
+  void append(AnchorElement element) {}
 }
 
-class Body {
-  void appendChild(dynamic element) {
-    throw UnsupportedError('Web operations not supported on this platform');
-  }
-}
+final _Document document = _Document();
 
-final document = Document();
+// Removed duplicate 'document' declaration to resolve the error.

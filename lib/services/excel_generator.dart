@@ -15,9 +15,8 @@ import 'dart:isolate';
 import 'dart:async';
 import 'dart:convert';
 
-// Safe conditional imports
-import 'dart:html' as html if (dart.library.html) 'dart:html';
-import 'web_stubs.dart' as html if (dart.library.io) 'web_stubs.dart';
+// Use a conditional import for web-specific functionality
+import 'web_stubs.dart' if (dart.library.html) 'dart:html' as html;
 
 class OptimizedExcelGenerator {
   static const int WEB_CHUNK_SIZE = 20; // Reduced chunk size
@@ -281,7 +280,7 @@ class OptimizedExcelGenerator {
         }
         final absoluteAmount = amountDue.abs();
         totalAmount += absoluteAmount;
-        final formattedAmount = '${absoluteAmount.toStringAsFixed(0)} ج.م';
+        final formattedAmount = '${absoluteAmount.toStringAsFixed(0)} ';
 
         // Systems
         String systems = '';
@@ -800,15 +799,17 @@ class OptimizedExcelGenerator {
         throw Exception('فشل في إنشاء بيانات Excel');
       }
 
-      final fileName = 'فواتير_العملاء_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+      final fileName =
+          'فواتير_العملاء_${DateTime.now().millisecondsSinceEpoch}.xlsx';
 
       // Use optimized web download with fallback
       try {
         await _webDownloadOptimized(fileBytes, fileName);
       } catch (downloadError) {
-        developer.log('Primary download failed, trying alternative: $downloadError',
+        developer.log(
+            'Primary download failed, trying alternative: $downloadError',
             name: 'OptimizedExcelGenerator');
-        
+
         // Alternative download method
         await _alternativeWebDownload(fileBytes, fileName);
       }
@@ -832,7 +833,7 @@ class OptimizedExcelGenerator {
       if (Get.isDialogOpen == true) Get.back();
       developer.log('Error downloading file for web: $e',
           name: 'OptimizedExcelGenerator');
-      
+
       // Show user-friendly error message
       _showMessage('فشل في تحميل الملف. يرجى المحاولة مرة أخرى.', Colors.red);
     }
@@ -856,7 +857,8 @@ class OptimizedExcelGenerator {
   }
 
   // Separate method for web download to isolate web-specific code
-  static Future<void> _performWebDownload(List<int> fileBytes, String fileName) async {
+  static Future<void> _performWebDownload(
+      List<int> fileBytes, String fileName) async {
     if (!kIsWeb) return;
 
     try {
@@ -869,10 +871,11 @@ class OptimizedExcelGenerator {
       final anchor = html.AnchorElement(href: url)
         ..setAttribute('style', 'display: none')
         ..setAttribute('download', fileName)
-        ..setAttribute('type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        ..setAttribute('type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
       // Add to DOM, click, and remove
-      html.document.body?.appendChild(anchor);
+      html.document.body?.append(anchor);
       anchor.click();
       anchor.remove();
 
@@ -881,14 +884,16 @@ class OptimizedExcelGenerator {
         try {
           html.Url.revokeObjectUrl(url);
         } catch (e) {
-          developer.log('Error revoking URL: $e', name: 'OptimizedExcelGenerator');
+          developer.log('Error revoking URL: $e',
+              name: 'OptimizedExcelGenerator');
         }
       });
 
       // Small delay to ensure download starts
       await Future.delayed(const Duration(milliseconds: 500));
     } catch (e) {
-      developer.log('Perform web download error: $e', name: 'OptimizedExcelGenerator');
+      developer.log('Perform web download error: $e',
+          name: 'OptimizedExcelGenerator');
       rethrow;
     }
   }
@@ -914,26 +919,29 @@ class OptimizedExcelGenerator {
   }
 
   // Alternative web download method
-  static Future<void> _alternativeWebDownload(List<int> fileBytes, String fileName) async {
+  static Future<void> _alternativeWebDownload(
+      List<int> fileBytes, String fileName) async {
     if (!kIsWeb) return;
-    
+
     try {
       // Convert to base64 data URL as fallback
       final base64String = base64Encode(fileBytes);
-      final dataUrl = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,$base64String';
-      
+      final dataUrl =
+          'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,$base64String';
+
       // Create download link with data URL
       final anchor = html.AnchorElement(href: dataUrl)
         ..setAttribute('download', fileName)
         ..setAttribute('style', 'display: none');
-      
-      html.document.body?.appendChild(anchor);
+
+      html.document.body?.append(anchor);
       anchor.click();
       anchor.remove();
-      
+
       await Future.delayed(const Duration(milliseconds: 300));
     } catch (e) {
-      developer.log('Alternative download failed: $e', name: 'OptimizedExcelGenerator');
+      developer.log('Alternative download failed: $e',
+          name: 'OptimizedExcelGenerator');
       _showWebDownloadFallback(fileName);
     }
   }
