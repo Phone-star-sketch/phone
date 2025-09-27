@@ -143,7 +143,7 @@ class ClientReceiptsExcelGenerator {
         sheetObject
             .cell(
                 CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex))
-            .value = '${amountDue.toStringAsFixed(0)} ج.م';
+            .value = '${amountDue.toStringAsFixed(0)} ';
 
         // Get detailed systems information (same as cards)
         Map<String, dynamic> systemsInfo =
@@ -221,7 +221,7 @@ class ClientReceiptsExcelGenerator {
       sheetObject
           .cell(CellIndex.indexByColumnRow(
               columnIndex: 1, rowIndex: summaryRowIndex + 1))
-          .value = '${totalAmount.toStringAsFixed(0)} ج.م';
+          .value = '${totalAmount.toStringAsFixed(0)}';
 
       // Count clients with notes
       int clientsWithNotes = 0;
@@ -314,7 +314,7 @@ class ClientReceiptsExcelGenerator {
         for (var system in visibleSystems) {
           String systemText = system.type?.name ?? 'غير محدد';
           if (system.type?.price != null) {
-            systemText += ' (${system.type!.price} ج.م)';
+            systemText += ' (${system.type!.price})';
           }
           systemNames.add(systemText);
 
@@ -344,7 +344,7 @@ class ClientReceiptsExcelGenerator {
             for (var system in number.systems!) {
               String systemText = system.type?.name ?? 'غير محدد';
               if (system.type?.price != null) {
-                systemText += ' (${system.type!.price} ج.م)';
+                systemText += ' (${system.type!.price})';
               }
               systemNames.add(systemText);
 
@@ -428,7 +428,7 @@ class ClientReceiptsExcelGenerator {
             for (var system in number.systems!) {
               String systemText = system.type?.name ?? 'غير محدد';
               if (system.type?.price != null) {
-                systemText += ' (${system.type!.price} ج.م)';
+                systemText += ' (${system.type!.price} )';
               }
               systemNames.add(systemText);
             }
@@ -775,7 +775,7 @@ class ClientReceiptsExcelGenerator {
         sheetObject
             .cell(
                 CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex))
-            .value = '${amountDue.toStringAsFixed(0)} ج.م';
+            .value = '${amountDue.toStringAsFixed(0)} ';
 
         // Get detailed systems information
         Map<String, dynamic> systemsInfo =
@@ -847,7 +847,7 @@ class ClientReceiptsExcelGenerator {
       sheetObject
           .cell(CellIndex.indexByColumnRow(
               columnIndex: 1, rowIndex: summaryRowIndex + 1))
-          .value = '${totalAmount.toStringAsFixed(0)} ج.م';
+          .value = '${totalAmount.toStringAsFixed(0)} ';
 
       // Count clients with notes
       int clientsWithNotes = 0;

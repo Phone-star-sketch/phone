@@ -6,6 +6,7 @@ import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/models/system.dart';
 import 'package:phone_system_app/models/system_type.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
+import 'package:phone_system_app/utils/error_handler.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
@@ -496,7 +497,7 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
     });
   }
 
-  // Export Selected Items
+  // Export Selected Items with offline processing
   Future<void> _exportSelectedToExcel(List<Client> allClients) async {
     try {
       final selectedClients = allClients.where((client) {
@@ -542,6 +543,14 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
                     color: Colors.grey[700],
                   ),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  'قد تستغرق هذه العملية بعض الوقت',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
               ],
             ),
           ),
@@ -549,11 +558,14 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
         barrierDismissible: false,
       );
 
-      // Generate Excel file for selected clients
-      await SimpleExcelGenerator.generateClientsReceiptsExcel(selectedClients);
+      // Use the optimized Excel generator
+      await OptimizedExcelGenerator.generateClientsReceiptsExcel(
+          selectedClients);
 
       // Close loading dialog
-      Get.back();
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
 
       // Clear selection after successful export
       setState(() {
@@ -575,10 +587,10 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red[100]!,
           messageText: Text(
-            'فشل في تصدير البيانات المحددة إلى Excel',
+            'فشل في تصدير البيانات المحددة إلى Excel: ${e.toString()}',
             style: TextStyle(color: Colors.red[900]),
           ),
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 5),
         ),
       );
     }
@@ -650,16 +662,7 @@ class _ClientReceiptCardState extends State<ClientReceiptCard>
         });
       }
     } catch (e) {
-      // Log errors silently to terminal only
-      if (e.toString().contains('ChannelRateLimitReached') ||
-          e.toString().contains('Too many channels')) {
-        developer.log(
-            'Supabase channel rate limit reached while loading notes: $e',
-            name: 'ClientReceiptCard');
-      } else {
-        developer.log('Error loading notes: $e', name: 'ClientReceiptCard');
-      }
-
+      ErrorHandler.handleError(e, 'loading notes');
       // Set empty text if there's any error
       if (mounted) {
         setState(() {
@@ -701,16 +704,7 @@ class _ClientReceiptCardState extends State<ClientReceiptCard>
         }
       }
     } catch (e) {
-      // Log Supabase channel errors silently
-      if (e.toString().contains('ChannelRateLimitReached') ||
-          e.toString().contains('Too many channels')) {
-        developer.log(
-            'Supabase channel rate limit reached while loading client systems: $e',
-            name: 'ClientReceiptCard');
-      } else {
-        developer.log('Error loading client systems: $e',
-            name: 'ClientReceiptCard');
-      }
+      ErrorHandler.handleError(e, 'loading client systems');
 
       // Fallback: try to get systems from client numbers
       if (mounted) {
@@ -729,8 +723,7 @@ class _ClientReceiptCardState extends State<ClientReceiptCard>
             _isLoadingSystems = false;
           });
         } catch (fallbackError) {
-          developer.log('Fallback error: $fallbackError',
-              name: 'ClientReceiptCard');
+          ErrorHandler.handleError(fallbackError, 'fallback system loading');
           setState(() {
             _clientSystems = [];
             _isLoadingSystems = false;
@@ -760,9 +753,6 @@ class _ClientReceiptCardState extends State<ClientReceiptCard>
       // Update the notes column in clients table using Supabase
       final supabase = Supabase.instance.client;
 
-      developer.log('Saving note for client ID: ${widget.client.id}',
-          name: 'ClientReceiptCard');
-
       // First, let's check if the client exists
       final existingClient = await supabase
           .from('client')
@@ -770,25 +760,15 @@ class _ClientReceiptCardState extends State<ClientReceiptCard>
           .eq('id', widget.client.id)
           .maybeSingle();
 
-      developer.log('Existing client found: $existingClient',
-          name: 'ClientReceiptCard');
-
       if (existingClient == null) {
         throw Exception(
             'Client with ID ${widget.client.id} not found in database');
       }
 
       // Now update the notes
-      final result = await supabase
-          .from('client')
-          .update({
-            'notes': _noteController.text.isEmpty ? null : _noteController.text
-          })
-          .eq('id', widget.client.id)
-          .select('id, notes');
-
-      developer.log('Note update successful: $result',
-          name: 'ClientReceiptCard');
+      await supabase.from('client').update({
+        'notes': _noteController.text.isEmpty ? null : _noteController.text
+      }).eq('id', widget.client.id);
 
       // Update the current saved note state
       setState(() {
@@ -801,7 +781,7 @@ class _ClientReceiptCardState extends State<ClientReceiptCard>
 
       widget.onNoteSaved();
 
-      // Only show success message, no error messages
+      // Show success message only
       Get.showSnackbar(
         GetSnackBar(
           title: 'نجح الحفظ',
@@ -817,23 +797,8 @@ class _ClientReceiptCardState extends State<ClientReceiptCard>
         ),
       );
     } catch (e) {
-      // Log all errors silently to terminal only, no UI feedback
-      if (e.toString().contains('ChannelRateLimitReached') ||
-          e.toString().contains('Too many channels')) {
-        developer.log(
-            'Supabase channel rate limit reached while saving note: $e',
-            name: 'ClientReceiptCard');
-      } else if (e
-          .toString()
-          .contains('type \'int\' is not a subtype of type \'double\'')) {
-        developer.log('Type conversion error while saving note: $e',
-            name: 'ClientReceiptCard');
-      } else {
-        developer.log('Error updating notes: $e', name: 'ClientReceiptCard');
-      }
-
-      // Don't show any error snackbar to user, handle silently
-      // The user will simply not see the success message if it fails
+      // Handle all errors silently - no UI feedback
+      ErrorHandler.handleError(e, 'saving note');
     } finally {
       setState(() {
         _isSavingNote = false;
@@ -1380,10 +1345,12 @@ class ModernSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final borderRadius = BorderRadius.circular(20);
+    final borderRadiusIcon = BorderRadius.circular(12);
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: borderRadius,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -1414,7 +1381,7 @@ class ModernSearchField extends StatelessWidget {
               gradient: const LinearGradient(
                 colors: [Color(0xFF10B981), Color(0xFF059669)],
               ),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: borderRadiusIcon,
             ),
             child: const Icon(
               FontAwesomeIcons.magnifyingGlass,
@@ -1423,7 +1390,7 @@ class ModernSearchField extends StatelessWidget {
             ),
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: borderRadius,
             borderSide: BorderSide.none,
           ),
           filled: true,

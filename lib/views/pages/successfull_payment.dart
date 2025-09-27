@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:phone_system_app/views/pages/all_clinets_page.dart';
 
 class SuccessfulPaymentPage extends StatefulWidget {
   final String? amount;
@@ -61,6 +63,7 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
     );
 
     _startAnimations();
+    _startNavigationTimer();
   }
 
   void _startAnimations() async {
@@ -72,6 +75,14 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
 
     await Future.delayed(const Duration(milliseconds: 100));
     _fadeController.forward();
+  }
+
+  void _startNavigationTimer() {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        Get.off(() => const AllClientsPage());
+      }
+    });
   }
 
   @override
@@ -133,8 +144,8 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                     // Success Title
                     FadeTransition(
                       opacity: _fadeAnimation,
-                      child: const Text(
-                        'Payment Successful!',
+                      child: Text(
+                        'تم الدفع بنجاح!',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -150,7 +161,7 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: Text(
-                        'Your payment has been processed successfully',
+                        'تمت معالجة عملية الدفع الخاصة بك بنجاح',
                         style: TextStyle(
                           fontSize: 16,
                           color: Colors.grey[600],
@@ -181,73 +192,16 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                         child: Column(
                           children: [
                             _buildDetailRow(
-                                'Amount', widget.amount ?? '\$99.99'),
+                                'المبلغ', widget.amount ?? '٩٩.٩٩ ج.م'),
                             const SizedBox(height: 16),
-                            _buildDetailRow('Transaction ID',
+                            _buildDetailRow('رقم المعاملة',
                                 widget.transactionId ?? 'TXN123456789'),
                             const SizedBox(height: 16),
-                            _buildDetailRow('Payment Method',
-                                widget.paymentMethod ?? 'Credit Card'),
+                            _buildDetailRow('طريقة الدفع',
+                                widget.paymentMethod ?? 'بطاقة ائتمان'),
                             const SizedBox(height: 16),
-                            _buildDetailRow('Date', _formatDate()),
+                            _buildDetailRow('التاريخ', _formatDate()),
                           ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Action Buttons
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: const Text(
-                          'Continue Shopping',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          // Add receipt/download functionality
-                        },
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Colors.grey[300]!),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: Text(
-                          'Download Receipt',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[700],
-                          ),
                         ),
                       ),
                     ),
@@ -284,8 +238,43 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
     );
   }
 
+  String _toArabicNumbers(String englishNumber) {
+    const english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+
+    String result = englishNumber;
+    for (int i = 0; i < english.length; i++) {
+      result = result.replaceAll(english[i], arabic[i]);
+    }
+    return result;
+  }
+
+  String _getArabicMonth(int month) {
+    const months = [
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر'
+    ];
+    return months[month - 1];
+  }
+
   String _formatDate() {
     final now = DateTime.now();
-    return '${now.day}/${now.month}/${now.year} at ${now.hour}:${now.minute.toString().padLeft(2, '0')}';
+    final day = _toArabicNumbers(now.day.toString());
+    final month = _getArabicMonth(now.month);
+    final year = _toArabicNumbers(now.year.toString());
+    final hour = _toArabicNumbers(now.hour.toString());
+    final minute = _toArabicNumbers(now.minute.toString().padLeft(2, '0'));
+
+    return '$day $month $year في $hour:$minute';
   }
 }

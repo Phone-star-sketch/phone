@@ -432,6 +432,17 @@ class _DuesShowPageState extends State<DuesShowPage>
     }
   }
 
+  // Add method to calculate total amount
+  double _calculateTotalAmount() {
+    return _filteredDues.fold<double>(0.0, (sum, due) {
+      final amount = due['amount'];
+      if (amount is num) {
+        return sum + amount.toDouble();
+      }
+      return sum;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -507,6 +518,11 @@ class _DuesShowPageState extends State<DuesShowPage>
                 ),
               ),
 
+              const SizedBox(height: 16),
+
+              // Total Price Display
+              _buildTotalPriceCard(),
+
               const SizedBox(height: 20),
 
               // Content
@@ -532,6 +548,152 @@ class _DuesShowPageState extends State<DuesShowPage>
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTotalPriceCard() {
+    final totalAmount = _calculateTotalAmount();
+    final totalCount = _filteredDues.length;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              Colors.white.withOpacity(0.95),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Colors.white.withOpacity(0.8),
+              blurRadius: 15,
+              offset: const Offset(0, -2),
+            ),
+          ],
+          border: Border.all(
+            color: Colors.white.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Icon Container
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF667EEA),
+                    Color(0xFF764BA2),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF667EEA).withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.account_balance_wallet,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+
+            // Total Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'إجمالي المستحقات',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        totalAmount.toStringAsFixed(0),
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF667EEA),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          'ج.م',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF667EEA),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Count Badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF667EEA).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF667EEA).withOpacity(0.2),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.group,
+                    size: 16,
+                    color: const Color(0xFF667EEA),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$totalCount',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF667EEA),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
