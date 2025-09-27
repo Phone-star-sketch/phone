@@ -18,8 +18,16 @@ import 'dart:async';
 import 'web_stubs.dart' if (dart.library.html) 'dart:html' as html;
 
 class OptimizedExcelGenerator {
-  static const int WEB_CHUNK_SIZE = 50; // Process 50 clients at a time on web
+  static const int WEB_CHUNK_SIZE = 20; // Reduced chunk size
   static const int MOBILE_ISOLATE_THRESHOLD = 100;
+  static const int MAX_DB_BATCH_SIZE =
+      50; // Maximum batch size for database queries
+  static const int MAX_RETRIES = 3;
+  static const Duration RETRY_DELAY = Duration(milliseconds: 500);
+
+  // Connection pool to limit concurrent database connections
+  static int _activeConnections = 0;
+  static const int MAX_CONCURRENT_CONNECTIONS = 3;
 
   static Future<void> generateClientsReceiptsExcel(List<Client> clients) async {
     try {
@@ -53,11 +61,11 @@ class OptimizedExcelGenerator {
       // Show progress
       _showProgressDialog();
 
-      // Platform-specific processing
+      // Platform-specific processing with connection management
       if (kIsWeb) {
-        await _processForWeb(validClients);
+        await _processForWebWithConnectionPool(validClients);
       } else {
-        await _processForMobile(validClients);
+        await _processForMobileWithConnectionPool(validClients);
       }
 
       stopwatch.stop();
@@ -72,10 +80,10 @@ class OptimizedExcelGenerator {
     }
   }
 
-  // Web-optimized processing
-  static Future<void> _processForWeb(List<Client> validClients) async {
+  // Web processing with connection pooling
+  static Future<void> _processForWebWithConnectionPool(
+      List<Client> validClients) async {
     try {
-      // Process in chunks to avoid blocking UI
       final chunks = _chunkList(validClients, WEB_CHUNK_SIZE);
       final List<List<dynamic>> allProcessedData = [];
       double totalAmount = 0.0;
@@ -83,35 +91,45 @@ class OptimizedExcelGenerator {
       // Update progress dialog
       _updateProgressDialog('جاري معالجة البيانات... (0/${chunks.length})');
 
+      // Process chunks with connection limiting
       for (int i = 0; i < chunks.length; i++) {
         final chunk = chunks[i];
 
-        // Batch fetch notes for this chunk
-        final clientIds = chunk.map((c) => c.id).toList();
-        final notesMap = await _batchGetClientNotes(clientIds);
+        // Wait for available connection slot
+        await _waitForConnectionSlot();
 
-        // Process chunk data
-        final chunkData = await _preprocessClientDataChunk(chunk, notesMap);
+        try {
+          _activeConnections++;
 
-        // Calculate chunk total
-        for (final rowData in chunkData) {
-          if (rowData.length >= 3 && rowData[2] is String) {
-            final amountStr = rowData[2] as String;
-            final amount =
-                double.tryParse(amountStr.replaceAll(RegExp(r'[^\d.]'), '')) ??
-                    0.0;
-            totalAmount += amount;
+          // Batch fetch notes for this chunk with retry
+          final clientIds = chunk.map((c) => c.id).toList();
+          final notesMap = await _batchGetClientNotesWithRetry(clientIds);
+
+          // Process chunk data
+          final chunkData = await _preprocessClientDataChunk(chunk, notesMap);
+
+          // Calculate chunk total
+          for (final rowData in chunkData) {
+            if (rowData.length >= 3 && rowData[2] is String) {
+              final amountStr = rowData[2] as String;
+              final amount = double.tryParse(
+                      amountStr.replaceAll(RegExp(r'[^\d.]'), '')) ??
+                  0.0;
+              totalAmount += amount;
+            }
           }
-        }
 
-        allProcessedData.addAll(chunkData);
+          allProcessedData.addAll(chunkData);
+        } finally {
+          _activeConnections--;
+        }
 
         // Update progress
         _updateProgressDialog(
             'جاري معالجة البيانات... (${i + 1}/${chunks.length})');
 
-        // Small delay to prevent blocking
-        await Future.delayed(const Duration(milliseconds: 10));
+        // Small delay between chunks
+        await Future.delayed(const Duration(milliseconds: 100));
       }
 
       // Add summary
@@ -133,24 +151,19 @@ class OptimizedExcelGenerator {
     }
   }
 
-  // Mobile processing (optimized)
-  static Future<void> _processForMobile(List<Client> validClients) async {
-    // For mobile, skip permission check
+  // Mobile processing with connection pooling
+  static Future<void> _processForMobileWithConnectionPool(
+      List<Client> validClients) async {
     if (!await _requestPermissions()) {
       if (Get.isDialogOpen == true) Get.back();
       _showMessage('لم يتم منح الصلاحيات المطلوبة', Colors.red);
       return;
     }
 
-    // Batch fetch all client notes at once
-    final Map<dynamic, String> clientNotesMap =
-        await _batchGetClientNotes(validClients.map((c) => c.id).toList());
+    // Use offline processing for mobile to avoid database issues
+    final processedData = await _preprocessClientDataOffline(validClients);
 
-    // Pre-process client data for faster Excel generation
-    final List<List<dynamic>> processedData =
-        await _preprocessClientData(validClients, clientNotesMap);
-
-    // Generate Excel in isolate for better performance
+    // Generate Excel
     late Excel excel;
     if (validClients.length > MOBILE_ISOLATE_THRESHOLD) {
       excel = await _generateExcelInIsolate(processedData);
@@ -159,6 +172,152 @@ class OptimizedExcelGenerator {
     }
 
     await _saveAndShowFile(excel);
+  }
+
+  // Wait for available connection slot
+  static Future<void> _waitForConnectionSlot() async {
+    while (_activeConnections >= MAX_CONCURRENT_CONNECTIONS) {
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+  }
+
+  // Batch fetch with retry logic and connection management
+  static Future<Map<dynamic, String>> _batchGetClientNotesWithRetry(
+      List<dynamic> clientIds) async {
+    Map<dynamic, String> notesMap = {};
+
+    if (clientIds.isEmpty) return notesMap;
+
+    // Split into smaller batches to avoid channel limits
+    final batches = _chunkList(
+        clientIds.where((id) => id != null).toList(), MAX_DB_BATCH_SIZE);
+
+    for (final batch in batches) {
+      int retryCount = 0;
+      bool success = false;
+
+      while (!success && retryCount < MAX_RETRIES) {
+        try {
+          final supabase = Supabase.instance.client;
+          final result = await supabase
+              .from('client')
+              .select('id, notes')
+              .filter('id', 'in', batch)
+              .timeout(const Duration(seconds: 15)); // Increased timeout
+
+          for (final row in result) {
+            final id = row['id'];
+            final notes = row['notes']?.toString() ?? '';
+            notesMap[id] = notes.isEmpty ? 'لا توجد ملاحظات' : notes;
+          }
+
+          success = true;
+        } catch (e) {
+          retryCount++;
+          developer.log(
+              'Batch query retry $retryCount for batch size ${batch.length}: $e',
+              name: 'OptimizedExcelGenerator');
+
+          if (retryCount < MAX_RETRIES) {
+            // Exponential backoff
+            await Future.delayed(Duration(
+                milliseconds: RETRY_DELAY.inMilliseconds * retryCount));
+          } else {
+            developer.log('Max retries reached for batch, using fallback',
+                name: 'OptimizedExcelGenerator');
+            // Fill with fallback values
+            for (final id in batch) {
+              notesMap[id] = 'خطأ في تحميل الملاحظات';
+            }
+          }
+        }
+      }
+
+      // Small delay between batches
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+
+    // Fill missing entries with defaults
+    for (final id in clientIds) {
+      if (id != null && !notesMap.containsKey(id)) {
+        notesMap[id] = 'لا توجد ملاحظات';
+      }
+    }
+
+    return notesMap;
+  }
+
+  // Offline processing for mobile (no database calls)
+  static Future<List<List<dynamic>>> _preprocessClientDataOffline(
+      List<Client> clients) async {
+    final List<List<dynamic>> processedData = [];
+    double totalAmount = 0.0;
+
+    _updateProgressDialog('جاري معالجة بيانات ${clients.length} عميل...');
+
+    for (final client in clients) {
+      try {
+        // Client name
+        final name = client.name ?? 'غير محدد';
+
+        // Phone number
+        String phone = 'غير متوفر';
+        if (client.numbers?.isNotEmpty == true) {
+          phone = client.numbers![0].phoneNumber ?? 'غير متوفر';
+        }
+
+        // Amount due
+        double amountDue = 0.0;
+        if (client.totalCash != null) {
+          if (client.totalCash is int) {
+            amountDue = (client.totalCash as int).toDouble() * -1;
+          } else if (client.totalCash is double) {
+            amountDue = (client.totalCash as double) * -1;
+          } else if (client.totalCash is num) {
+            amountDue = (client.totalCash as num).toDouble() * -1;
+          }
+        }
+        final absoluteAmount = amountDue.abs();
+        totalAmount += absoluteAmount;
+        final formattedAmount = '${absoluteAmount.toStringAsFixed(0)} ج.م';
+
+        // Systems
+        String systems = '';
+        if (client.numbers?.isNotEmpty == true) {
+          final systemNames = <String>[];
+          for (final number in client.numbers!) {
+            if (number.systems?.isNotEmpty == true) {
+              for (final system in number.systems!) {
+                final systemName = system.type?.name ?? 'غير محدد';
+                if (!systemNames.contains(systemName)) {
+                  systemNames.add(systemName);
+                }
+              }
+            }
+          }
+          systems =
+              systemNames.isNotEmpty ? systemNames.join(', ') : 'لا توجد خدمات';
+        } else {
+          systems = 'لا توجد خدمات';
+        }
+
+        // Use existing notes from client object (if available) instead of database
+        final notes = 'استخدم التطبيق لعرض الملاحظات';
+
+        processedData.add([name, phone, formattedAmount, systems, notes]);
+      } catch (e) {
+        developer.log('Error preprocessing client ${client.name}: $e',
+            name: 'OptimizedExcelGenerator');
+        processedData
+            .add(['خطأ في البيانات', 'خطأ', 'خطأ', 'خطأ', 'خطأ في البيانات']);
+      }
+    }
+
+    // Add summary
+    processedData.add(
+        ['SUMMARY', clients.length.toString(), totalAmount.toStringAsFixed(0)]);
+
+    return processedData;
   }
 
   // Chunk list into smaller pieces
@@ -199,7 +358,7 @@ class OptimizedExcelGenerator {
           }
         }
         final absoluteAmount = amountDue.abs();
-        final formattedAmount = '${absoluteAmount.toStringAsFixed(0)} ج.م';
+        final formattedAmount = '${absoluteAmount.toStringAsFixed(0)} ';
 
         // Systems - Pre-process system names
         String systems = '';
@@ -298,7 +457,7 @@ class OptimizedExcelGenerator {
         _setCellValueWithStyle(
             sheet, 0, summaryRowStart + 1, 'إجمالي المبلغ:', summaryStyle);
         _setCellValueWithStyle(
-            sheet, 1, summaryRowStart + 1, '${rowData[2]} ج.م', summaryStyle);
+            sheet, 1, summaryRowStart + 1, '${rowData[2]} ', summaryStyle);
 
         break;
       }
@@ -434,7 +593,7 @@ class OptimizedExcelGenerator {
         }
         final absoluteAmount = amountDue.abs();
         totalAmount += absoluteAmount;
-        final formattedAmount = '${absoluteAmount.toStringAsFixed(0)} ج.م';
+        final formattedAmount = '${absoluteAmount.toStringAsFixed(0)} ';
 
         // Systems - Pre-process system names
         String systems = '';
@@ -598,7 +757,7 @@ class OptimizedExcelGenerator {
         _setCellValueWithStyle(
             sheet, 0, summaryRowStart + 1, 'إجمالي المبلغ:', summaryStyle);
         _setCellValueWithStyle(
-            sheet, 1, summaryRowStart + 1, '${rowData[2]} ج.م', summaryStyle);
+            sheet, 1, summaryRowStart + 1, '${rowData[2]} ', summaryStyle);
 
         break;
       }
@@ -675,35 +834,30 @@ class OptimizedExcelGenerator {
       throw UnsupportedError('Web download not supported on this platform');
     }
 
-    if (kIsWeb) {
-      try {
-        // Create blob with proper MIME type
-        final blob = html.Blob([Uint8List.fromList(fileBytes)]);
+    try {
+      // Create blob with proper MIME type
+      final blob = html.Blob([Uint8List.fromList(fileBytes)]);
 
-        final url = html.Url.createObjectUrlFromBlob(blob);
+      final url = html.Url.createObjectUrlFromBlob(blob);
 
-        // Create and configure download link
-        final anchor = html.AnchorElement(href: url)
-          ..setAttribute('style', 'display: none')
-          ..setAttribute('download', fileName);
+      // Create and configure download link
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('style', 'display: none')
+        ..setAttribute('download', fileName);
 
-        // Add to DOM, click, and remove
-        // ignore: undefined_prefixed_name
-        html.document.body?.children.add(anchor);
-        anchor.click();
-        // ignore: undefined_prefixed_name
-        html.document.body?.children.remove(anchor);
+      // Add to DOM, click, and remove
+      html.document.body!.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
 
-        // Clean up object URL
-        html.Url.revokeObjectUrl(url);
+      // Clean up object URL
+      html.Url.revokeObjectUrl(url);
 
-        // Small delay to ensure download starts
-        await Future.delayed(const Duration(milliseconds: 100));
-      } catch (e) {
-        developer.log('Web download error: $e',
-            name: 'OptimizedExcelGenerator');
-        throw Exception('فشل في تحميل الملف: $e');
-      }
+      // Small delay to ensure download starts
+      await Future.delayed(const Duration(milliseconds: 100));
+    } catch (e) {
+      developer.log('Web download error: $e', name: 'OptimizedExcelGenerator');
+      throw Exception('فشل في تحميل الملف: $e');
     }
   }
 

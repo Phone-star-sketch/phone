@@ -1,7 +1,7 @@
-// Stub implementations for web-only functionality when running on mobile
+// Stubs for web-specific APIs when not on web platform
 
 class Blob {
-  Blob(List<dynamic> data);
+  Blob(List data);
 }
 
 class Url {
@@ -9,9 +9,20 @@ class Url {
   static void revokeObjectUrl(String url) {}
 }
 
-class AnchorElement {
+class Element {
+  void appendChild(Element child) {}
+  void remove() {}
+}
+
+class AnchorElement extends Element {
   String? href;
   AnchorElement({this.href});
   void setAttribute(String name, String value) {}
   void click() {}
 }
+
+class Document {
+  Element? body;
+}
+
+Document document = Document();
