@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:phone_system_app/views/pages/all_clinets_page.dart';
+import 'package:phone_system_app/views/account_details.dart';
 
 class SuccessfulPaymentPage extends StatefulWidget {
   final String? amount;
@@ -80,7 +80,7 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   void _startNavigationTimer() {
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
-        Get.off(() => const AllClientsPage());
+        Get.off(() => AccountDetails());
       }
     });
   }
