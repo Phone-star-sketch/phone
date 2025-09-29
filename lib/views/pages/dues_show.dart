@@ -1,6 +1,10 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+// Remove printing package import
+// import 'package:printing/printing.dart';
+import 'dues_pdf.dart';
 
 class DuesShowPage extends StatefulWidget {
   const DuesShowPage({Key? key}) : super(key: key);
@@ -20,6 +24,10 @@ class _DuesShowPageState extends State<DuesShowPage>
   String _searchQuery = '';
   String? _editingId;
   bool _isSaving = false;
+
+  // Selection functionality
+  Set<int> _selectedIds = <int>{};
+  bool _isSelectionMode = false;
 
   // Edit controllers
   final Map<String, TextEditingController> _editControllers = {};
@@ -234,10 +242,15 @@ class _DuesShowPageState extends State<DuesShowPage>
       }
 
       if (phoneStr != null && phoneStr.isNotEmpty) {
-        final phoneNumber = _parsePhoneForStorage(phoneStr);
-        if (phoneNumber != null) {
-          updates['phone'] = phoneNumber;
+        // Store phone as string to preserve leading zero
+        String cleanPhone = phoneStr.replaceAll(RegExp(r'[^\d]'), '');
+
+        // Add leading zero if it's missing and length is 10
+        if (cleanPhone.length == 10 && !cleanPhone.startsWith('0')) {
+          cleanPhone = '0$cleanPhone';
         }
+
+        updates['phone'] = cleanPhone; // Store as string
       }
 
       if (amountText != null && amountText.isNotEmpty) {
@@ -443,6 +456,234 @@ class _DuesShowPageState extends State<DuesShowPage>
     });
   }
 
+  // Selection methods
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      if (!_isSelectionMode) {
+        _selectedIds.clear();
+      }
+    });
+  }
+
+  void _toggleSelection(int id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _selectAll() {
+    setState(() {
+      _selectedIds = _filteredDues.map((due) => due['id'] as int).toSet();
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedIds.clear();
+      _isSelectionMode = false;
+    });
+  }
+
+  Future<void> _generateSelectedPdf() async {
+    if (_selectedIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى تحديد مستحقات أولاً'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('جاري إنشاء وحفظ PDF...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      print('Generating PDF for selected dues...');
+
+      // Filter selected dues and validate
+      final selectedDues = _filteredDues
+          .where((due) => _selectedIds.contains(due['id']))
+          .toList();
+
+      if (selectedDues.isEmpty) {
+        throw Exception('لا توجد مستحقات محددة صحيحة');
+      }
+
+      print('Generating PDF for ${selectedDues.length} selected dues');
+
+      final monthName = DateFormat('MMMM yyyy', 'ar').format(DateTime.now());
+
+      // Use the generateAndSave method to save directly to Downloads
+      final file = await selectedDues.generateAndSave(
+        monthName: '$monthName (مختارة)',
+        customFileName: 'المستحقات_المختارة_$monthName.pdf',
+        autoOpen: true, // This will automatically open the PDF
+      );
+
+      print('PDF saved and opened successfully: ${file.path}');
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم حفظ PDF في: ${file.path}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (error) {
+      print('PDF Generation Error: $error');
+
+      // Close loading dialog if still open
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في إنشاء PDF: ${error.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'تفاصيل',
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('تفاصيل الخطأ'),
+                    content: SingleChildScrollView(
+                      child: Text(error.toString()),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('موافق'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _generateAllDuesPdf() async {
+    if (_filteredDues.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لا توجد مستحقات لتصديرها'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('جاري إنشاء وحفظ PDF...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      print('Generating PDF for all dues...');
+
+      final monthName = DateFormat('MMMM yyyy', 'ar').format(DateTime.now());
+
+      // Use the generateAndSave method to save directly to Downloads
+      final file = await _filteredDues.generateAndSave(
+        monthName: monthName,
+        customFileName: 'كشف_المستحقات_$monthName.pdf',
+        autoOpen: true, // This will automatically open the PDF
+      );
+
+      print('PDF saved and opened successfully: ${file.path}');
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم حفظ PDF في: ${file.path}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (error) {
+      print('PDF Generation Error: $error');
+
+      // Close loading dialog if still open
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في إنشاء PDF: ${error.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'تفاصيل',
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('تفاصيل الخطأ'),
+                    content: SingleChildScrollView(
+                      child: Text(error.toString()),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('موافق'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -476,54 +717,158 @@ class _DuesShowPageState extends State<DuesShowPage>
                       ),
                     ),
                     const SizedBox(width: 16),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'المستحقات',
-                        style: TextStyle(
+                        _isSelectionMode
+                            ? 'تحديد المستحقات (${_selectedIds.length})'
+                            : 'المستحقات',
+                        style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
+                    if (!_isSelectionMode) ...[
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: _toggleSelectionMode,
+                          icon:
+                              const Icon(Icons.checklist, color: Colors.white),
+                          tooltip: 'تحديد',
+                        ),
                       ),
-                      child: IconButton(
-                        onPressed: _fetchDues,
-                        icon: const Icon(Icons.refresh, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: _fetchDues,
+                          icon: const Icon(Icons.refresh, color: Colors.white),
+                        ),
                       ),
-                    ),
+                    ] else ...[
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: _selectAll,
+                          icon:
+                              const Icon(Icons.select_all, color: Colors.white),
+                          tooltip: 'تحديد الكل',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: _clearSelection,
+                          icon: const Icon(Icons.clear, color: Colors.white),
+                          tooltip: 'إلغاء التحديد',
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
 
-              // Search Bar
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: const InputDecoration(
-                    hintText: 'البحث بالاسم أو رقم الهاتف...',
-                    prefixIcon: Icon(Icons.search, color: Color(0xFF667EEA)),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(16),
+              // Search Bar (hide during selection mode)
+              if (!_isSelectionMode)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      hintText: 'البحث بالاسم أو رقم الهاتف...',
+                      prefixIcon: Icon(Icons.search, color: Color(0xFF667EEA)),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(16),
+                    ),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+              if (!_isSelectionMode) const SizedBox(height: 16),
 
-              // Total Price Display
-              _buildTotalPriceCard(),
+              // Selection Action Bar
+              if (_isSelectionMode && _selectedIds.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.picture_as_pdf,
+                        color: const Color(0xFF667EEA),
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'إنشاء PDF للمستحقات المحددة (${_selectedIds.length})',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF667EEA),
+                          ),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: _generateSelectedPdf,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF667EEA),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                        ),
+                        child: const Text(
+                          'إنشاء PDF',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-              const SizedBox(height: 20),
+              if (_isSelectionMode && _selectedIds.isNotEmpty)
+                const SizedBox(height: 16),
+
+              // Total Price Display (hide during selection mode)
+              if (!_isSelectionMode) _buildTotalPriceCard(),
+
+              if (!_isSelectionMode) const SizedBox(height: 20),
 
               // Content
               Expanded(
@@ -550,6 +895,18 @@ class _DuesShowPageState extends State<DuesShowPage>
           ),
         ),
       ),
+      // Add floating action button for PDF export when not in selection mode
+      floatingActionButton: !_isSelectionMode && _filteredDues.isNotEmpty
+          ? FloatingActionButton(
+              onPressed: _generateAllDuesPdf,
+              backgroundColor: const Color(0xFF667EEA),
+              child: const Icon(
+                Icons.picture_as_pdf,
+                color: Colors.white,
+              ),
+              tooltip: 'تصدير PDF لجميع المستحقات',
+            )
+          : null,
     );
   }
 
@@ -758,6 +1115,8 @@ class _DuesShowPageState extends State<DuesShowPage>
     final statusText = _getStatusText(due['ends_at']);
     final isEditing = _editingId == due['id'].toString();
     final dueId = due['id'].toString();
+    final dueIdInt = due['id'] as int;
+    final isSelected = _selectedIds.contains(dueIdInt);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -783,35 +1142,74 @@ class _DuesShowPageState extends State<DuesShowPage>
               begin: Alignment.topRight,
               end: Alignment.bottomLeft,
               colors: [
-                Colors.white,
-                Colors.grey.shade50,
+                _isSelectionMode && isSelected
+                    ? const Color(0xFF667EEA).withOpacity(0.1)
+                    : Colors.white,
+                _isSelectionMode && isSelected
+                    ? const Color(0xFF667EEA).withOpacity(0.05)
+                    : Colors.grey.shade50,
               ],
             ),
+            border: _isSelectionMode && isSelected
+                ? Border.all(
+                    color: const Color(0xFF667EEA),
+                    width: 2,
+                  )
+                : null,
           ),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Row with Edit/Save buttons
+                // Header Row with selection checkbox or edit/save buttons
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                    // Selection checkbox or profile icon
+                    if (_isSelectionMode)
+                      GestureDetector(
+                        onTap: () => _toggleSelection(dueIdInt),
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFF667EEA)
+                                : Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF667EEA)
+                                  : Colors.grey.shade400,
+                              width: 2,
+                            ),
+                          ),
+                          child: Icon(
+                            isSelected ? Icons.check : Icons.person,
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.grey.shade600,
+                            size: 24,
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(15),
+                      )
+                    else
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                          ),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -857,71 +1255,33 @@ class _DuesShowPageState extends State<DuesShowPage>
                       ),
                     ),
                     const SizedBox(width: 12),
-                    // Action buttons - Keep them in a column for better space management
-                    Column(
-                      children: [
-                        if (!isEditing) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: statusColor.withOpacity(0.3),
+                    // Action buttons - Only show in non-selection mode
+                    if (!_isSelectionMode)
+                      Column(
+                        children: [
+                          if (!isEditing) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
                               ),
-                            ),
-                            child: Text(
-                              statusText,
-                              style: TextStyle(
-                                color: statusColor,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 40,
-                                height: 40,
-                                child: IconButton(
-                                  onPressed: () => _startEditing(due),
-                                  icon: const Icon(Icons.edit, size: 20),
-                                  color: const Color(0xFF667EEA),
-                                  tooltip: 'تعديل',
-                                  padding: EdgeInsets.zero,
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: statusColor.withOpacity(0.3),
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              SizedBox(
-                                width: 40,
-                                height: 40,
-                                child: IconButton(
-                                  onPressed: () => _deleteDue(due),
-                                  icon: const Icon(Icons.delete, size: 20),
-                                  color: Colors.red,
-                                  tooltip: 'حذف',
-                                  padding: EdgeInsets.zero,
+                              child: Text(
+                                statusText,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ],
-                          ),
-                        ] else ...[
-                          if (_isSaving)
-                            const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF667EEA),
-                              ),
-                            )
-                          else
+                            ),
+                            const SizedBox(height: 6),
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -929,10 +1289,10 @@ class _DuesShowPageState extends State<DuesShowPage>
                                   width: 40,
                                   height: 40,
                                   child: IconButton(
-                                    onPressed: _saveChanges,
-                                    icon: const Icon(Icons.check, size: 20),
-                                    color: Colors.green,
-                                    tooltip: 'حفظ',
+                                    onPressed: () => _startEditing(due),
+                                    icon: const Icon(Icons.edit, size: 20),
+                                    color: const Color(0xFF667EEA),
+                                    tooltip: 'تعديل',
                                     padding: EdgeInsets.zero,
                                   ),
                                 ),
@@ -941,18 +1301,57 @@ class _DuesShowPageState extends State<DuesShowPage>
                                   width: 40,
                                   height: 40,
                                   child: IconButton(
-                                    onPressed: _cancelEditing,
-                                    icon: const Icon(Icons.close, size: 20),
+                                    onPressed: () => _deleteDue(due),
+                                    icon: const Icon(Icons.delete, size: 20),
                                     color: Colors.red,
-                                    tooltip: 'إلغاء',
+                                    tooltip: 'حذف',
                                     padding: EdgeInsets.zero,
                                   ),
                                 ),
                               ],
                             ),
+                          ] else ...[
+                            if (_isSaving)
+                              const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF667EEA),
+                                ),
+                              )
+                            else
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: IconButton(
+                                      onPressed: _saveChanges,
+                                      icon: const Icon(Icons.check, size: 20),
+                                      color: Colors.green,
+                                      tooltip: 'حفظ',
+                                      padding: EdgeInsets.zero,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: IconButton(
+                                      onPressed: _cancelEditing,
+                                      icon: const Icon(Icons.close, size: 20),
+                                      color: Colors.red,
+                                      tooltip: 'إلغاء',
+                                      padding: EdgeInsets.zero,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
                         ],
-                      ],
-                    ),
+                      ),
                   ],
                 ),
 
@@ -1204,9 +1603,9 @@ class _DuesShowPageState extends State<DuesShowPage>
     if (value == null) return null;
     if (value is String) return value;
     if (value is int) {
-      // For phone numbers, pad with leading zero if needed
+      // Convert integer to string and preserve leading zero for phone numbers
       final phoneStr = value.toString();
-      // If it's a phone number (based on length), add leading zero if missing
+      // If it looks like a phone number (10 digits), add leading zero if missing
       if (phoneStr.length == 10 && !phoneStr.startsWith('0')) {
         return '0$phoneStr';
       }
@@ -1230,21 +1629,48 @@ class _DuesShowPageState extends State<DuesShowPage>
     return phoneStr;
   }
 
-  // Helper method to convert phone for database storage
-  int? _parsePhoneForStorage(String phoneStr) {
+  // Helper method to convert phone for database storage - now returns string
+  String? _parsePhoneForStorage(String phoneStr) {
     if (phoneStr.isEmpty) return null;
 
     // Remove any non-digit characters
-    final digitsOnly = phoneStr.replaceAll(RegExp(r'[^\d]'), '');
+    String digitsOnly = phoneStr.replaceAll(RegExp(r'[^\d]'), '');
 
-    // Parse as integer (this will remove leading zeros)
-    return int.tryParse(digitsOnly);
+    // Add leading zero if it's missing and length is 10
+    if (digitsOnly.length == 10 && !digitsOnly.startsWith('0')) {
+      digitsOnly = '0$digitsOnly';
+    }
+
+    // Return as string to preserve leading zero
+    return digitsOnly.isNotEmpty ? digitsOnly : null;
   }
 
-  // Helper method to get amount as string
+  // Helper method to format amount values consistently for display
   String _getAmountString(dynamic amount) {
     if (amount == null) return '0';
-    if (amount is num) return amount.toString();
-    return '0';
+
+    if (amount is int) {
+      return amount.toString();
+    }
+
+    if (amount is double) {
+      // If it's effectively an integer, show without decimals
+      if (amount == amount.roundToDouble()) {
+        return amount.toInt().toString();
+      }
+      return amount.toString();
+    }
+
+    if (amount is String) {
+      final parsed = double.tryParse(amount);
+      if (parsed == null) return amount;
+      if (parsed == parsed.roundToDouble()) {
+        return parsed.toInt().toString();
+      }
+      return parsed.toString();
+    }
+
+    // Fallback
+    return amount.toString();
   }
 }
