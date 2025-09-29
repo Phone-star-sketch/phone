@@ -15,7 +15,6 @@ class _DuesPageState extends State<DuesPage> {
   final _nameController = TextEditingController();
   final _amountController = TextEditingController();
   final _phoneController = TextEditingController();
-  DateTime? _endsAt;
   DateTime? _createdAt;
   bool _isLoading = false;
 
@@ -35,12 +34,10 @@ class _DuesPageState extends State<DuesPage> {
     super.dispose();
   }
 
-  Future<void> _selectDate(BuildContext context, bool isEndDate) async {
+  Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: isEndDate
-          ? (_endsAt ?? DateTime.now().add(const Duration(days: 30)))
-          : (_createdAt ?? DateTime.now()),
+      initialDate: _createdAt ?? DateTime.now(),
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
@@ -57,19 +54,13 @@ class _DuesPageState extends State<DuesPage> {
     );
     if (picked != null) {
       setState(() {
-        if (isEndDate) {
-          _endsAt = picked;
-        } else {
-          _createdAt = picked;
-        }
+        _createdAt = picked;
       });
     }
   }
 
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate() ||
-        _endsAt == null ||
-        _createdAt == null) {
+    if (!_formKey.currentState!.validate() || _createdAt == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('يرجى ملء جميع الحقول المطلوبة'),
@@ -135,7 +126,6 @@ class _DuesPageState extends State<DuesPage> {
     _amountController.clear();
     _phoneController.clear();
     setState(() {
-      _endsAt = null;
       _createdAt = DateTime.now();
     });
   }
@@ -293,7 +283,7 @@ class _DuesPageState extends State<DuesPage> {
                             label: 'تاريخ الإنشاء',
                             icon: Icons.calendar_today_outlined,
                             selectedDate: _createdAt,
-                            onTap: () => _selectDate(context, false),
+                            onTap: () => _selectDate(context),
                           ),
 
                           const SizedBox(height: 20),
@@ -438,7 +428,6 @@ class _DuesPageState extends State<DuesPage> {
     required IconData icon,
     required DateTime? selectedDate,
     required VoidCallback onTap,
-    bool isRequired = false,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -460,7 +449,7 @@ class _DuesPageState extends State<DuesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      label + (isRequired ? ' *' : ''),
+                      label,
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 12,
