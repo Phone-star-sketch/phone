@@ -84,21 +84,22 @@ class _DuesPageState extends State<DuesPage> {
     });
 
     try {
-      // Parse phone number as integer for numeric storage
+      // Store phone number as string to preserve leading zero
       final phoneStr = _phoneController.text.trim();
-      final phoneNumber =
-          int.tryParse(phoneStr.replaceAll(RegExp(r'[^\d]'), ''));
 
-      if (phoneNumber == null) {
-        throw Exception('رقم الهاتف غير صحيح');
+      // Clean the phone number but keep it as string
+      String cleanPhone = phoneStr.replaceAll(RegExp(r'[^\d]'), '');
+
+      // Add leading zero if it's missing and length is 10
+      if (cleanPhone.length == 10 && !cleanPhone.startsWith('0')) {
+        cleanPhone = '0$cleanPhone';
       }
 
       await supabase.from('dues').insert({
         'name': _nameController.text.trim(),
         'amount': double.parse(_amountController.text.trim()),
-        'ends_at': _endsAt!.toIso8601String(),
         'created_at': _createdAt!.toIso8601String(),
-        'phone': phoneNumber, // Store as integer
+        'phone': cleanPhone, // Store as string to preserve leading zero
       });
 
       if (mounted) {
@@ -274,7 +275,11 @@ class _DuesPageState extends State<DuesPage> {
                               if (digitsOnly.length < 10) {
                                 return 'رقم الهاتف قصير جداً';
                               }
-                              if (int.tryParse(digitsOnly) == null) {
+                              if (digitsOnly.length > 11) {
+                                return 'رقم الهاتف طويل جداً';
+                              }
+                              // Check if it's all digits
+                              if (!RegExp(r'^\d+$').hasMatch(digitsOnly)) {
                                 return 'رقم الهاتف غير صحيح';
                               }
                               return null;
@@ -292,17 +297,6 @@ class _DuesPageState extends State<DuesPage> {
                           ),
 
                           const SizedBox(height: 20),
-
-                          // Ends At Date
-                          _buildDateField(
-                            label: 'تاريخ الانتهاء',
-                            icon: Icons.event_outlined,
-                            selectedDate: _endsAt,
-                            onTap: () => _selectDate(context, true),
-                            isRequired: true,
-                          ),
-
-                          const SizedBox(height: 40),
 
                           // Submit Button
                           Container(

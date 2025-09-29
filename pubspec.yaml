@@ -42,6 +42,7 @@ dependencies:
   lottie: ^2.7.0
   path_provider: ^2.1.1
   google_fonts: ^5.1.0
+  share_plus: ^7.2.1
   
   # Mobile-only packages (will be conditionally used)
   app_badge_plus: ^1.2.0
