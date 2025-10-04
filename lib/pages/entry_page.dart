@@ -350,7 +350,7 @@ class _WelcomePageState extends State<WelcomePage>
                           child: Opacity(
                             opacity: 1 - (_supermanController.value * 0.7),
                             child: Image.asset(
-                              'assets/images/logo.png', // Correct asset path
+                              'assets/images/MKQ.png', // Correct asset path
                               width: 150,
                               height: 150,
                               fit: BoxFit.contain,

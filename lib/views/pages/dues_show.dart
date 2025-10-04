@@ -107,69 +107,6 @@ class _DuesShowPageState extends State<DuesShowPage>
     }
   }
 
-  bool _isOverdue(dynamic endsAtValue) {
-    if (endsAtValue == null) return false;
-
-    DateTime endsAt;
-    if (endsAtValue is String) {
-      endsAt = DateTime.parse(endsAtValue);
-    } else if (endsAtValue is int) {
-      endsAt = DateTime.fromMillisecondsSinceEpoch(endsAtValue);
-    } else {
-      return false;
-    }
-
-    return endsAt.isBefore(DateTime.now());
-  }
-
-  Color _getStatusColor(dynamic endsAtValue) {
-    if (endsAtValue == null) return Colors.grey;
-
-    if (_isOverdue(endsAtValue)) {
-      return Colors.red;
-    }
-
-    DateTime endsAt;
-    if (endsAtValue is String) {
-      endsAt = DateTime.parse(endsAtValue);
-    } else if (endsAtValue is int) {
-      endsAt = DateTime.fromMillisecondsSinceEpoch(endsAtValue);
-    } else {
-      return Colors.grey;
-    }
-
-    final daysLeft = endsAt.difference(DateTime.now()).inDays;
-
-    if (daysLeft <= 7) {
-      return Colors.orange;
-    }
-    return Colors.green;
-  }
-
-  String _getStatusText(dynamic endsAtValue) {
-    if (endsAtValue == null) return 'غير محدد';
-
-    if (_isOverdue(endsAtValue)) {
-      return 'متأخر';
-    }
-
-    DateTime endsAt;
-    if (endsAtValue is String) {
-      endsAt = DateTime.parse(endsAtValue);
-    } else if (endsAtValue is int) {
-      endsAt = DateTime.fromMillisecondsSinceEpoch(endsAtValue);
-    } else {
-      return 'غير محدد';
-    }
-
-    final daysLeft = endsAt.difference(DateTime.now()).inDays;
-
-    if (daysLeft <= 7) {
-      return 'ينتهي قريباً';
-    }
-    return 'نشط';
-  }
-
   void _startEditing(Map<String, dynamic> due) {
     final id = due['id'].toString();
     setState(() {
@@ -187,12 +124,9 @@ class _DuesShowPageState extends State<DuesShowPage>
       text: _getAmountString(due['amount']),
     );
 
-    // Initialize dates
+    // Initialize dates - only created_at now
     _editDates['${id}_created_at'] = due['created_at'] != null
         ? DateTime.parse(due['created_at'].toString())
-        : null;
-    _editDates['${id}_ends_at'] = due['ends_at'] != null
-        ? DateTime.parse(due['ends_at'].toString())
         : null;
   }
 
@@ -209,7 +143,6 @@ class _DuesShowPageState extends State<DuesShowPage>
       _editControllers.remove('${id}_phone');
       _editControllers.remove('${id}_amount');
       _editDates.remove('${id}_created_at');
-      _editDates.remove('${id}_ends_at');
     }
 
     setState(() {
@@ -234,7 +167,6 @@ class _DuesShowPageState extends State<DuesShowPage>
       final phoneStr = _editControllers['${_editingId}_phone']?.text.trim();
       final amountText = _editControllers['${_editingId}_amount']?.text.trim();
       final createdAt = _editDates['${_editingId}_created_at'];
-      final endsAt = _editDates['${_editingId}_ends_at'];
 
       // Validate and prepare updates
       if (name != null && name.isNotEmpty) {
@@ -262,10 +194,6 @@ class _DuesShowPageState extends State<DuesShowPage>
 
       if (createdAt != null) {
         updates['created_at'] = createdAt.toIso8601String();
-      }
-
-      if (endsAt != null) {
-        updates['ends_at'] = endsAt.toIso8601String();
       }
 
       // Update in database
@@ -315,7 +243,7 @@ class _DuesShowPageState extends State<DuesShowPage>
     }
   }
 
-  Future<void> _selectEditDate(String dateKey, bool isEndDate) async {
+  Future<void> _selectEditDate(String dateKey) async {
     final currentDate = _editDates[dateKey] ?? DateTime.now();
 
     final DateTime? picked = await showDatePicker(
@@ -1111,8 +1039,6 @@ class _DuesShowPageState extends State<DuesShowPage>
   }
 
   Widget _buildDueCard(Map<String, dynamic> due, int index) {
-    final statusColor = _getStatusColor(due['ends_at']);
-    final statusText = _getStatusText(due['ends_at']);
     final isEditing = _editingId == due['id'].toString();
     final dueId = due['id'].toString();
     final dueIdInt = due['id'] as int;
@@ -1260,28 +1186,6 @@ class _DuesShowPageState extends State<DuesShowPage>
                       Column(
                         children: [
                           if (!isEditing) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: statusColor.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Text(
-                                statusText,
-                                style: TextStyle(
-                                  color: statusColor,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -1408,39 +1312,88 @@ class _DuesShowPageState extends State<DuesShowPage>
 
                 const SizedBox(height: 16),
 
-                // Dates Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildDateInfo(
-                        'تاريخ الإنشاء',
-                        isEditing
-                            ? _editDates['${dueId}_created_at']
-                            : due['created_at'],
-                        Icons.calendar_today_outlined,
-                        isEditing: isEditing,
-                        onTap: isEditing
-                            ? () =>
-                                _selectEditDate('${dueId}_created_at', false)
-                            : null,
+                // Date Section - Only created_at now
+                Container(
+                  decoration: BoxDecoration(
+                    color: isEditing ? Colors.white : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isEditing
+                          ? const Color(0xFF667EEA).withOpacity(0.3)
+                          : Colors.grey.shade200,
+                    ),
+                  ),
+                  child: InkWell(
+                    onTap: isEditing
+                        ? () => _selectEditDate('${dueId}_created_at')
+                        : null,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                size: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'تاريخ الإنشاء',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              if (isEditing) ...[
+                                const Spacer(),
+                                Icon(
+                                  Icons.edit,
+                                  size: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            () {
+                              final dateValue = isEditing
+                                  ? _editDates['${dueId}_created_at']
+                                  : due['created_at'];
+                              
+                              if (dateValue == null) return 'غير محدد';
+                              
+                              DateTime? date;
+                              try {
+                                if (dateValue is String) {
+                                  date = DateTime.parse(dateValue);
+                                } else if (dateValue is int) {
+                                  date = DateTime.fromMillisecondsSinceEpoch(dateValue);
+                                } else if (dateValue is DateTime) {
+                                  date = dateValue;
+                                }
+                              } catch (e) {
+                                date = null;
+                              }
+                              
+                              return date != null
+                                  ? DateFormat('dd MMM yyyy', 'ar').format(date)
+                                  : 'غير محدد';
+                            }(),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildDateInfo(
-                        'تاريخ الانتهاء',
-                        isEditing
-                            ? _editDates['${dueId}_ends_at']
-                            : due['ends_at'],
-                        Icons.event_outlined,
-                        isEndDate: true,
-                        isEditing: isEditing,
-                        onTap: isEditing
-                            ? () => _selectEditDate('${dueId}_ends_at', true)
-                            : null,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -1513,91 +1466,6 @@ class _DuesShowPageState extends State<DuesShowPage>
     );
   }
 
-  Widget _buildDateInfo(
-    String label,
-    dynamic dateValue,
-    IconData icon, {
-    bool isEndDate = false,
-    bool isEditing = false,
-    VoidCallback? onTap,
-  }) {
-    DateTime? date;
-    if (dateValue != null) {
-      try {
-        if (dateValue is String) {
-          date = DateTime.parse(dateValue);
-        } else if (dateValue is int) {
-          date = DateTime.fromMillisecondsSinceEpoch(dateValue);
-        } else if (dateValue is DateTime) {
-          date = dateValue;
-        }
-      } catch (e) {
-        date = null;
-      }
-    }
-
-    Color iconColor = Colors.grey.shade600;
-    if (isEndDate && dateValue != null && !isEditing) {
-      iconColor = _getStatusColor(dateValue);
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isEditing ? Colors.white : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isEditing
-              ? const Color(0xFF667EEA).withOpacity(0.3)
-              : Colors.grey.shade200,
-        ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, size: 16, color: iconColor),
-                  const SizedBox(width: 4),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  if (isEditing) ...[
-                    const Spacer(),
-                    Icon(
-                      Icons.edit,
-                      size: 14,
-                      color: Colors.grey.shade600,
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                date != null
-                    ? DateFormat('dd MMM yyyy', 'ar').format(date)
-                    : 'غير محدد',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   // Helper method to safely get string values
   String? _getStringValue(dynamic value) {
     if (value == null) return null;
@@ -1627,22 +1495,6 @@ class _DuesShowPageState extends State<DuesShowPage>
     }
 
     return phoneStr;
-  }
-
-  // Helper method to convert phone for database storage - now returns string
-  String? _parsePhoneForStorage(String phoneStr) {
-    if (phoneStr.isEmpty) return null;
-
-    // Remove any non-digit characters
-    String digitsOnly = phoneStr.replaceAll(RegExp(r'[^\d]'), '');
-
-    // Add leading zero if it's missing and length is 10
-    if (digitsOnly.length == 10 && !digitsOnly.startsWith('0')) {
-      digitsOnly = '0$digitsOnly';
-    }
-
-    // Return as string to preserve leading zero
-    return digitsOnly.isNotEmpty ? digitsOnly : null;
   }
 
   // Helper method to format amount values consistently for display

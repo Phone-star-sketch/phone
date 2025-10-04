@@ -115,11 +115,7 @@ class ArabicDuesPdfGenerator {
       phoneStr = '0$phoneStr';
     }
 
-    // Format as: 0123-456-7890
-    if (phoneStr.length == 11 && phoneStr.startsWith('0')) {
-      return '${phoneStr.substring(0, 4)}-${phoneStr.substring(4, 7)}-${phoneStr.substring(7)}';
-    }
-
+    // Return phone number without formatting (no dashes)
     return phoneStr;
   }
 
@@ -372,16 +368,20 @@ class ArabicDuesPdfGenerator {
                     textAlign: pw.TextAlign.center,
                     style: pw.TextStyle(
                       font: regularFont,
-                      fontSize: 12,
+                      fontSize: 20,
                       color: PdfColors.grey800,
                     ),
                   ),
                   pw.SizedBox(height: 8),
-                  // Plain value without any style
                   pw.Text(
                     _formatAmount(totalAmount),
                     textDirection: pw.TextDirection.rtl,
                     textAlign: pw.TextAlign.center,
+                    style: pw.TextStyle(
+                      font: boldFont,
+                      fontSize: 20,
+                      color: PdfColors.blue800,
+                    ),
                   ),
                 ],
               ),
@@ -395,16 +395,20 @@ class ArabicDuesPdfGenerator {
                     textAlign: pw.TextAlign.center,
                     style: pw.TextStyle(
                       font: regularFont,
-                      fontSize: 12,
+                      fontSize: 20,
                       color: PdfColors.grey800,
                     ),
                   ),
                   pw.SizedBox(height: 8),
-                  // Plain value without any style
                   pw.Text(
                     totalCount.toString(),
                     textDirection: pw.TextDirection.rtl,
                     textAlign: pw.TextAlign.center,
+                    style: pw.TextStyle(
+                      font: boldFont,
+                      fontSize: 20,
+                      color: PdfColors.blue800,
+                    ),
                   ),
                 ],
               ),
@@ -567,22 +571,50 @@ class ArabicDuesPdfGenerator {
     return pw.TableRow(
       decoration: pw.BoxDecoration(color: backgroundColor),
       children: [
-        _buildDataCell(
-          _formatAmount(due['amount']),
-          boldFont,
+      // Amount - larger and extra bold if available
+      pw.Container(
+        padding: const pw.EdgeInsets.all(10),
+        child: pw.Text(
+        _formatAmount(due['amount']),
+        textDirection: pw.TextDirection.rtl,
+        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(
+          font: _cairoExtraBold ?? boldFont,
+          fontSize: 16,
           color: PdfColors.blue900,
-          textAlign: pw.TextAlign.center,
         ),
-        _buildDataCell(
-          _formatPhoneNumber(due['phone']),
-          regularFont,
-          textAlign: pw.TextAlign.center,
         ),
-        _buildDataCell(
-          _safeString(due['name']),
-          regularFont,
-          textAlign: pw.TextAlign.right,
+      ),
+
+      // Phone - slightly larger and bold
+      pw.Container(
+        padding: const pw.EdgeInsets.all(10),
+        child: pw.Text(
+        _formatPhoneNumber(due['phone']),
+        textDirection: pw.TextDirection.rtl,
+        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(
+          font: _cairoExtraBold ?? boldFont,
+          fontSize: 14,
+          color: PdfColors.black,
         ),
+        ),
+      ),
+
+      // Name - larger and extra bold for emphasis
+      pw.Container(
+        padding: const pw.EdgeInsets.all(10),
+        child: pw.Text(
+        _safeString(due['name']),
+        textDirection: pw.TextDirection.rtl,
+        textAlign: pw.TextAlign.right,
+        style: pw.TextStyle(
+          font: _cairoExtraBold ?? boldFont,
+          fontSize: 14,
+          color: PdfColors.black,
+        ),
+        ),
+      ),
       ],
     );
   }
@@ -1042,3 +1074,4 @@ extension DuesPdfExtension on List<Map<String, dynamic>> {
     );
   }
 }
+
