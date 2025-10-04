@@ -452,7 +452,7 @@ class _WelcomePageState extends State<WelcomePage>
                                 ],
                               ),
                               child: Image.asset(
-                                'assets/images/logo.png',
+                                'assets/images/MKQ.png',
                                 width: 120,
                                 height: 120,
                                 fit: BoxFit.contain,
