@@ -66,11 +66,11 @@ dependency_overrides:
 
 flutter_launcher_icons:
   android: "launcher_icon"
-  image_path: "assets/images/logo.png"
+  image_path: "assets/images/MKQ.png"
   min_sdk_android: 21
   web:
     generate: true
-    image_path: "assets/images/logo.png"
+    image_path: "assets/images/MKQ.png"
     background_color: "#hexcode"
     theme_color: "#hexcode"
 
@@ -104,3 +104,4 @@ flutter:
     - assets/images/whatsapp_icon.png
     - assets/images/logo.png
     - assets/images/Company.png
+    - assets/images/MKQ.png
