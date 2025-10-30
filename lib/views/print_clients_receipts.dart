@@ -130,12 +130,12 @@ class PrintClientsReceipts extends StatelessWidget {
         pw.Positioned.fill(
           child: pw.Center(
             child: pw.Opacity(
-              opacity: 0.06,
+              opacity: 0.03,
               child: pw.Image(
                 pw.MemoryImage(backgroundImage),
                 fit: pw.BoxFit.contain,
-                width: 600,
-                height: 600,
+                width: 300,
+                height: 300,
               ),
             ),
           ),
@@ -144,11 +144,11 @@ class PrintClientsReceipts extends StatelessWidget {
           bottom: 30,
           right: 30,
           child: pw.Opacity(
-            opacity: 0.08,
+            opacity: 0.05,
             child: pw.Image(
               pw.MemoryImage(backgroundImage),
-              width: 150,
-              height: 150,
+              width: 80,
+              height: 80,
             ),
           ),
         ),
@@ -167,8 +167,8 @@ class PrintClientsReceipts extends StatelessWidget {
     final document = pw.Document();
 
     try {
-      final logo = await getImage("assets/images/rece_bg.jpg");
-      final backgroundImage = await getImage("assets/images/rece_bg.jpg");
+      final logo = await getImage("assets/images/MKQ.png");
+      final backgroundImage = await getImage("assets/images/MKQ.png");
       final vCashIcon = await getImage("assets/images/v_cash_icon.png");
       final instaPayIcon = await getImage("assets/images/instapay_icon.png");
       final whatsappIcon = await getImage("assets/images/whatsapp_icon.png");
@@ -731,9 +731,9 @@ class PrintClientsReceipts extends StatelessWidget {
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.center,
             children: [
-                pw.Image(pw.MemoryImage(whatsappIcon), width: 20),
-                pw.SizedBox(width: 8),
-                makeText("01017174149", font, 14.0, PdfColors.red900),
+              pw.Image(pw.MemoryImage(whatsappIcon), width: 20),
+              pw.SizedBox(width: 8),
+              makeText("01017174149", font, 14.0, PdfColors.red900),
               makeText("للاستفسار : ", font, 14.0, PdfColors.blue900),
               //makeText("01017174149", font, 14.0, PdfColors.red900),
               pw.SizedBox(width: 5),

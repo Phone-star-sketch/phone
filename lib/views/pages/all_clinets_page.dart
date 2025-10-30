@@ -911,11 +911,11 @@ class _ModernClientCardState extends State<ModernClientCard>
                             child: Align(
                               alignment: Alignment.topCenter,
                               child: SizedBox(
-                                height: 110, // Make logo smaller
+                                height: 80, // Make logo smaller
                                 child: Opacity(
                                   opacity: 0.05,
                                   child: Image.asset(
-                                    'assets/images/logo.png',
+                                    'assets/images/MKQ.png',
                                     fit: BoxFit.contain,
                                   ),
                                 ),

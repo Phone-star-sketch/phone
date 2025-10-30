@@ -247,7 +247,7 @@ class _ClientCardState extends State<ClientCard>
                       child: Opacity(
                         opacity: 0.05,
                         child: Image.asset(
-                          'assets/images/logo.png',
+                          'assets/images/MKQ.png',
                           height: 100,
                           fit: BoxFit.fitHeight,
                         ),
