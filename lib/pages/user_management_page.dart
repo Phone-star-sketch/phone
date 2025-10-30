@@ -666,7 +666,7 @@ class _BuildUserList extends StatelessWidget {
                                         ],
                                       )
                                     : Image.asset(
-                                        'assets/images/logo.png',
+                                        'assets/images/MKQ.png',
                                         fit: BoxFit.cover,
                                       ),
                               ),

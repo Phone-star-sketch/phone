@@ -63,7 +63,7 @@ class PdfService {
 
     try {
       final logoImage = pw.MemoryImage(
-        (await rootBundle.load('assets/images/nb_logo.png'))
+        (await rootBundle.load('assets/images/MKQ.png'))
             .buffer
             .asUint8List(),
       );

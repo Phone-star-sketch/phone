@@ -667,7 +667,7 @@ class ArabicDuesPdfGenerator {
       print('Fonts initialized, processing ${dues.length} dues');
 
       // Load logo - always use rece.png only
-      Uint8List? logo = await _loadAssetImage('assets/images/rece.png');
+      Uint8List? logo = await _loadAssetImage('assets/images/MKQ.png');
 
       // Get fonts with null safety
       final regularFont = _getRegularFont();
@@ -1028,7 +1028,7 @@ extension DuesPdfExtension on List<Map<String, dynamic>> {
     return ArabicDuesPdfGenerator.buildDuesPdf(
       dues: this,
       monthName: monthName,
-      logoAssetPath: 'assets/images/rece.png', // Always use rece.png
+      logoAssetPath: 'assets/images/MKQ.png', // Always use rece.png
       logoBytes: logoBytes,
       companyName: companyName,
     );
@@ -1066,7 +1066,7 @@ extension DuesPdfExtension on List<Map<String, dynamic>> {
     return ArabicDuesPdfGenerator.savePdfToDownloads(
       dues: this,
       monthName: monthName,
-      logoAssetPath: 'assets/images/rece.png',
+      logoAssetPath: 'assets/images/MKQ.png',
       logoBytes: logoBytes,
       companyName: companyName,
       customFileName: customFileName,
