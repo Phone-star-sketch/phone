@@ -38,9 +38,12 @@ class ClientBottomSheetController extends GetxController {
       // Set up streams
       BackendServices.instance.clientRepository
           .bindStreamToClientLogsChanges(client, (data) {
+        final mapped = data
+            .map((logJsonObject) => Log.fromJson(logJsonObject))
+            .toList();
+        mapped.sort((a, b) => b.createdAt!.compareTo(a.createdAt!));
         _logs.clear();
-        _logs.addAll(
-            data.map((logJsonObject) => Log.fromJson(logJsonObject)).toList());
+        _logs.addAll(mapped);
         _logsLength = _logs.length;
         update(); // Trigger UI update
       });
@@ -70,12 +73,10 @@ class ClientBottomSheetController extends GetxController {
         client,
         (payload) {
           try {
-            print(payload);
             final data = payload[0];
             _client.value.totalCash = data[Client.totalCashColumns];
             update(); // Trigger UI update
           } catch (e) {
-            print(e);
           }
         },
       );

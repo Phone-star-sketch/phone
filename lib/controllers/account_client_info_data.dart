@@ -20,6 +20,7 @@ class AccountClientInfo extends GetxController {
   Account currentAccount;
   TextEditingController searchController = TextEditingController();
   RxString query = "".obs;
+  Timer? _searchDebounce;
 
   AccountClientInfo({required this.currentAccount});
 
@@ -75,6 +76,7 @@ class AccountClientInfo extends GetxController {
   @override
   void onClose() {
     _clientSubscription.cancel();
+    _searchDebounce?.cancel();
     super.onClose();
   }
 
@@ -120,7 +122,10 @@ class AccountClientInfo extends GetxController {
   }
 
   void searchQueryChanged(String query) {
-    this.query.value = normalizeArabic(query);
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      this.query.value = normalizeArabic(query);
+    });
   }
 
   List<Client> getClients() {
