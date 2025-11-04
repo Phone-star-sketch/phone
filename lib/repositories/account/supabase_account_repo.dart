@@ -12,9 +12,23 @@ class SupabaseAccountRepository extends AccountRepository
 
   @override
   Future<List<Account>> getAllAccounts() async {
-    final data =
-        await client.from(SupabaseAccountRepository.tableName).select();
-    return data.map((e) => Account.fromJson(e)).toList();
+    try {
+      final data = await client
+          .from(SupabaseAccountRepository.tableName)
+          .select()
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => throw Exception('Request timed out'),
+          );
+      return data.map((e) => Account.fromJson(e)).toList();
+    } catch (e) {
+      if (e.toString().contains('SocketException') || 
+          e.toString().contains('Connection') ||
+          e.toString().contains('timed out')) {
+        throw Exception('Network error: Unable to connect to server. Please check your internet connection.');
+      }
+      rethrow;
+    }
   }
 
   @override

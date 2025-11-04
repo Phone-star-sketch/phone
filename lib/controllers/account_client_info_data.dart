@@ -39,6 +39,8 @@ class AccountClientInfo extends GetxController {
   RxInt countNotPaid = 0.obs;
 
   late StreamSubscription<List<Client>> _clientSubscription;
+  Timer? _realtimeDebounce;
+  List<Client>? _pendingUpdate;
 
   @override
   void onInit() {
@@ -51,8 +53,16 @@ class AccountClientInfo extends GetxController {
         BackendServices.instance.clientRepository as SupabaseClientRepository;
     _clientSubscription =
         repository.getRealtimeClients(currentAccount).listen((updatedClients) {
-      clinets.value = updatedClients;
-      searchQueryChanged(query.value);
+      // Debounce rapid updates to prevent UI slowdown
+      _pendingUpdate = updatedClients;
+      _realtimeDebounce?.cancel();
+      _realtimeDebounce = Timer(const Duration(milliseconds: 500), () {
+        if (_pendingUpdate != null) {
+          clinets.value = _pendingUpdate!;
+          searchQueryChanged(query.value);
+          _pendingUpdate = null;
+        }
+      });
     });
   }
 
@@ -77,6 +87,7 @@ class AccountClientInfo extends GetxController {
   void onClose() {
     _clientSubscription.cancel();
     _searchDebounce?.cancel();
+    _realtimeDebounce?.cancel();
     super.onClose();
   }
 
@@ -220,6 +231,23 @@ class AccountClientInfo extends GetxController {
         countPaid++;
         await BackendServices.instance.clientRepository
             .paySystemsBills(client, month, year);
+        
+        // Update local client data immediately after payment
+        final index = clinets.indexWhere((c) => c.id == client.id);
+        if (index != -1) {
+          // Fetch updated client data to reflect the new balance
+          try {
+            final updatedClient = await BackendServices.instance.clientRepository.read(client.id);
+            clinets[index] = updatedClient;
+            // Trigger reactive update
+            clinets.refresh();
+          } catch (e) {
+            print('Error updating local client after payment: $e');
+          }
+        }
+        
+        // Add a small delay to prevent overwhelming the backend
+        await Future.delayed(const Duration(milliseconds: 100));
       }
       Loaders.to.paymentIsLoading.value = false;
     } catch (e) {
@@ -236,12 +264,32 @@ class AccountClientInfo extends GetxController {
     try {
       isLoading.value = true;
       final newClients = await BackendServices.instance.clientRepository
-          .getAllClientsByAccount(currentAccount);
+          .getAllClientsByAccount(currentAccount)
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw Exception('Request timed out'),
+          );
       clinets.value = newClients;
       isLoading.value = false;
     } catch (e) {
       print('Error fetching clients: $e');
       isLoading.value = false;
+      
+      String errorMessage = 'حدث خطأ أثناء تحميل بيانات العملاء';
+      if (e.toString().contains('SocketException') || 
+          e.toString().contains('Connection') ||
+          e.toString().contains('timed out')) {
+        errorMessage = 'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت.';
+      }
+      
+      Get.snackbar(
+        'خطأ',
+        errorMessage,
+        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 

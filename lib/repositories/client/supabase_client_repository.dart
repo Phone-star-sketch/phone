@@ -76,8 +76,10 @@ class SupabaseClientRepository extends ClientRepository
 
   @override
   Future<Client> read(Object id) async {
-    final data =
-        await _clinet.from(clientTableName).select().match({'id': id}).single();
+    final data = await _clinet
+        .from(clientTableName)
+        .select("*, phone(* ,system(* , system_type(*))), log(*)")
+        .match({'id': id}).single();
     final obj = Client.fromJson(data);
     return obj;
   }
@@ -296,12 +298,28 @@ class SupabaseClientRepository extends ClientRepository
   }
 
   Stream<List<Client>> getRealtimeClients(Account account) {
+    // The stream returns basic data without nested relationships
+    // We'll handle full data fetching in the controller
     return _clinet
         .from(clientTableName)
         .stream(primaryKey: ['id'])
         .eq('account_id', account.id)
         .order('name')
-        .map((list) => list.map((e) => Client.fromJson(e)).toList());
+        .asyncMap((list) async {
+          // When realtime update occurs, fetch full data with relationships
+          try {
+            final fullData = await _clinet
+                .from(clientTableName)
+                .select("*, phone(* ,system(* , system_type(*))), log(*)")
+                .eq('account_id', account.id)
+                .order('name', ascending: true);
+            return fullData.map((e) => Client.fromJson(e)).toList();
+          } catch (e) {
+            print('Error fetching full client data in stream: $e');
+            // Fallback to basic data if fetch fails
+            return list.map((e) => Client.fromJson(e)).toList();
+          }
+        });
   }
 
   Future<List<Map<String, dynamic>>> getAllClientsData() async {
