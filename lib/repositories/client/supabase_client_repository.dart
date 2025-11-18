@@ -19,6 +19,8 @@ class SupabaseClientRepository extends ClientRepository
   static const String clientTableName = "client";
 
   final _clinet = Supabase.instance.client;
+  DateTime _lastFullFetch = DateTime.now();
+  static const Duration _fullFetchThrottle = Duration(seconds: 5);
 
   @override
   Future<List<Client>> getAllClientsByAccount(Account account) async {
@@ -298,25 +300,34 @@ class SupabaseClientRepository extends ClientRepository
   }
 
   Stream<List<Client>> getRealtimeClients(Account account) {
-    // The stream returns basic data without nested relationships
-    // We'll handle full data fetching in the controller
+    // Throttle full data fetches to avoid overwhelming the database
+    // Only fetch full nested data every 5 seconds max
     return _clinet
         .from(clientTableName)
         .stream(primaryKey: ['id'])
         .eq('account_id', account.id)
         .order('name')
         .asyncMap((list) async {
-          // When realtime update occurs, fetch full data with relationships
-          try {
-            final fullData = await _clinet
-                .from(clientTableName)
-                .select("*, phone(* ,system(* , system_type(*))), log(*)")
-                .eq('account_id', account.id)
-                .order('name', ascending: true);
-            return fullData.map((e) => Client.fromJson(e)).toList();
-          } catch (e) {
-            print('Error fetching full client data in stream: $e');
-            // Fallback to basic data if fetch fails
+          final now = DateTime.now();
+          final shouldFetchFull = now.difference(_lastFullFetch) > _fullFetchThrottle;
+          
+          if (shouldFetchFull) {
+            // Only fetch full data if throttle period has passed
+            try {
+              _lastFullFetch = now;
+              final fullData = await _clinet
+                  .from(clientTableName)
+                  .select("*, phone(* ,system(* , system_type(*))), log(*)")
+                  .eq('account_id', account.id)
+                  .order('name', ascending: true);
+              return fullData.map((e) => Client.fromJson(e)).toList();
+            } catch (e) {
+              print('Error fetching full client data in stream: $e');
+              // Fallback to basic data if fetch fails
+              return list.map((e) => Client.fromJson(e)).toList();
+            }
+          } else {
+            // Return basic data without fetching - saves expensive queries
             return list.map((e) => Client.fromJson(e)).toList();
           }
         });

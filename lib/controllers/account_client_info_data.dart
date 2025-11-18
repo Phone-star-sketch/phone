@@ -41,6 +41,7 @@ class AccountClientInfo extends GetxController {
   late StreamSubscription<List<Client>> _clientSubscription;
   Timer? _realtimeDebounce;
   List<Client>? _pendingUpdate;
+  bool _isProcessingBulkOperation = false;
 
   @override
   void onInit() {
@@ -53,11 +54,16 @@ class AccountClientInfo extends GetxController {
         BackendServices.instance.clientRepository as SupabaseClientRepository;
     _clientSubscription =
         repository.getRealtimeClients(currentAccount).listen((updatedClients) {
+      // Skip updates during bulk operations to prevent slowdown
+      if (_isProcessingBulkOperation) {
+        return;
+      }
+      
       // Debounce rapid updates to prevent UI slowdown
       _pendingUpdate = updatedClients;
       _realtimeDebounce?.cancel();
       _realtimeDebounce = Timer(const Duration(milliseconds: 500), () {
-        if (_pendingUpdate != null) {
+        if (_pendingUpdate != null && !_isProcessingBulkOperation) {
           clinets.value = _pendingUpdate!;
           searchQueryChanged(query.value);
           _pendingUpdate = null;
@@ -197,6 +203,8 @@ class AccountClientInfo extends GetxController {
 
   Future<void> automaticPaymentAtStartup() async {
     try {
+      // Pause realtime updates during bulk operation
+      _isProcessingBulkOperation = true;
       Loaders.to.paymentIsLoading.value = true;
 
       print(" the length is ${clinets.length}");
@@ -226,37 +234,59 @@ class AccountClientInfo extends GetxController {
 
       countPaid.value = clinets.length - toBePaidClients.length;
 
+      // Process payments without individual fetches
       for (Client client in toBePaidClients) {
         currentPayingClient = client.obs;
         countPaid++;
+        
         await BackendServices.instance.clientRepository
             .paySystemsBills(client, month, year);
         
-        // Update local client data immediately after payment
+        // Update local balance without fetching - calculate new balance
         final index = clinets.indexWhere((c) => c.id == client.id);
         if (index != -1) {
-          // Fetch updated client data to reflect the new balance
-          try {
-            final updatedClient = await BackendServices.instance.clientRepository.read(client.id);
-            clinets[index] = updatedClient;
-            // Trigger reactive update
-            clinets.refresh();
-          } catch (e) {
-            print('Error updating local client after payment: $e');
+          double bills = client.systemsCost();
+          
+          // Apply discount if it exists
+          if (client.discountPercentage != null &&
+              client.discountEndDate != null &&
+              client.discountEndDate!.isAfter(DateTime.now())) {
+            double discountAmount = bills * (client.discountPercentage! / 100);
+            bills -= discountAmount;
           }
+          
+          // Update local balance immediately
+          clinets[index].totalCash = clinets[index].totalCash - bills;
         }
-        
-        // Add a small delay to prevent overwhelming the backend
-        await Future.delayed(const Duration(milliseconds: 100));
       }
+      
+      // Single refresh at the end instead of after each payment
+      clinets.refresh();
+      
+      // Fetch fresh data once after all payments
+      await _refreshClientsAfterBulkOperation();
+      
       Loaders.to.paymentIsLoading.value = false;
+      _isProcessingBulkOperation = false;
     } catch (e) {
+      _isProcessingBulkOperation = false;
       Loaders.to.paymentIsLoading.value = false;
 
       Get.showSnackbar(GetSnackBar(
         message: e.toString(),
         title: "حدثت مشكلة اثناء الدفع الالي ",
       ));
+    }
+  }
+  
+  Future<void> _refreshClientsAfterBulkOperation() async {
+    try {
+      // Fetch all clients once after bulk operation completes
+      final freshClients = await BackendServices.instance.clientRepository
+          .getAllClientsByAccount(currentAccount);
+      clinets.value = freshClients;
+    } catch (e) {
+      print('Error refreshing clients after bulk operation: $e');
     }
   }
 
