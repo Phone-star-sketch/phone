@@ -39,6 +39,9 @@ class AccountClientInfo extends GetxController {
   RxInt countNotPaid = 0.obs;
 
   late StreamSubscription<List<Client>> _clientSubscription;
+  Timer? _realtimeDebounce;
+  List<Client>? _pendingUpdate;
+  bool _isProcessingBulkOperation = false;
 
   @override
   void onInit() {
@@ -51,8 +54,21 @@ class AccountClientInfo extends GetxController {
         BackendServices.instance.clientRepository as SupabaseClientRepository;
     _clientSubscription =
         repository.getRealtimeClients(currentAccount).listen((updatedClients) {
-      clinets.value = updatedClients;
-      searchQueryChanged(query.value);
+      // Skip updates during bulk operations to prevent slowdown
+      if (_isProcessingBulkOperation) {
+        return;
+      }
+      
+      // Debounce rapid updates to prevent UI slowdown
+      _pendingUpdate = updatedClients;
+      _realtimeDebounce?.cancel();
+      _realtimeDebounce = Timer(const Duration(milliseconds: 500), () {
+        if (_pendingUpdate != null && !_isProcessingBulkOperation) {
+          clinets.value = _pendingUpdate!;
+          searchQueryChanged(query.value);
+          _pendingUpdate = null;
+        }
+      });
     });
   }
 
@@ -77,6 +93,7 @@ class AccountClientInfo extends GetxController {
   void onClose() {
     _clientSubscription.cancel();
     _searchDebounce?.cancel();
+    _realtimeDebounce?.cancel();
     super.onClose();
   }
 
@@ -186,6 +203,8 @@ class AccountClientInfo extends GetxController {
 
   Future<void> automaticPaymentAtStartup() async {
     try {
+      // Pause realtime updates during bulk operation
+      _isProcessingBulkOperation = true;
       Loaders.to.paymentIsLoading.value = true;
 
       print(" the length is ${clinets.length}");
@@ -215,14 +234,42 @@ class AccountClientInfo extends GetxController {
 
       countPaid.value = clinets.length - toBePaidClients.length;
 
+      // Process payments without individual fetches
       for (Client client in toBePaidClients) {
         currentPayingClient = client.obs;
         countPaid++;
+        
         await BackendServices.instance.clientRepository
             .paySystemsBills(client, month, year);
+        
+        // Update local balance without fetching - calculate new balance
+        final index = clinets.indexWhere((c) => c.id == client.id);
+        if (index != -1) {
+          double bills = client.systemsCost();
+          
+          // Apply discount if it exists
+          if (client.discountPercentage != null &&
+              client.discountEndDate != null &&
+              client.discountEndDate!.isAfter(DateTime.now())) {
+            double discountAmount = bills * (client.discountPercentage! / 100);
+            bills -= discountAmount;
+          }
+          
+          // Update local balance immediately
+          clinets[index].totalCash = clinets[index].totalCash - bills;
+        }
       }
+      
+      // Single refresh at the end instead of after each payment
+      clinets.refresh();
+      
+      // Fetch fresh data once after all payments
+      await _refreshClientsAfterBulkOperation();
+      
       Loaders.to.paymentIsLoading.value = false;
+      _isProcessingBulkOperation = false;
     } catch (e) {
+      _isProcessingBulkOperation = false;
       Loaders.to.paymentIsLoading.value = false;
 
       Get.showSnackbar(GetSnackBar(
@@ -231,17 +278,48 @@ class AccountClientInfo extends GetxController {
       ));
     }
   }
+  
+  Future<void> _refreshClientsAfterBulkOperation() async {
+    try {
+      // Fetch all clients once after bulk operation completes
+      final freshClients = await BackendServices.instance.clientRepository
+          .getAllClientsByAccount(currentAccount);
+      clinets.value = freshClients;
+    } catch (e) {
+      print('Error refreshing clients after bulk operation: $e');
+    }
+  }
 
   Future<void> fetchClients() async {
     try {
       isLoading.value = true;
       final newClients = await BackendServices.instance.clientRepository
-          .getAllClientsByAccount(currentAccount);
+          .getAllClientsByAccount(currentAccount)
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw Exception('Request timed out'),
+          );
       clinets.value = newClients;
       isLoading.value = false;
     } catch (e) {
       print('Error fetching clients: $e');
       isLoading.value = false;
+      
+      String errorMessage = 'حدث خطأ أثناء تحميل بيانات العملاء';
+      if (e.toString().contains('SocketException') || 
+          e.toString().contains('Connection') ||
+          e.toString().contains('timed out')) {
+        errorMessage = 'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت.';
+      }
+      
+      Get.snackbar(
+        'خطأ',
+        errorMessage,
+        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 

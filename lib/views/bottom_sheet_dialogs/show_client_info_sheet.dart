@@ -27,12 +27,23 @@ import 'package:phone_system_app/views/pages/system_choice.dart';
 import 'package:phone_system_app/views/pages/successfull_payment.dart';
 
 Future showClientInfoSheet(
-  BuildContext context,
+  BuildContext? context,
   Client client,
 ) async {
+  // Use Get.context as fallback if provided context is null or invalid
+  final effectiveContext = context ?? Get.context;
+  if (effectiveContext == null) {
+    Get.snackbar('خطأ', 'لا يمكن فتح صفحة معلومات العميل');
+    return;
+  }
+
+  // Check if context is still mounted
+  if (effectiveContext is Element && !effectiveContext.mounted) {
+    Get.snackbar('خطأ', 'السياق غير صالح');
+    return;
+  }
+
   final colors = Get.theme.colorScheme;
-  double width = MediaQuery.of(context).size.width;
-  double height = MediaQuery.of(context).size.height;
 
   // Remove any existing controller
   if (Get.isRegistered<ClientBottomSheetController>()) {
@@ -59,10 +70,11 @@ Future showClientInfoSheet(
     isScrollControlled: true,
     barrierLabel: "بيانات العميل",
     constraints: BoxConstraints.expand(
-      width: min(width, 800),
+      width: min(MediaQuery.maybeOf(effectiveContext)?.size.width ?? 800, 800),
     ),
-    context: context,
-    builder: (context) {
+    context: effectiveContext,
+    builder: (builderContext) {
+      final height = MediaQuery.of(builderContext).size.height;
       return GetBuilder<ClientBottomSheetController>(
         builder: (controller) => GetBuilder<ExcludedSystemsManager>(
           builder: (excludedManager) => ClientDataWidget(

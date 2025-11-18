@@ -32,11 +32,30 @@ class SupabaseBackendServices extends BackendServiceType {
 
   @override
   Future<void> initialize() async {
-    await Supabase.initialize(
-      url: 'https://kmtimujsqhpltmzrycxw.supabase.co',
-      anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttdGltdWpzcWhwbHRtenJ5Y3h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTQ5MjYxOTIsImV4cCI6MjAzMDUwMjE5Mn0.G5zvCK0wlaK5VMF_hssR-AtkbKAfBtH_ZgPDZTXw5gg',
-    );
+    try {
+      await Supabase.initialize(
+        url: 'https://kmtimujsqhpltmzrycxw.supabase.co',
+        anonKey:
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttdGltdWpzcWhwbHRtenJ5Y3h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTQ5MjYxOTIsImV4cCI6MjAzMDUwMjE5Mn0.G5zvCK0wlaK5VMF_hssR-AtkbKAfBtH_ZgPDZTXw5gg',
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.pkce,
+        ),
+        realtimeClientOptions: const RealtimeClientOptions(
+          logLevel: RealtimeLogLevel.info,
+        ),
+        postgrestOptions: const PostgrestClientOptions(
+          schema: 'public',
+        ),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Connection to Supabase timed out. Please check your internet connection.');
+        },
+      );
+    } catch (e) {
+      print('Supabase initialization error: $e');
+      rethrow;
+    }
 
     _logRepository = SupabaseLogRepository();
     _accountRepository = SupabaseAccountRepository();

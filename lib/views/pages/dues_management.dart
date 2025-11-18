@@ -7,8 +7,6 @@ import 'package:phone_system_app/views/pages/all_clinets_page.dart'
     as client_page;
 import 'package:flutter/animation.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:phone_system_app/views/widgets/custom_toolbar.dart';
-import 'package:phone_system_app/views/widgets/modern_client_list_view.dart';
 import 'package:phone_system_app/views/print_clients_receipts.dart';
 import 'package:flutter/services.dart';
 
@@ -246,11 +244,41 @@ class _DuesManagementState extends State<DuesManagement>
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),
-                    child: ModernClientListView(
-                      data: filteredData,
-                      isLoading: controller.isLoading.value,
-                      query: q,
-                    ),
+                    child: filteredData.isEmpty
+                        ? const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.search_off,
+                                  size: 64,
+                                  color: Color(0xFF94A3B8),
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  'لا توجد مستحقات',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Color(0xFF64748B),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: filteredData.length,
+                            physics: const BouncingScrollPhysics(),
+                            cacheExtent: 1000,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 16),
+                            itemBuilder: (context, index) {
+                              return client_page.ModernClientCard(
+                                client: filteredData[index],
+                                index: index,
+                              );
+                            },
+                          ),
                   ),
                 ),
               ],

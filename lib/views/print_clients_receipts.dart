@@ -238,12 +238,21 @@ class PrintClientsReceipts extends StatelessWidget {
                         buildHeader(logo, cairoBold,
                             extraBoldFont: cairoExtraBold),
                         pw.SizedBox(height: 20),
-                        pw.Row(
-                          mainAxisAlignment: pw.MainAxisAlignment.center,
+                        pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.center,
                           children: [
-                            makeText(c.name ?? "غير محدد", cairoBold, 16.0),
-                            makeText("  سجل المعاملات المالية الخاصة بالسيد/ ",
-                                cairoRegular, 14.0),
+                            pw.Text("سجل المعاملات المالية الخاصة بالسيد/",
+                                textDirection: pw.TextDirection.rtl,
+                                style: pw.TextStyle(
+                                    font: cairoRegular, fontSize: 14.0)),
+                            pw.SizedBox(height: 8),
+                            pw.Text(c.name ?? "غير محدد",
+                                textDirection: pw.TextDirection.rtl,
+                                textAlign: pw.TextAlign.center,
+                                style: pw.TextStyle(
+                                    font: cairoBold, fontSize: 16.0),
+                                softWrap: true,
+                                maxLines: 3),
                           ],
                         ),
                         pw.SizedBox(height: 20),

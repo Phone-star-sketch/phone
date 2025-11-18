@@ -1,11 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/controllers/account_profit_controller.dart';
 import 'package:phone_system_app/models/account.dart';
-import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/profit.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
-import 'package:phone_system_app/services/backend/supabase_backend_services.dart';
 
 class AccountViewController extends GetxController {
   static RxList<Account> accounts = <Account>[].obs;
@@ -68,11 +67,48 @@ class AccountViewController extends GetxController {
   @override
   void onReady() async {
     super.onReady();
-    isLoading.value = true;
+    await fetchAccountsWithRetry();
+  }
 
-    accounts.value =
-        await BackendServices.instance.accountRepository.getAllAccounts();
-    isLoading.value = false;
+  Future<void> fetchAccountsWithRetry({int maxRetries = 3}) async {
+    isLoading.value = true;
+    int retryCount = 0;
+
+    while (retryCount < maxRetries) {
+      try {
+        accounts.value =
+            await BackendServices.instance.accountRepository.getAllAccounts();
+        isLoading.value = false;
+        return; // Success, exit the retry loop
+      } catch (e) {
+        retryCount++;
+        print('Error fetching accounts (attempt $retryCount/$maxRetries): $e');
+
+        if (retryCount >= maxRetries) {
+          isLoading.value = false;
+          Get.snackbar(
+            'خطأ في الاتصال',
+            'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.',
+            backgroundColor: Get.theme.colorScheme.error.withOpacity(0.9),
+            colorText: Colors.white,
+            duration: const Duration(seconds: 5),
+            snackPosition: SnackPosition.BOTTOM,
+            margin: const EdgeInsets.all(16),
+            mainButton: TextButton(
+              onPressed: () => fetchAccountsWithRetry(),
+              child: const Text(
+                'إعادة المحاولة',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          );
+          break;
+        }
+
+        // Wait before retrying (exponential backoff)
+        await Future.delayed(Duration(seconds: retryCount * 2));
+      }
+    }
   }
 
   List<Account> getCurrentAccounts() {
@@ -96,6 +132,14 @@ class AccountViewController extends GetxController {
       accounts.value = data;
     } catch (e) {
       print('Error refreshing accounts: $e');
+      Get.snackbar(
+        'خطأ في التحديث',
+        'فشل تحديث البيانات: ${e.toString()}',
+        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.8),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+        snackPosition: SnackPosition.BOTTOM,
+      );
     } finally {
       isLoading.value = false;
     }

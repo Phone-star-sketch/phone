@@ -767,6 +767,8 @@ class ModernClientListView extends StatelessWidget {
 
     return ListView.separated(
       itemCount: data.length,
+      physics: const BouncingScrollPhysics(),
+      cacheExtent: 1000, // Improve scrolling performance
       separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         return ModernClientCard(
