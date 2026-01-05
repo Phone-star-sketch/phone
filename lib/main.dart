@@ -1,9 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 // Remove problematic imports for web
 // import 'package:phone_system_app/components/money_display.dart';
@@ -30,9 +28,15 @@ Future<void> main() async {
 
   // Web-specific initialization
   if (kIsWeb) {
+    // Suppress mouse tracker assertions in debug mode
     FlutterError.onError = (FlutterErrorDetails details) {
+      // Ignore mouse tracker assertions
+      if (details.exception.toString().contains('_debugDuringDeviceUpdate') ||
+          details.exception.toString().contains('mouse_tracker')) {
+        return;
+      }
       if (kDebugMode) {
-        print('Web error: ${details.exception}');
+        FlutterError.presentError(details);
       }
     };
 
@@ -94,22 +98,22 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = const ColorScheme.light(
-            background: Colors.black87, brightness: Brightness.dark)
+            surface: Colors.black87, brightness: Brightness.dark)
         .copyWith(
       primary: Colors.white54,
       onPrimary: Colors.greenAccent,
       secondary: Colors.blueAccent,
-      onBackground: Colors.black,
-      background: Colors.red,
-      surfaceTint: Color.fromARGB(255, 249, 249, 249),
+      onSurface: Colors.black,
+      surface: Colors.red,
+      surfaceTint: const Color.fromARGB(255, 249, 249, 249),
       error: const Color(0xFFd62828),
     );
 
     final textTheme = Theme.of(context).textTheme.apply(
           fontFamily: "Cairo",
           bodyColor: Colors.black,
-          displayColor: colorScheme.onBackground,
-          decorationColor: colorScheme.onBackground,
+          displayColor: colorScheme.onSurface,
+          decorationColor: colorScheme.onSurface,
         );
 
     return GetMaterialApp(
@@ -128,12 +132,12 @@ class MainApp extends StatelessWidget {
         datePickerTheme: DatePickerThemeData(
           surfaceTintColor: Colors.black,
           backgroundColor: Colors.white,
-          headerBackgroundColor: colorScheme.background,
+          headerBackgroundColor: colorScheme.surface,
           cancelButtonStyle:
               ElevatedButton.styleFrom(backgroundColor: Colors.black),
           confirmButtonStyle:
               ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          dividerColor: colorScheme.background,
+          dividerColor: colorScheme.surface,
         ),
         splashFactory: kIsWeb ? NoSplash.splashFactory : null,
       ),
@@ -147,7 +151,7 @@ class MainApp extends StatelessWidget {
               } catch (e) {
                 return Container(
                   color: Colors.blue,
-                  child: Center(
+                  child: const Center(
                     child: Text(
                       'مرحباً',
                       style: TextStyle(color: Colors.white, fontSize: 24),
@@ -162,7 +166,7 @@ class MainApp extends StatelessWidget {
             right: 16,
             child: Builder(
               builder: (context) => IconButton(
-                icon: Icon(Icons.palette_outlined, color: Colors.white),
+                icon: const Icon(Icons.palette_outlined, color: Colors.white),
                 onPressed: () => _showThemeSelector(context),
               ),
             ),
@@ -179,7 +183,7 @@ class MainApp extends StatelessWidget {
       opaqueRoute: true, // Make routes opaque for better performance
       builder: (context, child) {
         return ScrollConfiguration(
-          behavior: ScrollBehavior().copyWith(
+          behavior: const ScrollBehavior().copyWith(
             physics:
                 const ClampingScrollPhysics(), // More performant than BouncingScrollPhysics
             dragDevices: {
@@ -349,7 +353,7 @@ class MainApp extends StatelessWidget {
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),

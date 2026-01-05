@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -8,11 +9,10 @@ import 'package:phone_system_app/controllers/account_profit_controller.dart';
 import 'package:phone_system_app/controllers/money_display_loading.dart';
 import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_sheet.dart';
-import 'package:phone_system_app/views/client_list_view.dart';
 import 'package:phone_system_app/views/print_clients_receipts.dart';
 import 'package:flutter/services.dart';
-import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/widget_models/clientCreationModelSheet.dart';
+import 'package:phone_system_app/services/backend/backend_services.dart';
 
 // Add this extension at the top of the file, after imports
 extension ClientPhoneHelper on Client {
@@ -72,19 +72,8 @@ class _AllClientsPageState extends State<AllClientsPage>
   }
 
   List<Client> _getSmartFilteredClients(String query) {
-    List<Client> clients = controller.clinets.value;
-    if (query.isEmpty) return clients;
-
-    return clients.where((element) {
-      final hasMatchingPhone = element.numbers?.isNotEmpty == true &&
-          element.numbers![0].phoneNumber?.contains(query) == true;
-
-      final hasMatchingName = element.name != null &&
-          removeSpecialArabicChars(element.name!)
-              .contains(removeSpecialArabicChars(query));
-
-      return hasMatchingPhone || hasMatchingName;
-    }).toList();
+    // Use optimized search from controller
+    return controller.searchClients(query);
   }
 
   @override
@@ -106,125 +95,133 @@ class _AllClientsPageState extends State<AllClientsPage>
           ],
         ),
       ),
-      child: Obx(() {
-        final q = controller.query.value;
-        final filteredData = _getSmartFilteredClients(q);
-        final isLoading = controller.isLoading.value;
-        final printingClients = controller.clientPrintAdded.value;
+      child: GetBuilder<AccountClientInfo>(
+        id: 'client-list',
+        builder: (ctrl) {
+          final q = ctrl.query.value;
+          final filteredData = _getSmartFilteredClients(q);
+          final isLoading = ctrl.isLoading.value;
+          final printingClients = ctrl.clientPrintAdded;
 
-        return FadeTransition(
-          opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: Column(
-              children: [
-                // Modern Header with Glass Effect
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(32),
-                      bottomRight: Radius.circular(32),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        children: [
-                          // Page Title
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF3B82F6),
-                                      Color(0xFF1E40AF)
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: const Icon(
-                                  FontAwesomeIcons.users,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              const Text(
-                                'إدارة العملاء',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1E293B),
-                                ),
-                              ),
-                              const Spacer(),
-                              // Client Count Badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF10B981),
-                                      Color(0xFF059669)
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  '${filteredData.length} عميل',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          // Custom Toolbar
-                          ModernToolBar(
-                            controller: controller,
-                            printingClients: printingClients,
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: Column(
+                children: [
+                  // Modern Header with Glass Effect
+                  GetBuilder<AccountClientInfo>(
+                    id: 'toolbar',
+                    builder: (toolbarCtrl) => Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(32),
+                          bottomRight: Radius.circular(32),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
+                      child: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            children: [
+                              // Page Title
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFF3B82F6),
+                                          Color(0xFF1E40AF)
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Icon(
+                                      FontAwesomeIcons.users,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  const Text(
+                                    'إدارة العملاء',
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  // Client Count Badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFF10B981),
+                                          Color(0xFF059669)
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      q.isEmpty
+                                          ? '${ctrl.totalClientsCount} عميل (عرض ${filteredData.length})'
+                                          : '${filteredData.length} نتيجة',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              // Custom Toolbar
+                              ModernToolBar(
+                                controller: toolbarCtrl,
+                                printingClients: printingClients,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                // Content Area
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: (isLoading)
-                        ? const SoundWaveIndicator()
-                        : (Loaders.to.paymentIsLoading.value)
-                            ? ModernPaymentLoadingWidget()
-                            : ModernClientListView(
-                                data: filteredData,
-                                isLoading: isLoading,
-                                query: controller.query.value,
-                              ),
+                  // Content Area
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: (isLoading)
+                          ? const SoundWaveIndicator()
+                          : (Loaders.to.paymentIsLoading.value)
+                              ? ModernPaymentLoadingWidget()
+                              : ModernClientListView(
+                                  data: filteredData,
+                                  isLoading: isLoading,
+                                  query: ctrl.query.value,
+                                ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      }),
+          );
+        },
+      ),
     );
   }
 }
@@ -727,7 +724,7 @@ class ModernSearchField extends StatelessWidget {
   }
 }
 
-class ModernClientListView extends StatelessWidget {
+class ModernClientListView extends StatefulWidget {
   const ModernClientListView({
     super.key,
     required this.data,
@@ -740,8 +737,40 @@ class ModernClientListView extends StatelessWidget {
   final String query;
 
   @override
+  State<ModernClientListView> createState() => _ModernClientListViewState();
+}
+
+class _ModernClientListViewState extends State<ModernClientListView> {
+  final ScrollController _scrollController = ScrollController();
+  final controller = Get.find<AccountClientInfo>();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // Load more when reaching 80% of scroll
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent * 0.8) {
+      // Only load more when not searching
+      if (widget.query.isEmpty && controller.hasMoreData) {
+        controller.loadMore();
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (data.isEmpty) {
+    if (widget.data.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -765,22 +794,90 @@ class ModernClientListView extends StatelessWidget {
       );
     }
 
+    final hasMore = controller.hasMoreData && widget.query.isEmpty;
+
     return ListView.separated(
-      itemCount: data.length,
+      controller: _scrollController,
+      itemCount: widget.data.length + (hasMore ? 1 : 0),
       physics: const BouncingScrollPhysics(),
-      cacheExtent: 1000, // Improve scrolling performance
+      cacheExtent: 500,
       separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
-        return ModernClientCard(
-          client: data[index],
-          index: index,
+        // Show loading indicator at the end
+        if (index == widget.data.length) {
+          return _buildLoadMoreButton();
+        }
+
+        return RepaintBoundary(
+          child: ModernClientCard(
+            client: widget.data[index],
+            index: index,
+          ),
         );
       },
     );
   }
+
+  Widget _buildLoadMoreButton() {
+    return Obx(() {
+      if (controller.isLoadingMore.value) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: const Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text(
+                  'جاري تحميل المزيد...',
+                  style: TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      // Show "load more" button
+      return GestureDetector(
+        onTap: () => controller.loadMore(),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3B82F6),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'تحميل المزيد (${controller.totalClientsCount - widget.data.length} متبقي)',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    });
+  }
 }
 
-class ModernClientCard extends StatefulWidget {
+class ModernClientCard extends StatelessWidget {
   const ModernClientCard({
     super.key,
     required this.client,
@@ -790,250 +887,164 @@ class ModernClientCard extends StatefulWidget {
   final Client client;
   final int index;
 
-  @override
-  State<ModernClientCard> createState() => _ModernClientCardState();
-}
-
-class _ModernClientCardState extends State<ModernClientCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: Duration(milliseconds: 300 + (widget.index * 50)),
-      vsync: this,
-    );
-
-    _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutBack,
-    ));
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
+  // Cached colors to avoid recalculation
+  static final List<Color> _baseColors = [
+    const Color(0xFF3B82F6), // Blue
+    const Color(0xFF10B981), // Green
+    const Color(0xFF8B5CF6), // Purple
+    const Color(0xFFF59E0B), // Orange
+    const Color(0xFFEF4444), // Red
+  ];
 
   Color _getBaseColor(int index) {
-    // Define a default color in case the list is empty
-    const defaultColor = Color(0xFF3B82F6); // Blue
-
-    final colors = [
-      const Color(0xFF3B82F6), // Blue
-      const Color(0xFF10B981), // Green
-      const Color(0xFF8B5CF6), // Purple
-      const Color(0xFFF59E0B), // Orange
-      const Color(0xFFEF4444), // Red
-    ];
-
-    // Safely get color or return default
-    try {
-      return colors[index % colors.length];
-    } catch (_) {
-      return defaultColor;
-    }
+    return _baseColors[index % _baseColors.length];
   }
 
   List<Color> _getGradientColors(int index) {
     final baseColor = _getBaseColor(index);
     return [
       baseColor,
-      baseColor.withOpacity(0.7),
+      baseColor.withValues(alpha: 0.7),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
     return GetBuilder<AccountClientInfo>(
+      id: 'client-${client.id}',
       builder: (accountController) {
-        final isSelected =
-            accountController.clientPrintAdded.contains(widget.client);
+        final isSelected = accountController.clientPrintAdded.contains(client);
 
-        return AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color:
-                          isSelected ? Colors.blue[700]! : Colors.transparent,
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isSelected
-                            ? Colors.blue[700]!.withOpacity(0.1)
-                            : Colors.black.withOpacity(0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                Colors.grey[50]!,
+              ],
+            ),
+            border: Border.all(
+              color: isSelected ? const Color(0xFF3B82F6) : Colors.grey[200]!,
+              width: isSelected ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isSelected
+                    ? const Color(0xFF3B82F6).withValues(alpha: 0.2)
+                    : Colors.black.withOpacity(0.06),
+                blurRadius: isSelected ? 20 : 15,
+                offset: const Offset(0, 4),
+                spreadRadius: isSelected ? 2 : 0,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
+              children: [
+                // Subtle Background Pattern
+                Positioned(
+                  top: -20,
+                  right: -20,
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          _getBaseColor(index).withOpacity(0.05),
+                          Colors.transparent,
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: () =>
-                          accountController.enableMulipleClientPrint.value
-                              ? _handleSelection(accountController)
-                              : showClientInfoSheet(context, widget.client),
-                      child: Stack(
+                ),
+
+                // Main Content
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () =>
+                        accountController.enableMulipleClientPrint.value
+                            ? _handleSelection(accountController)
+                            : _handleTap(context, accountController),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Background Logo
-                          Positioned(
-                            top: 10, // Move up from center
-                            right: 0,
-                            left: 0,
-                            child: Align(
-                              alignment: Alignment.topCenter,
-                              child: SizedBox(
-                                height: 80, // Make logo smaller
-                                child: Opacity(
-                                  opacity: 0.05,
-                                  child: Image.asset(
-                                    'assets/images/MKQ.png',
-                                    fit: BoxFit.contain,
+                          // Top Section: Avatar + Name + Phone
+                          Row(
+                            children: [
+                              // Modern Avatar
+                              Container(
+                                width: 52,
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: _getGradientColors(index),
                                   ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _getBaseColor(index)
+                                          .withOpacity(0.25),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.person_rounded,
+                                  color: Colors.white,
+                                  size: 26,
                                 ),
                               ),
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Main Content
-                              Padding(
-                                padding: const EdgeInsets.all(20),
-                                child: Row(
+                              const SizedBox(width: 14),
+
+                              // Client Name & Phone
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Avatar with safe gradient
-                                    Container(
-                                      width: 60,
-                                      height: 60,
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors:
-                                              _getGradientColors(widget.index),
-                                        ),
-                                        borderRadius: BorderRadius.circular(16),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: _getBaseColor(widget.index)
-                                                .withOpacity(0.3),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
+                                    Text(
+                                      client.name ?? 'غير محدد',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: Color(0xFF1E293B),
+                                        height: 1.2,
                                       ),
-                                      child: const Icon(Icons.person,
-                                          color: Colors.white, size: 28),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    const SizedBox(width: 20),
-                                    // Client Info with null safety
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            widget.client.name ?? 'غير محدد',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18,
-                                              color: Color(0xFF1E293B),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Container(
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF3B82F6)
-                                                  .withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(
-                                                  Icons.phone,
-                                                  size: 14,
-                                                  color: Color(0xFF3B82F6),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Flexible(
-                                                  child: Text(
-                                                    widget.client
-                                                        .getFormattedPhoneNumber(),
-                                                    style: const TextStyle(
-                                                      color: Color(0xFF3B82F6),
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                    ),
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    // Action Buttons
-                                    Column(
+                                    const SizedBox(height: 5),
+                                    // Phone Number
+                                    Row(
                                       children: [
-                                        _buildActionIcon(
-                                          Icons.copy,
-                                          const Color(0xFF10B981),
-                                          () {
-                                            final phoneNumber = widget.client
-                                                .getFormattedPhoneNumber();
-                                            if (phoneNumber != 'غير متوفر') {
-                                              Clipboard.setData(ClipboardData(
-                                                  text: phoneNumber));
-                                              _showSuccessSnackbar(
-                                                  'تم نسخ رقم الهاتف');
-                                            }
-                                          },
+                                        const Icon(
+                                          Icons.phone_rounded,
+                                          size: 13,
+                                          color: Color(0xFF64748B),
                                         ),
-                                        const SizedBox(height: 8),
-                                        _buildActionIcon(
-                                          Icons.edit,
-                                          const Color(0xFF64748B),
-                                          () => clientEditModelSheet(
-                                            context,
-                                            client: widget.client,
+                                        const SizedBox(width: 5),
+                                        Flexible(
+                                          child: Text(
+                                            client.getFormattedPhoneNumber(),
+                                            style: const TextStyle(
+                                              color: Color(0xFF64748B),
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                       ],
@@ -1041,121 +1052,400 @@ class _ModernClientCardState extends State<ModernClientCard>
                                   ],
                                 ),
                               ),
-                              // Money Status Bar
-                              _buildMoneyStatusBar(),
                             ],
                           ),
-                          if (accountController.enableMulipleClientPrint.value)
-                            Positioned(
-                              top: 12,
-                              right: 12,
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: isSelected
-                                      ? Colors.blue[700]
-                                      : Colors.grey[200],
-                                ),
-                                padding: const EdgeInsets.all(2),
-                                child: Icon(
-                                  isSelected ? Icons.check : Icons.add,
-                                  size: 20,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : Colors.grey[600],
-                                ),
-                              ),
+
+                          // Divider
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: Color(0xFFE2E8F0),
                             ),
+                          ),
+
+                          // Bottom Section: Money Status + Action Buttons
+                          Row(
+                            children: [
+                              // Money Status (Compact)
+                              Expanded(
+                                child: _buildCompactMoneyStatus(),
+                              ),
+                              const SizedBox(width: 12),
+
+                              // Action Buttons Row
+                              Row(
+                                children: [
+                                  // Copy Button
+                                  _buildCompactActionButton(
+                                    icon: Icons.content_copy_rounded,
+                                    color: const Color(0xFF10B981),
+                                    onPressed: () {
+                                      final phoneNumber =
+                                          client.getFormattedPhoneNumber();
+                                      if (phoneNumber != 'غير متوفر') {
+                                        Clipboard.setData(
+                                            ClipboardData(text: phoneNumber));
+                                        HapticFeedback.mediumImpact();
+                                        _showSuccessSnackbar(
+                                            'تم نسخ رقم الهاتف');
+                                      }
+                                    },
+                                    tooltip: 'نسخ',
+                                  ),
+                                  const SizedBox(width: 6),
+                                  // Edit Button
+                                  _buildCompactActionButton(
+                                    icon: Icons.edit_rounded,
+                                    color: const Color(0xFF8B5CF6),
+                                    onPressed: () {
+                                      HapticFeedback.lightImpact();
+                                      clientEditModelSheet(context,
+                                          client: client);
+                                    },
+                                    tooltip: 'تعديل',
+                                  ),
+                                  const SizedBox(width: 6),
+                                  // Delete Button
+                                  _buildCompactActionButton(
+                                    icon: Icons.delete_rounded,
+                                    color: const Color(0xFFEF4444),
+                                    onPressed: () {
+                                      HapticFeedback.heavyImpact();
+                                      _showDeleteConfirmation(
+                                          context, accountController);
+                                    },
+                                    tooltip: 'حذف',
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
+
+                // Selection Indicator
+                if (accountController.enableMulipleClientPrint.value)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color:
+                            isSelected ? const Color(0xFF3B82F6) : Colors.white,
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFF3B82F6)
+                              : Colors.grey[300]!,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isSelected
+                                ? const Color(0xFF3B82F6).withOpacity(0.3)
+                                : Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        isSelected ? Icons.check_rounded : Icons.add_rounded,
+                        size: 18,
+                        color: isSelected ? Colors.white : Colors.grey[400],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
   void _handleSelection(AccountClientInfo controller) {
-    if (controller.clientPrintAdded.contains(widget.client)) {
-      controller.clientPrintAdded.remove(widget.client);
+    if (controller.clientPrintAdded.contains(client)) {
+      controller.clientPrintAdded.remove(client);
     } else {
-      controller.clientPrintAdded.add(widget.client);
+      controller.clientPrintAdded.add(client);
       HapticFeedback.selectionClick();
     }
-    controller.update(); // Add this to trigger UI update
+    // Trigger targeted rebuild for this specific card only
+    controller.update(['client-${client.id}', 'toolbar']);
   }
 
-  Widget _buildActionIcon(IconData icon, Color color, VoidCallback onPressed) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: color, size: 18),
-        onPressed: onPressed,
-        constraints: const BoxConstraints(
-          minWidth: 36,
-          minHeight: 36,
+  Future<void> _handleTap(
+      BuildContext context, AccountClientInfo controller) async {
+    // Fetch full client data before opening details
+    final fullClient = await controller.getFullClientData(client.id as int);
+    if (context.mounted) {
+      showClientInfoSheet(context, fullClient);
+    }
+  }
+
+  Widget _buildCompactActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+    required String tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: color.withOpacity(0.25),
+            width: 1.2,
+          ),
         ),
-        padding: EdgeInsets.zero,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: onPressed,
+            child: Icon(
+              icon,
+              color: color,
+              size: 18,
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildMoneyStatusBar() {
-    final totalCash = widget.client.totalCash ?? 0;
+  Widget _buildCompactMoneyStatus() {
+    final totalCash = client.totalCash;
     final isPositive = totalCash >= 0;
     final statusColor =
         isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444);
 
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
+        color: statusColor.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: statusColor.withOpacity(0.2),
+          width: 1,
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Icon(
-                isPositive
-                    ? Icons.check_circle_outline
-                    : Icons.warning_amber_rounded,
-                size: 20,
-                color: statusColor,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                isPositive ? 'لا يوجد مستحقات' : 'المبلغ المطلوب',
-                style: TextStyle(
-                  color: statusColor,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+          Icon(
+            isPositive ? Icons.check_circle_rounded : Icons.warning_rounded,
+            size: 16,
+            color: statusColor,
           ),
-          Text(
-            '${totalCash.abs()} ج.م',
-            style: TextStyle(
-              color: statusColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              isPositive ? 'لا مستحقات' : '${totalCash.abs()} ج.م',
+              style: TextStyle(
+                color: statusColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _showDeleteConfirmation(
+      BuildContext context, AccountClientInfo controller) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Warning Icon
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.warning_rounded,
+                  color: Color(0xFFEF4444),
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Title
+              const Text(
+                'تأكيد الحذف',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Message
+              Text(
+                'هل أنت متأكد من حذف العميل "${client.name}"؟',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF64748B),
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'لا يمكن التراجع عن هذا الإجراء',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFFEF4444),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Action Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Get.back(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[200],
+                        foregroundColor: const Color(0xFF64748B),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'إلغاء',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Get.back();
+                        await _deleteClient(controller);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEF4444),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'حذف',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteClient(AccountClientInfo controller) async {
+    try {
+      // Show loading
+      Get.dialog(
+        const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('جاري الحذف...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+      );
+
+      // Delete from backend
+      await BackendServices.instance.clientRepository.delete(client);
+
+      // Update local list
+      controller.clinets.remove(client);
+      controller.update();
+
+      // Close loading
+      Get.back();
+
+      // Show success message
+      Get.showSnackbar(const GetSnackBar(
+        message: 'تم حذف العميل بنجاح',
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFF10B981),
+        borderRadius: 12,
+        margin: EdgeInsets.all(16),
+        icon: Icon(Icons.check_circle, color: Colors.white),
+      ));
+    } catch (e) {
+      // Close loading
+      Get.back();
+
+      // Show error
+      Get.showSnackbar(GetSnackBar(
+        message: 'حدث خطأ أثناء الحذف: ${e.toString()}',
+        duration: const Duration(seconds: 3),
+        backgroundColor: const Color(0xFFEF4444),
+        borderRadius: 12,
+        margin: const EdgeInsets.all(16),
+        icon: const Icon(Icons.error, color: Colors.white),
+      ));
+    }
   }
 
   void _showSuccessSnackbar(String message) {

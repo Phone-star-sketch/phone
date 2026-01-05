@@ -1,18 +1,12 @@
-import 'package:phone_system_app/models/account.dart';
-import 'package:phone_system_app/repositories/account/account_repository.dart';
+import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:phone_system_app/repositories/account/supabase_account_repo.dart';
-import 'package:phone_system_app/repositories/client/client_repository.dart';
 import 'package:phone_system_app/repositories/client/supabase_client_repository.dart';
-import 'package:phone_system_app/repositories/log/log_repository.dart';
 import 'package:phone_system_app/repositories/log/log_supabase_repository.dart';
-import 'package:phone_system_app/repositories/phone/phone_repository.dart';
 import 'package:phone_system_app/repositories/phone/supabase_phone_repository.dart';
-import 'package:phone_system_app/repositories/profit/profit_repository.dart';
 import 'package:phone_system_app/repositories/profit/supabase_profit_repository.dart';
 import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
-import 'package:phone_system_app/repositories/system/system_repository.dart';
 import 'package:phone_system_app/repositories/system_type/supabase_system_type_repository.dart';
-import 'package:phone_system_app/repositories/system_type/system_type_repository.dart';
 import 'package:phone_system_app/repositories/user/supabase_user_repository.dart';
 import 'package:phone_system_app/repositories/user/user_repository.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
@@ -49,11 +43,19 @@ class SupabaseBackendServices extends BackendServiceType {
       ).timeout(
         const Duration(seconds: 30),
         onTimeout: () {
-          throw Exception('Connection to Supabase timed out. Please check your internet connection.');
+          throw Exception(
+              'Connection to Supabase timed out. Please check your internet connection.');
         },
       );
-    } catch (e) {
-      print('Supabase initialization error: $e');
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        developer.log(
+          'Supabase initialization failed',
+          name: 'BackendServices',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
       rethrow;
     }
 
@@ -65,7 +67,6 @@ class SupabaseBackendServices extends BackendServiceType {
     _systemTypeRepository = SupabaseSystemTypeRepository();
     _profitRepository = SupabaseProfitRepository();
     // Authentication
-    _supabaseAuthentication = SupabaseAuthentication();
     _supabaseAuthentication = SupabaseAuthentication();
     _userRepository = SupabaseUserRepository();
   }
@@ -94,10 +95,6 @@ class SupabaseBackendServices extends BackendServiceType {
 
   @override
   SupabaseProfitRepository get profitRepository => _profitRepository;
-  //SupabaseAuthentication get supabaseAuthentication => _supabaseAuthentication;
-
-  //@override
-  //SupabaseLogRepository get logRepository => _logRepository;
 
   @override
   UserRepository get userRepository => _userRepository;

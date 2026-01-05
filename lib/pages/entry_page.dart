@@ -3,9 +3,10 @@ import 'package:get/get.dart';
 import 'dart:math' as math;
 import 'package:phone_system_app/views/pages/auth_raper.dart';
 import 'package:phone_system_app/views/pages/login_page.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 class WelcomePage extends StatefulWidget {
+  const WelcomePage({super.key});
+
   @override
   _WelcomePageState createState() => _WelcomePageState();
 }
@@ -15,18 +16,13 @@ class _WelcomePageState extends State<WelcomePage>
   late AnimationController _controller;
   late AnimationController _backgroundController;
   late AnimationController _floatingController;
-  late AnimationController _supermanController;
   late AnimationController _crescentController;
   late AnimationController _lanternController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
-  late Animation<Offset> _supermanSlideAnimation;
-  late Animation<double> _supermanScaleAnimation;
-  final AudioPlayer _audioPlayer = AudioPlayer();
   final List<Particle> _particles = [];
   final List<Lantern> _lanterns = [];
-  bool _showSuperman = false;
 
   @override
   void initState() {
@@ -38,28 +34,23 @@ class _WelcomePageState extends State<WelcomePage>
 
   void _initializeAnimations() {
     _controller = AnimationController(
-        duration: Duration(milliseconds: 1500), vsync: this);
+        duration: const Duration(milliseconds: 1500), vsync: this);
 
     _backgroundController = AnimationController(
-        duration: Duration(seconds: 15), vsync: this) // Slower rotation
+        duration: const Duration(seconds: 15), vsync: this) // Slower rotation
       ..repeat();
 
     _floatingController =
-        AnimationController(duration: Duration(seconds: 2), vsync: this)
+        AnimationController(duration: const Duration(seconds: 2), vsync: this)
           ..repeat(reverse: true);
 
-    _supermanController = AnimationController(
-      duration: Duration(milliseconds: 1500),
-      vsync: this,
-    );
-
     _crescentController = AnimationController(
-      duration: Duration(seconds: 3),
+      duration: const Duration(seconds: 3),
       vsync: this,
     )..repeat(reverse: true);
 
     _lanternController = AnimationController(
-      duration: Duration(seconds: 6), // Slower lantern movement
+      duration: const Duration(seconds: 6), // Slower lantern movement
       vsync: this,
     )..repeat(reverse: true);
 
@@ -68,32 +59,16 @@ class _WelcomePageState extends State<WelcomePage>
     );
 
     _slideAnimation = Tween<Offset>(
-      begin: Offset(0, 0.5),
+      begin: const Offset(0, 0.5),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: Interval(0.3, 0.8, curve: Curves.easeOut),
+      curve: const Interval(0.3, 0.8, curve: Curves.easeOut),
     ));
 
     _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
-
-    _supermanSlideAnimation = Tween<Offset>(
-      begin: Offset(-1, 0.5), // Updated start position
-      end: Offset(1.5, -0.5), // Updated end position
-    ).animate(CurvedAnimation(
-      parent: _supermanController,
-      curve: Curves.easeInOut,
-    ));
-
-    _supermanScaleAnimation = Tween<double>(
-      begin: 1.2, // Increased starting scale
-      end: 0.2, // Updated end scale
-    ).animate(CurvedAnimation(
-      parent: _supermanController,
-      curve: Curves.easeIn,
-    ));
 
     _controller.forward();
   }
@@ -108,16 +83,10 @@ class _WelcomePageState extends State<WelcomePage>
 
   void _generateLanterns() {
     final random = math.Random();
-    for (int i = 0; i < 8; i++) {
-      // Increased number of lanterns
+    for (int i = 0; i < 4; i++) {
+      // Reduced from 8 to 4
       _lanterns.add(Lantern(random));
     }
-  }
-
-  void _startSupermanAnimation() async {
-    setState(() => _showSuperman = true);
-    await _supermanController.forward();
-    setState(() => _showSuperman = false);
   }
 
   @override
@@ -125,15 +94,9 @@ class _WelcomePageState extends State<WelcomePage>
     _controller.dispose();
     _backgroundController.dispose();
     _floatingController.dispose();
-    _supermanController.dispose();
     _crescentController.dispose();
     _lanternController.dispose();
-    _audioPlayer.dispose();
     super.dispose();
-  }
-
-  Future<void> _playButtonSound() async {
-    await _audioPlayer.play(AssetSource('sounds/button_click.wav'));
   }
 
   @override
@@ -176,11 +139,11 @@ class _WelcomePageState extends State<WelcomePage>
                               width: particle.size,
                               height: particle.size,
                               decoration: BoxDecoration(
-                                color: Colors.amber.withOpacity(0.8),
+                                color: Colors.amber.withValues(alpha: 0.8),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.amber.withOpacity(0.3),
+                                    color: Colors.amber.withValues(alpha: 0.3),
                                     blurRadius: 5,
                                     spreadRadius: 2,
                                   ),
@@ -240,7 +203,8 @@ class _WelcomePageState extends State<WelcomePage>
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.amber.withOpacity(0.3),
+                                          color: Colors.amber
+                                              .withValues(alpha: 0.3),
                                           blurRadius: 20,
                                           spreadRadius: 5,
                                         ),
@@ -273,12 +237,14 @@ class _WelcomePageState extends State<WelcomePage>
                                   color: Colors.amber.shade300,
                                   shadows: [
                                     Shadow(
-                                      color: Colors.amber.withOpacity(0.8),
+                                      color:
+                                          Colors.amber.withValues(alpha: 0.8),
                                       blurRadius: 15,
                                       offset: Offset(0, 5),
                                     ),
                                     Shadow(
-                                      color: Colors.amber.withOpacity(0.4),
+                                      color:
+                                          Colors.amber.withValues(alpha: 0.4),
                                       blurRadius: 25,
                                       offset: Offset(0, 8),
                                     ),
@@ -291,7 +257,7 @@ class _WelcomePageState extends State<WelcomePage>
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 24,
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: Colors.white.withValues(alpha: 0.9),
                                   letterSpacing: 1.2,
                                 ),
                               ),
@@ -308,21 +274,18 @@ class _WelcomePageState extends State<WelcomePage>
                             children: [
                               _buildGlassButton(
                                 'ابدأ الآن',
-                                onPressed: () async {
-                                  await _playButtonSound();
-                                  _startSupermanAnimation();
+                                onPressed: () {
                                   _controller.reverse().then((_) {
                                     Get.off(() => AuthRaper());
                                   });
                                 },
                               ),
-                              SizedBox(height: 24),
+                              const SizedBox(height: 24),
                               _buildTextButton(
                                 'لديك حساب بالفعل؟ سجل دخول',
-                                onPressed: () async {
-                                  await _playButtonSound();
+                                onPressed: () {
                                   _controller.reverse().then((_) {
-                                    Get.off(() => LoginPage());
+                                    Get.off(() => const LoginPage());
                                   });
                                 },
                               ),
@@ -334,46 +297,6 @@ class _WelcomePageState extends State<WelcomePage>
                   ),
                 ),
               ),
-              if (_showSuperman)
-                AnimatedBuilder(
-                  animation: _supermanController,
-                  builder: (context, child) {
-                    final size = MediaQuery.of(context).size;
-                    return Positioned(
-                      left: size.width * 0.5 - 150, // Center horizontally
-                      top: size.height * 0.4, // Position from top
-                      child: Transform.translate(
-                        offset:
-                            _supermanSlideAnimation.value * size.width * 0.5,
-                        child: Transform.scale(
-                          scale: _supermanScaleAnimation.value,
-                          child: Opacity(
-                            opacity: 1 - (_supermanController.value * 0.7),
-                            child: Image.asset(
-                              'assets/images/MKQ.png', // Correct asset path
-                              width: 150,
-                              height: 150,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                print('Error loading image: $error');
-                                return Container(
-                                  width: 300,
-                                  height: 300,
-                                  child: Icon(
-                                    Icons
-                                        .rocket_launch, // Changed to a rocket icon as fallback
-                                    color: Colors.white,
-                                    size: 80,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
             ],
           );
         },
@@ -390,8 +313,8 @@ class _WelcomePageState extends State<WelcomePage>
           padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
-            color: Colors.white.withOpacity(0.2),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
+            color: Colors.white.withValues(alpha: 0.2),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black12,
@@ -419,10 +342,10 @@ class _WelcomePageState extends State<WelcomePage>
       child: Text(
         text,
         style: TextStyle(
-          color: Colors.white.withOpacity(0.9),
+          color: Colors.white.withValues(alpha: 0.9),
           fontSize: 16,
           decoration: TextDecoration.underline,
-          decorationColor: Colors.white.withOpacity(0.5),
+          decorationColor: Colors.white.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -433,11 +356,11 @@ class _WelcomePageState extends State<WelcomePage>
       width: 45,
       height: 70,
       decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(0.9),
+        color: Colors.amber.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.amber.withOpacity(0.4),
+            color: Colors.amber.withValues(alpha: 0.4),
             blurRadius: 15,
             spreadRadius: 8,
           ),

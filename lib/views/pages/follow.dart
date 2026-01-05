@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
@@ -18,29 +19,12 @@ import 'package:intl/intl.dart';
 import 'package:phone_system_app/services/transaction_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart' as prefs;
 
-class LogWidthUser {
-  Log log;
-  AppUser? user;
-  Client? client;
-  LogWidthUser({required this.log}) {
-    user = SupabaseAuthentication.allUser!.firstWhereOrNull(
-      (element) => element.id == log.createdBy,
-    );
-
-    if (log.clientId != null) {
-      client = AccountClientInfo.to.clinets.firstWhereOrNull(
-        (element) => element.id == log.clientId,
-      );
-    }
-  }
-}
-
 class FollowController extends GetxController {
   RxList<LogWidthUser> logs = <LogWidthUser>[].obs;
   RealtimeChannel? _subscription;
   RxString connectionStatus = 'غير متصل'.obs;
   RxString lastUpdateTime = ''.obs;
-  final Set<int> _shownNotifications = {};
+  // Removed unused _shownNotifications
   static const String LAST_NOTIFICATION_KEY = 'last_notified_transaction_id';
 
   @override
@@ -53,6 +37,17 @@ class FollowController extends GetxController {
 
   Future<void> _initializeData() async {
     try {
+      // Check if AccountClientInfo is registered
+      if (!Get.isRegistered<AccountClientInfo>()) {
+        if (kDebugMode) {
+          print('⚠️ AccountClientInfo not registered, skipping client fetch');
+        }
+        // Just fetch logs without client data
+        await updateLogs();
+        _setupRealtime();
+        return;
+      }
+
       // First ensure clients are loaded
       await AccountClientInfo.to.fetchClients();
 
@@ -62,12 +57,22 @@ class FollowController extends GetxController {
       // Finally setup real-time
       _setupRealtime();
     } catch (e) {
-      print('Error initializing data: $e');
+      if (kDebugMode) {
+        print('Error initializing data: $e');
+      }
     }
   }
 
   void _setupRealtime() {
     try {
+      // Skip if AccountClientInfo not registered
+      if (!Get.isRegistered<AccountClientInfo>()) {
+        if (kDebugMode) {
+          print('⚠️ AccountClientInfo not registered, skipping realtime setup');
+        }
+        return;
+      }
+
       final client = Supabase.instance.client;
 
       connectionStatus.value = 'جاري الاتصال...';
@@ -84,9 +89,11 @@ class FollowController extends GetxController {
               value: AccountClientInfo.to.currentAccount.id,
             ),
             callback: (payload) async {
-              print(
-                  '🔴 Realtime update received: ${payload.eventType} at ${DateTime.now()}');
-              print('🔴 Changed data: ${payload.newRecord}');
+              if (kDebugMode) {
+                print(
+                    '🔴 Realtime update received: ${payload.eventType} at ${DateTime.now()}');
+                print('🔴 Changed data: ${payload.newRecord}');
+              }
 
               // Update timestamp
               lastUpdateTime.value = DateFormat.jm('ar').format(DateTime.now());
@@ -95,27 +102,32 @@ class FollowController extends GetxController {
               Get.snackbar(
                 'تحديث مباشر',
                 'تم استلام تحديث جديد',
-                backgroundColor: Colors.green.withOpacity(0.1),
-                duration: Duration(seconds: 2),
+                backgroundColor: Colors.green.withValues(alpha: 0.1),
+                duration: const Duration(seconds: 2),
               );
 
               // Check if this is an assistant transaction (creator = 2)
               if (payload.eventType == PostgresChangeEvent.insert &&
                   payload.newRecord != null &&
-                  payload.newRecord!['creator'] == 2) {
-                print(
-                    '🔴 Assistant transaction detected, showing immediate notification');
+                  payload.newRecord['creator'] == 2) {
+                if (kDebugMode) {
+                  print(
+                      '🔴 Assistant transaction detected, showing immediate notification');
+                }
 
                 // Fetch the client information
-                await AccountClientInfo.to.fetchClients();
+                if (Get.isRegistered<AccountClientInfo>()) {
+                  await AccountClientInfo.to.fetchClients();
+                }
 
                 // Create a log object from the payload
                 final newLog =
-                    Log.fromJson(Map<String, dynamic>.from(payload.newRecord!));
+                    Log.fromJson(Map<String, dynamic>.from(payload.newRecord));
 
                 // Find client information if available
                 Client? client;
-                if (newLog.clientId != null) {
+                if (newLog.clientId != null &&
+                    Get.isRegistered<AccountClientInfo>()) {
                   client = AccountClientInfo.to.clinets.firstWhereOrNull(
                     (element) => element.id == newLog.clientId,
                   );
@@ -136,26 +148,33 @@ class FollowController extends GetxController {
                     LAST_NOTIFICATION_KEY, newLog.id as int);
 
                 // Explicitly send to background service to ensure it works when app is closed
-                
               }
 
               // Update logs list
-              await AccountClientInfo.to.fetchClients();
+              if (Get.isRegistered<AccountClientInfo>()) {
+                await AccountClientInfo.to.fetchClients();
+              }
               await updateLogs();
             },
           )
           .subscribe((status, error) {
         if (error != null) {
           connectionStatus.value = 'خطأ في الاتصال';
-          print('🔴 Realtime error: $error');
+          if (kDebugMode) {
+            print('🔴 Realtime error: $error');
+          }
         } else {
           connectionStatus.value = 'متصل';
-          print('🔴 Realtime status: $status');
+          if (kDebugMode) {
+            print('🔴 Realtime status: $status');
+          }
         }
       });
     } catch (e) {
       connectionStatus.value = 'فشل الاتصال';
-      print('🔴 Error setting up realtime: $e');
+      if (kDebugMode) {
+        print('🔴 Error setting up realtime: $e');
+      }
     }
   }
 
@@ -172,12 +191,23 @@ class FollowController extends GetxController {
 
     try {
       final l = <Log>[];
-      final dataAdd =
-          await BackendServices.instance.logRepository.getLogsByMatchMapQuery({
-        Log.accountIdColumnName: AccountClientInfo.to.currentAccount.id,
-      }, 200);
 
-      l.addAll(dataAdd);
+      // Skip if AccountClientInfo not registered
+      if (!Get.isRegistered<AccountClientInfo>()) {
+        if (kDebugMode) {
+          print('⚠️ AccountClientInfo not registered, fetching all logs');
+        }
+        // Fetch all logs without account filter
+        final dataAdd = await BackendServices.instance.logRepository
+            .getLogsByMatchMapQuery({}, 200);
+        l.addAll(dataAdd);
+      } else {
+        final dataAdd = await BackendServices.instance.logRepository
+            .getLogsByMatchMapQuery({
+          Log.accountIdColumnName: AccountClientInfo.to.currentAccount.id,
+        }, 200);
+        l.addAll(dataAdd);
+      }
 
       logs.value = l
           .map(
@@ -212,10 +242,14 @@ class FollowController extends GetxController {
         }
       }
 
-      print("Real-time update: Found ${logs.length} logs");
+      if (kDebugMode) {
+        print("Real-time update: Found ${logs.length} logs");
+      }
       Loaders.to.followLoading.value = false;
     } catch (e) {
-      print("Real-time update error: $e");
+      if (kDebugMode) {
+        print("Real-time update error: $e");
+      }
       //Get.snackbar("مشكلة اثناء التحميل", e.toString());
       Loaders.to.followLoading.value = false;
     }
@@ -223,6 +257,12 @@ class FollowController extends GetxController {
 
   Future<void> insertDummyLog() async {
     try {
+      // Skip if AccountClientInfo not registered
+      if (!Get.isRegistered<AccountClientInfo>()) {
+        Get.snackbar('خطأ', 'لا يوجد حساب نشط');
+        return;
+      }
+
       final firstClient =
           AccountClientInfo.to.clinets.firstWhereOrNull((c) => c.id != null);
 

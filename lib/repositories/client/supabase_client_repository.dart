@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/models/account.dart';
 import 'package:phone_system_app/models/client.dart';
+import 'package:phone_system_app/models/client_summary.dart';
 import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/phone_number.dart';
 import 'package:phone_system_app/models/system.dart';
@@ -36,6 +37,27 @@ class SupabaseClientRepository extends ClientRepository
       }).toList();
     } catch (e) {
       Get.snackbar("Account Clients fetching error", e.toString());
+    }
+    return data;
+  }
+
+  /// Fetch basic client data only (without nested relations)
+  /// This is much faster than getAllClientsByAccount for initial load
+  Future<List<Client>> getBasicClientsByAccount(Account account) async {
+    List<Client> data = [];
+    try {
+      final values = await _clinet
+          .from(clientTableName)
+          .select(
+              "id, name, total_cash, account_id, expire_date, discount_percentage, discount_end_date, created_at")
+          .eq("account_id", account.id as int)
+          .order('name', ascending: true);
+
+      data = values.map((e) {
+        return Client.fromJson(e);
+      }).toList();
+    } catch (e) {
+      Get.snackbar("خطأ في تحميل العملاء", e.toString());
     }
     return data;
   }
@@ -309,8 +331,9 @@ class SupabaseClientRepository extends ClientRepository
         .order('name')
         .asyncMap((list) async {
           final now = DateTime.now();
-          final shouldFetchFull = now.difference(_lastFullFetch) > _fullFetchThrottle;
-          
+          final shouldFetchFull =
+              now.difference(_lastFullFetch) > _fullFetchThrottle;
+
           if (shouldFetchFull) {
             // Only fetch full data if throttle period has passed
             try {
@@ -331,6 +354,16 @@ class SupabaseClientRepository extends ClientRepository
             return list.map((e) => Client.fromJson(e)).toList();
           }
         });
+  }
+
+  /// Realtime stream with basic data only (much more efficient)
+  Stream<List<Client>> getBasicRealtimeClients(Account account) {
+    return _clinet
+        .from(clientTableName)
+        .stream(primaryKey: ['id'])
+        .eq('account_id', account.id)
+        .order('name')
+        .map((list) => list.map((e) => Client.fromJson(e)).toList());
   }
 
   Future<List<Map<String, dynamic>>> getAllClientsData() async {
@@ -389,6 +422,24 @@ class SupabaseClientRepository extends ClientRepository
       await _clinet.from(clientTableName).update(data).eq('id', clientId);
     } catch (e) {
       throw Exception('Failed to update client: $e');
+    }
+  }
+
+  /// Get optimized client summaries using database function
+  /// This is MUCH faster than getAllClientsByAccount for list views
+  Future<List<ClientSummary>> getClientsSummary({int? accountId}) async {
+    try {
+      final response = await _clinet.rpc(
+        'get_clients_summary',
+        params: {'p_account_id': accountId},
+      );
+
+      return (response as List)
+          .map((e) => ClientSummary.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      Get.snackbar("خطأ في تحميل العملاء", e.toString());
+      return [];
     }
   }
 }

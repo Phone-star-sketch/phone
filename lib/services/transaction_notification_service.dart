@@ -1,19 +1,16 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' show Platform;
 import 'dart:typed_data';
-import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/client.dart';
-import 'package:phone_system_app/models/user.dart';
 import 'package:intl/intl.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:phone_system_app/views/pages/follow.dart';
 import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TransactionNotificationService {
@@ -49,15 +46,29 @@ class TransactionNotificationService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
+    // Skip initialization on web
+    if (kIsWeb) {
+      if (kDebugMode) {
+        print('🔔 Notification service disabled on web');
+      }
+      _isInitialized = true;
+      if (!_initCompleter.isCompleted) {
+        _initCompleter.complete(false);
+      }
+      return;
+    }
+
     try {
-      print('🔔 Starting notification service initialization');
+      if (kDebugMode) {
+        print('🔔 Starting notification service initialization');
+      }
 
       // Initialize timezone data first
       tz.initializeTimeZones();
 
       // Request permissions
       final permissionStatus = await _requestPermissions();
-      if (!permissionStatus) {
+      if (!permissionStatus && kDebugMode) {
         print('🔔 Warning: Notification permissions not granted');
       }
 
@@ -87,9 +98,13 @@ class TransactionNotificationService {
         _initCompleter.complete(true);
       }
 
-      print('🔔 Notification service initialized successfully');
+      if (kDebugMode) {
+        print('🔔 Notification service initialized successfully');
+      }
     } catch (e) {
-      print('🔔 Error initializing notification service: $e');
+      if (kDebugMode) {
+        print('🔔 Error initializing notification service: $e');
+      }
       _isInitialized = false;
 
       if (!_initCompleter.isCompleted) {
@@ -97,7 +112,7 @@ class TransactionNotificationService {
       }
 
       // Retry initialization after a delay
-      Future.delayed(Duration(seconds: 5), () => initialize());
+      Future.delayed(const Duration(seconds: 5), () => initialize());
     }
   }
 
@@ -120,7 +135,7 @@ class TransactionNotificationService {
               if (payload.newRecord != null) {
                 try {
                   // Create log from data
-                  final logData = Map<String, dynamic>.from(payload.newRecord!);
+                  final logData = Map<String, dynamic>.from(payload.newRecord);
                   final Log log = Log.fromJson(logData);
 
                   // Get client data if available
@@ -133,12 +148,11 @@ class TransactionNotificationService {
                           .eq('id', log.clientId as int)
                           .single();
 
-                      if (response != null) {
-                        client =
-                            Client.fromJson(response as Map<String, dynamic>);
-                      }
+                      client = Client.fromJson(response);
                     } catch (e) {
-                      print('🔔 Error fetching client data: $e');
+                      if (kDebugMode) {
+                        print('🔔 Error fetching client data: $e');
+                      }
                     }
                   }
 
@@ -149,20 +163,24 @@ class TransactionNotificationService {
                   // Show notification
                   await showTransactionNotification(logWithUser);
                 } catch (e) {
-                  print('🔔 Error processing notification: $e');
+                  if (kDebugMode) {
+                    print('🔔 Error processing notification: $e');
+                  }
                 }
               }
             },
           )
           .subscribe((status, error) {
-        if (error != null) {
+        if (error != null && kDebugMode) {
           print('🔔 Realtime subscription error: $error');
-        } else {
+        } else if (kDebugMode) {
           print('🔔 Realtime subscription status: $status');
         }
       });
     } catch (e) {
-      print('🔔 Error setting up realtime subscription: $e');
+      if (kDebugMode) {
+        print('🔔 Error setting up realtime subscription: $e');
+      }
     }
   }
 
@@ -182,7 +200,7 @@ class TransactionNotificationService {
           final result = await Permission.notification.request();
           isGranted = result.isGranted;
 
-          if (result.isPermanentlyDenied) {
+          if (result.isPermanentlyDenied && kDebugMode) {
             // Suggest opening app settings
             print(
                 '🔔 Notification permission permanently denied. Please enable in settings.');
@@ -195,7 +213,9 @@ class TransactionNotificationService {
         isGranted = true;
       }
     } catch (e) {
-      print('🔔 Error requesting permissions: $e');
+      if (kDebugMode) {
+        print('🔔 Error requesting permissions: $e');
+      }
       isGranted = false;
     }
 
@@ -237,7 +257,9 @@ class TransactionNotificationService {
     if (androidPlugin != null) {
       await androidPlugin.createNotificationChannel(mainChannel);
       await androidPlugin.createNotificationChannel(assistantChannel);
-      print('🔔 Android notification channels created');
+      if (kDebugMode) {
+        print('🔔 Android notification channels created');
+      }
     }
   }
 
@@ -255,7 +277,9 @@ class TransactionNotificationService {
       onDidReceiveLocalNotification:
           (int id, String? title, String? body, String? payload) async {
         // For older iOS versions (deprecated but needed for backward compatibility)
-        print('🔔 Received local notification: $id, $title, $body, $payload');
+        if (kDebugMode) {
+          print('🔔 Received local notification: $id, $title, $body, $payload');
+        }
       },
     );
 
@@ -267,10 +291,10 @@ class TransactionNotificationService {
   }
 
   void _checkPendingClientId() {
-    if (pendingClientId != null) {
+    if (pendingClientId != null && kDebugMode) {
       print('🔔 Found pending client ID: $pendingClientId');
       // Navigate to follow screen with the client ID
-      Future.delayed(Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 500), () {
         Get.toNamed('/follow', arguments: {'clientId': pendingClientId});
         pendingClientId = null;
       });
@@ -279,7 +303,9 @@ class TransactionNotificationService {
 
   Future<void> _handleNotificationResponse(
       NotificationResponse response) async {
-    print('🔔 Notification tapped: ${response.payload}');
+    if (kDebugMode) {
+      print('🔔 Notification tapped: ${response.payload}');
+    }
     if (response.payload != null) {
       final clientId = int.tryParse(response.payload!);
       if (clientId != null) {
@@ -289,12 +315,19 @@ class TransactionNotificationService {
   }
 
   Future<void> showTransactionNotification(LogWidthUser logWithUser) async {
+    // Skip on web
+    if (kIsWeb) return;
+
     // Ensure initialized or wait for initialization
     if (!_isInitialized) {
-      print('🔔 Waiting for notification service to initialize...');
+      if (kDebugMode) {
+        print('🔔 Waiting for notification service to initialize...');
+      }
       bool initialized = await isInitialized;
       if (!initialized) {
-        print('🔔 Failed to initialize notification service');
+        if (kDebugMode) {
+          print('🔔 Failed to initialize notification service');
+        }
         return;
       }
     }
@@ -304,7 +337,9 @@ class TransactionNotificationService {
 
     // Only show notifications for assistant transactions (createdBy = 2)
     if (log.createdBy != 2) {
-      print('🔔 Skipping notification - not from assistant');
+      if (kDebugMode) {
+        print('🔔 Skipping notification - not from assistant');
+      }
       return;
     }
 
@@ -316,7 +351,9 @@ class TransactionNotificationService {
       try {
         await AppBadgePlus.updateBadge(_badgeCount);
       } catch (e) {
-        print('🔔 Badge update error: $e');
+        if (kDebugMode) {
+          print('🔔 Badge update error: $e');
+        }
       }
 
       // Prepare notification content
@@ -349,9 +386,14 @@ class TransactionNotificationService {
         payload: client?.id.toString(),
       );
 
-      print('🔔 Notification sent successfully for transaction ID: ${log.id}');
+      if (kDebugMode) {
+        print(
+            '🔔 Notification sent successfully for transaction ID: ${log.id}');
+      }
     } catch (e) {
-      print('🔔 Error showing notification: $e');
+      if (kDebugMode) {
+        print('🔔 Error showing notification: $e');
+      }
       // Retry with simpler notification as fallback
       await _retryWithSimpleNotification(log, client);
     }
@@ -360,7 +402,7 @@ class TransactionNotificationService {
   Future<NotificationDetails> _buildNotificationDetails(
     TransactionType transactionType,
     String userName,
-    String transactionType_str,
+    String transactionTypeStr,
     String clientName,
     String amount,
     String date,
@@ -379,7 +421,7 @@ class TransactionNotificationService {
       largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
       styleInformation: BigTextStyleInformation(
         'تمت معاملة بواسطة: $userName\n'
-        'نوع المعاملة: $transactionType_str\n'
+        'نوع المعاملة: $transactionTypeStr\n'
         'العميل: $clientName\n'
         'المبلغ: $amount\n'
         'التاريخ: $date',
@@ -418,7 +460,7 @@ class TransactionNotificationService {
   Future<void> _retryWithSimpleNotification(Log log, Client? client) async {
     try {
       // Simple notification as fallback
-      final simpleAndroidDetails = AndroidNotificationDetails(
+      const simpleAndroidDetails = AndroidNotificationDetails(
         MAIN_CHANNEL_ID,
         'Transactions',
         channelDescription: 'Notifications for all transactions',
@@ -426,9 +468,9 @@ class TransactionNotificationService {
         priority: Priority.high,
       );
 
-      final simpleDarwinDetails = DarwinNotificationDetails();
+      const simpleDarwinDetails = DarwinNotificationDetails();
 
-      final simpleDetails = NotificationDetails(
+      const simpleDetails = NotificationDetails(
         android: simpleAndroidDetails,
         iOS: simpleDarwinDetails,
       );
@@ -443,9 +485,13 @@ class TransactionNotificationService {
         payload: client?.id.toString(),
       );
 
-      print('🔔 Simple fallback notification sent successfully');
+      if (kDebugMode) {
+        print('🔔 Simple fallback notification sent successfully');
+      }
     } catch (e) {
-      print('🔔 Even simple notification failed: $e');
+      if (kDebugMode) {
+        print('🔔 Even simple notification failed: $e');
+      }
     }
   }
 
@@ -464,25 +510,33 @@ class TransactionNotificationService {
   }
 
   Future<void> clearBadge() async {
+    if (kIsWeb) return;
+
     _badgeCount = 0;
     try {
       await AppBadgePlus.updateBadge(0);
     } catch (e) {
-      print('🔔 Error clearing badge: $e');
+      if (kDebugMode) {
+        print('🔔 Error clearing badge: $e');
+      }
     }
   }
 
   Future<void> cancelNotification(int id) async {
+    if (kIsWeb) return;
     await flutterLocalNotificationsPlugin.cancel(id);
   }
 
   Future<void> cancelAllNotifications() async {
+    if (kIsWeb) return;
     await flutterLocalNotificationsPlugin.cancelAll();
     await clearBadge();
   }
 
   // Test notification method for debugging
   Future<void> sendTestNotification() async {
+    if (kIsWeb) return;
+
     if (!_isInitialized) {
       await initialize();
     }
@@ -500,7 +554,7 @@ class TransactionNotificationService {
         vibrationPattern: _vibrationPattern,
       );
 
-      final DarwinNotificationDetails iOSDetails = DarwinNotificationDetails(
+      const DarwinNotificationDetails iOSDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
@@ -519,9 +573,13 @@ class TransactionNotificationService {
         platformDetails,
       );
 
-      print('🔔 Test notification sent successfully');
+      if (kDebugMode) {
+        print('🔔 Test notification sent successfully');
+      }
     } catch (e) {
-      print('🔔 Test notification failed: $e');
+      if (kDebugMode) {
+        print('🔔 Test notification failed: $e');
+      }
     }
   }
 }
@@ -536,5 +594,7 @@ void notificationTapBackground(NotificationResponse response) {
       TransactionNotificationService.pendingClientId = clientId;
     }
   }
-  print('Notification tapped in background: ${response.payload}');
+  if (kDebugMode) {
+    print('Notification tapped in background: ${response.payload}');
+  }
 }

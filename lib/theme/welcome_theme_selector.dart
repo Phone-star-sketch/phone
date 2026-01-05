@@ -42,11 +42,11 @@ class WelcomeThemeController extends GetxController {
   Widget getCurrentWelcomePage() {
     switch (_theme.value) {
       case WelcomeTheme.ramadan:
-        return ramadan.WelcomePage(); // Ramadan theme (entry_page.dart)
+        return const ramadan.WelcomePage(); // Ramadan theme (entry_page.dart)
       case WelcomeTheme.eid:
-        return eid.WelcomePage(); // Eid theme (Eid_page.dart)
+        return const eid.WelcomePage(); // Eid theme (Eid_page.dart)
       case WelcomeTheme.general:
-        return general.WelcomePage(); // General theme (general_ui.dart)
+        return const general.WelcomePage(); // General theme (general_ui.dart)
     }
   }
 }

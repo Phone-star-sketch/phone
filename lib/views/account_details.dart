@@ -245,238 +245,259 @@ class AccountDetails extends StatelessWidget {
     // Move controller initialization to the beginning of build method
     final accountDetailsController = Get.put(AccountDetailsController());
 
-    return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA), // Modern light background
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF1a237e), // Dark blue
-          elevation: 0,
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF1a237e), // Dark blue
-                  Color(0xFF0d47a1), // Slightly lighter blue
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          // Cleanup controllers when leaving the page
+          if (Get.isRegistered<AccountClientInfo>()) {
+            Get.delete<AccountClientInfo>();
+          }
+          if (Get.isRegistered<ProfitController>()) {
+            Get.delete<ProfitController>();
+          }
+          if (Get.isRegistered<AccountDetailsController>()) {
+            Get.delete<AccountDetailsController>();
+          }
+        }
+      },
+      child: Scaffold(
+          backgroundColor: const Color(0xFFF8F9FA), // Modern light background
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF1a237e), // Dark blue
+            elevation: 0,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFF1a237e), // Dark blue
+                    Color(0xFF0d47a1), // Slightly lighter blue
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
-          ),
-          leading: (MediaQuery.of(context).size.width < 1200)
-              ? Builder(
-                  builder: (BuildContext context) {
-                    return IconButton(
-                      icon: const Icon(Icons.menu,
-                          color: Colors.white), // Updated color
-                      onPressed: () {
-                        Scaffold.of(context).openDrawer();
-                      },
+            leading: (MediaQuery.of(context).size.width < 1200)
+                ? Builder(
+                    builder: (BuildContext context) {
+                      return IconButton(
+                        icon: const Icon(Icons.menu,
+                            color: Colors.white), // Updated color
+                        onPressed: () {
+                          Scaffold.of(context).openDrawer();
+                        },
+                      );
+                    },
+                  )
+                : const SizedBox(),
+            actions: [
+              Text(
+                "${AccountClientInfo.to.currentAccount.day}",
+                style: const TextStyle(
+                    color: Colors.white, // Updated color
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22),
+              ),
+              const SizedBox(width: 5),
+              IconButton(
+                  tooltip: "يوم التحصيل الشهري",
+                  onPressed: () async {
+                    final startDate =
+                        DateTime.now().subtract(const Duration(days: 30));
+                    final endDate =
+                        DateTime.now().add(const Duration(days: 30));
+                    final data = await showDatePicker(
+                      context: context,
+                      firstDate: startDate,
+                      lastDate: endDate,
                     );
+
+                    if (data != null) {
+                      final currentAccount =
+                          AccountClientInfo.to.currentAccount;
+                      currentAccount.day = data.day;
+                      await BackendServices.instance.accountRepository
+                          .update(currentAccount);
+                    }
                   },
-                )
-              : const SizedBox(),
-          actions: [
-            Text(
-              "${AccountClientInfo.to.currentAccount.day}",
-              style: const TextStyle(
-                  color: Colors.white, // Updated color
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22),
-            ),
-            const SizedBox(width: 5),
-            IconButton(
-                tooltip: "يوم التحصيل الشهري",
-                onPressed: () async {
-                  final startDate =
-                      DateTime.now().subtract(const Duration(days: 30));
-                  final endDate = DateTime.now().add(const Duration(days: 30));
-                  final data = await showDatePicker(
-                    context: context,
-                    firstDate: startDate,
-                    lastDate: endDate,
+                  icon: const Icon(Icons.calendar_today,
+                      color: Colors.white)), // Updated color
+              Builder(
+                builder: (BuildContext context) {
+                  return IconButton(
+                    icon: const Icon(Icons.keyboard_arrow_left,
+                        color: Colors.white), // Updated color
+                    onPressed: () {
+                      Get.delete<AccountDetailsController>(force: true);
+                      Get.delete<AccountClientInfo>(force: true);
+                      Get.delete<ProfitController>(force: true);
+                      Get.delete<FollowController>(force: true);
+
+                      Get.back();
+                    },
                   );
-
-                  if (data != null) {
-                    final currentAccount = AccountClientInfo.to.currentAccount;
-                    currentAccount.day = data.day;
-                    await BackendServices.instance.accountRepository
-                        .update(currentAccount);
-                  }
                 },
-                icon: const Icon(Icons.calendar_today,
-                    color: Colors.white)), // Updated color
-            Builder(
-              builder: (BuildContext context) {
-                return IconButton(
-                  icon: const Icon(Icons.keyboard_arrow_left,
-                      color: Colors.white), // Updated color
-                  onPressed: () {
-                    Get.delete<AccountDetailsController>(force: true);
-                    Get.delete<AccountClientInfo>(force: true);
-                    Get.delete<ProfitController>(force: true);
-                    Get.delete<FollowController>(force: true);
+              ),
+            ],
+          ),
+          drawer: (isMobile)
+              ? Stack(
+                  children: [
+                    Positioned.fill(
+                        child: Container(
+                      color: Colors.black.withOpacity(0.5),
+                    )),
+                    Positioned.fill(
+                      child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              IconButton(
+                                  onPressed: () => Get.back(),
+                                  icon: const Icon(Icons.arrow_back)),
+                              Expanded(
+                                  child: SideBar(
+                                pages: _pages
+                                    .where((page) =>
+                                        (page.roles
+                                            .map((role) => role.index)
+                                            .contains(SupabaseAuthentication
+                                                .myUser!.role)) ||
+                                        (page.title == "انشاء مستخدم" &&
+                                            SupabaseAuthentication
+                                                    .myUser!.role ==
+                                                UserRoles.admin.index))
+                                    .toList(),
+                              )),
+                            ],
+                          )),
+                    ),
+                  ],
+                )
+              : null,
+          bottomNavigationBar: isMobile
+              ? Obx(() {
+                  final currentIndex = pageController.selectedIndex.value;
 
-                    Get.back();
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-        drawer: (isMobile)
-            ? Stack(
-                children: [
-                  Positioned.fill(
-                      child: Container(
-                    color: Colors.black.withOpacity(0.5),
-                  )),
-                  Positioned.fill(
-                    child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            IconButton(
-                                onPressed: () => Get.back(),
-                                icon: const Icon(Icons.arrow_back)),
-                            Expanded(
-                                child: SideBar(
-                              pages: _pages
-                                  .where((page) =>
-                                      (page.roles
-                                          .map((role) => role.index)
-                                          .contains(SupabaseAuthentication
-                                              .myUser!.role)) ||
-                                      (page.title == "انشاء مستخدم" &&
-                                          SupabaseAuthentication.myUser!.role ==
-                                              UserRoles.admin.index))
-                                  .toList(),
-                            )),
-                          ],
-                        )),
-                  ),
-                ],
-              )
-            : null,
-        bottomNavigationBar: isMobile
-            ? Obx(() {
-                final currentIndex = pageController.selectedIndex.value;
-
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF1a237e), // Dark blue
-                        Color(0xFF0d47a1), // Slightly lighter blue
+                  return Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFF1a237e), // Dark blue
+                          Color(0xFF0d47a1), // Slightly lighter blue
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 12,
+                          offset: const Offset(0, -4),
+                        ),
                       ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 12,
-                        offset: const Offset(0, -4),
-                      ),
-                    ],
-                  ),
-                  child: CurvedNavigationBar(
-                    key: _bottomNavigationKey,
-                    index: currentIndex,
-                    height: 65.0,
-                    items: filteredPages
-                        .map((page) => Container(
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(
-                                (page.icon as Icon).icon!,
-                                size: 28,
-                                color: Colors.white,
-                              ),
-                            ))
-                        .toList(),
-                    color: const Color(0xFF1a237e), // Dark blue
-                    buttonBackgroundColor:
-                        const Color(0xFF2196F3), // Accent blue for selected
-                    backgroundColor: Colors.transparent,
-                    animationCurve: Curves.easeInOutCubic,
-                    animationDuration: const Duration(milliseconds: 300),
-                    onTap: (index) =>
-                        pageController.selectedIndex.value = index,
-                    letIndexChange: (_) => true,
-                  ),
-                );
-              })
-            : null,
-        body: isMobile
-            ? Obx(() {
-                final accountClientController = Get.find<AccountClientInfo>();
-                final currentPage = _pages[pageController.selectedIndex.value];
-
-                if (currentPage.title == "العروض المطلوبة") {
-                  // Instead of immediately navigating, return the ExpiredSystemsPage directly
-                  final expiredSystemsClients = accountClientController
-                      .clinets.value
-                      .where((client) => client.numbers!.any(
-                          (number) => number.getExpiredSystems().isNotEmpty))
-                      .toList();
-                  return ExpiredSystemsPage(clients: expiredSystemsClients);
-                }
-
-                return Container(
-                  color: colors.background,
-                  child: content[pageController.selectedIndex.value],
-                );
-              })
-            : Row(
-                children: [
-                  Container(
-                    color: colors.background,
-                    width: 250,
-                    child: SideBar(
-                      pages: _pages
-                          .where((page) =>
-                              (page.roles.map((role) => role.index).contains(
-                                  SupabaseAuthentication.myUser!.role)) ||
-                              (page.title == "انشاء مستخدم" &&
-                                  SupabaseAuthentication.myUser!.role ==
-                                      UserRoles.admin.index))
+                    child: CurvedNavigationBar(
+                      key: _bottomNavigationKey,
+                      index: currentIndex,
+                      height: 65.0,
+                      items: filteredPages
+                          .map((page) => Container(
+                                padding: const EdgeInsets.all(8),
+                                child: Icon(
+                                  (page.icon as Icon).icon!,
+                                  size: 28,
+                                  color: Colors.white,
+                                ),
+                              ))
                           .toList(),
+                      color: const Color(0xFF1a237e), // Dark blue
+                      buttonBackgroundColor:
+                          const Color(0xFF2196F3), // Accent blue for selected
+                      backgroundColor: Colors.transparent,
+                      animationCurve: Curves.easeInOutCubic,
+                      animationDuration: const Duration(milliseconds: 300),
+                      onTap: (index) =>
+                          pageController.selectedIndex.value = index,
+                      letIndexChange: (_) => true,
                     ),
-                  ),
-                  Obx(
-                    () => Expanded(
-                        child: Card(
-                      margin: const EdgeInsets.all(0),
-                      elevation: 0,
-                      child: Container(
-                          decoration: BoxDecoration(),
-                          padding: const EdgeInsets.all(10),
-                          child: () {
-                            print(_pages[pageController.selectedIndex.value]
-                                .title);
-                            final accountClientController =
-                                Get.find<AccountClientInfo>();
-                            if (_pages[pageController.selectedIndex.value]
-                                    .title ==
-                                "العروض المطلوبة") {
-                              print("GETTING THE VERY PAGE");
-                              final expiredSystemsClients =
-                                  accountClientController.clinets.value
-                                      .where((client) => client.numbers!.any(
-                                          (number) => number
-                                              .getExpiredSystems()
-                                              .isNotEmpty))
-                                      .toList();
-                              // Get.to(() => ExpiredSystemsPage(clients: expiredSystemsClients));
-                              return ExpiredSystemsPage(
-                                  clients: expiredSystemsClients);
-                            } else {
-                              return content[
-                                  pageController.selectedIndex.value];
-                            }
-                          }()),
-                    )),
-                  ),
-                ],
-              ));
+                  );
+                })
+              : null,
+          body: isMobile
+              ? Obx(() {
+                  final accountClientController = Get.find<AccountClientInfo>();
+                  final currentPage =
+                      _pages[pageController.selectedIndex.value];
+
+                  if (currentPage.title == "العروض المطلوبة") {
+                    // Instead of immediately navigating, return the ExpiredSystemsPage directly
+                    final expiredSystemsClients = accountClientController
+                        .clinets.value
+                        .where((client) => client.numbers!.any(
+                            (number) => number.getExpiredSystems().isNotEmpty))
+                        .toList();
+                    return ExpiredSystemsPage(clients: expiredSystemsClients);
+                  }
+
+                  return Container(
+                    color: colors.background,
+                    child: content[pageController.selectedIndex.value],
+                  );
+                })
+              : Row(
+                  children: [
+                    Container(
+                      color: colors.background,
+                      width: 250,
+                      child: SideBar(
+                        pages: _pages
+                            .where((page) =>
+                                (page.roles.map((role) => role.index).contains(
+                                    SupabaseAuthentication.myUser!.role)) ||
+                                (page.title == "انشاء مستخدم" &&
+                                    SupabaseAuthentication.myUser!.role ==
+                                        UserRoles.admin.index))
+                            .toList(),
+                      ),
+                    ),
+                    Obx(
+                      () => Expanded(
+                          child: Card(
+                        margin: const EdgeInsets.all(0),
+                        elevation: 0,
+                        child: Container(
+                            decoration: BoxDecoration(),
+                            padding: const EdgeInsets.all(10),
+                            child: () {
+                              print(_pages[pageController.selectedIndex.value]
+                                  .title);
+                              final accountClientController =
+                                  Get.find<AccountClientInfo>();
+                              if (_pages[pageController.selectedIndex.value]
+                                      .title ==
+                                  "العروض المطلوبة") {
+                                print("GETTING THE VERY PAGE");
+                                final expiredSystemsClients =
+                                    accountClientController.clinets.value
+                                        .where((client) => client.numbers!.any(
+                                            (number) => number
+                                                .getExpiredSystems()
+                                                .isNotEmpty))
+                                        .toList();
+                                // Get.to(() => ExpiredSystemsPage(clients: expiredSystemsClients));
+                                return ExpiredSystemsPage(
+                                    clients: expiredSystemsClients);
+                              } else {
+                                return content[
+                                    pageController.selectedIndex.value];
+                              }
+                            }()),
+                      )),
+                    ),
+                  ],
+                )),
+    ); // Close PopScope
   }
 }
 
@@ -802,9 +823,9 @@ class SideBar extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
+    ); // Close PopScope
+  } // Close build method
+} // Close AccountDetails class
 
 // Add this extension method at the end of the file
 extension HoverExtensions on Widget {

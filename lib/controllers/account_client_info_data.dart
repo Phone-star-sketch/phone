@@ -1,19 +1,18 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_profit_controller.dart';
-import 'package:phone_system_app/controllers/account_view_controller.dart';
 import 'package:phone_system_app/controllers/money_display_loading.dart';
 import 'package:phone_system_app/models/account.dart';
 import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/models/log.dart';
+import 'package:phone_system_app/models/phone_number.dart';
 import 'package:phone_system_app/repositories/client/supabase_client_repository.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
-import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/views/pages/profit_management_page.dart';
-import 'package:phone_system_app/utils/arabic_normalizer.dart';
 import 'package:phone_system_app/utils/arabic_utils.dart';
 
 class AccountClientInfo extends GetxController {
@@ -24,16 +23,98 @@ class AccountClientInfo extends GetxController {
 
   AccountClientInfo({required this.currentAccount});
 
+  // All clients data (full list)
   RxList<Client> clinets = <Client>[].obs;
   static RxList<Map<String, dynamic>> allClients = <Map<String, dynamic>>[].obs;
-  List<Client> _queryClinets = <Client>[].obs;
+
   RxBool isLoading = false.obs;
   RxBool enableMulipleClientPrint = false.obs;
   RxList<Client> clientPrintAdded = <Client>[].obs;
   static AccountClientInfo get to => Get.find<AccountClientInfo>();
 
-  // Payments
+  // ============ PAGINATION ============
+  // Number of items to show initially and load more
+  static const int _pageSize = 30;
 
+  // Current number of items being displayed
+  RxInt _displayCount = 30.obs;
+
+  // Loading state for pagination
+  RxBool isLoadingMore = false.obs;
+
+  // Get displayed clients (paginated)
+  List<Client> get displayedClients {
+    final allData = _getFilteredClients();
+    final count = _displayCount.value.clamp(0, allData.length);
+    return allData.take(count).toList();
+  }
+
+  // Check if there's more data to load
+  bool get hasMoreData {
+    final allData = _getFilteredClients();
+    return _displayCount.value < allData.length;
+  }
+
+  // Get total count
+  int get totalClientsCount => _getFilteredClients().length;
+
+  // Get filtered clients based on search query
+  List<Client> _getFilteredClients() {
+    if (query.value.isEmpty) {
+      return clinets;
+    }
+
+    final normalizedQuery = normalizeArabic(query.value);
+    return clinets.where((client) {
+      // Search in client name
+      if (normalizeArabic(client.name ?? '').contains(normalizedQuery)) {
+        return true;
+      }
+      // Search in phone numbers
+      if (client.numbers != null) {
+        for (var number in client.numbers!) {
+          if (number.phoneNumber?.contains(normalizedQuery) ?? false) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }).toList();
+  }
+
+  // Load more clients
+  void loadMore() {
+    if (isLoadingMore.value || !hasMoreData) return;
+
+    isLoadingMore.value = true;
+
+    // Simulate small delay for smooth UX
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _displayCount.value += _pageSize;
+      isLoadingMore.value = false;
+      update(['client-list']);
+
+      if (kDebugMode) {
+        print(
+            '📜 Loaded more. Now showing: ${displayedClients.length}/${totalClientsCount}');
+      }
+    });
+  }
+
+  // Reset pagination (call when data changes)
+  void resetPagination() {
+    _displayCount.value = _pageSize;
+    if (kDebugMode) {
+      print('📜 Pagination reset. Showing: $_pageSize/${clinets.length}');
+    }
+  }
+  // ============ END PAGINATION ============
+
+  // Full data cache (lazy-loaded on demand)
+  final Map<int, Client> _fullDataCache = {};
+  static const int _maxCacheSize = 50;
+
+  // Payments
   late Rx<Client> currentPayingClient;
   RxInt countPaid = 0.obs;
   RxInt countNotPaid = 0.obs;
@@ -42,6 +123,9 @@ class AccountClientInfo extends GetxController {
   Timer? _realtimeDebounce;
   List<Client>? _pendingUpdate;
   bool _isProcessingBulkOperation = false;
+  DateTime? _lastRealtimeUpdate;
+  static const Duration _realtimeThrottleDuration = Duration(seconds: 10);
+  static const Duration _realtimeBatchWindow = Duration(seconds: 2);
 
   @override
   void onInit() {
@@ -49,35 +133,91 @@ class AccountClientInfo extends GetxController {
     setupRealtimeSubscription();
   }
 
+  /// Fetch full client data on demand (with caching)
+  Future<Client> getFullClientData(int clientId) async {
+    if (_fullDataCache.containsKey(clientId)) {
+      return _fullDataCache[clientId]!;
+    }
+
+    final fullClient =
+        await BackendServices.instance.clientRepository.read(clientId);
+    _fullDataCache[clientId] = fullClient;
+
+    if (_fullDataCache.length > _maxCacheSize) {
+      final oldestKey = _fullDataCache.keys.first;
+      _fullDataCache.remove(oldestKey);
+    }
+
+    return fullClient;
+  }
+
+  void clearFullDataCache() {
+    _fullDataCache.clear();
+  }
+
   void setupRealtimeSubscription() {
-    final repository =
-        BackendServices.instance.clientRepository as SupabaseClientRepository;
-    _clientSubscription =
-        repository.getRealtimeClients(currentAccount).listen((updatedClients) {
-      // Skip updates during bulk operations to prevent slowdown
-      if (_isProcessingBulkOperation) {
-        return;
-      }
-      
-      // Debounce rapid updates to prevent UI slowdown
-      _pendingUpdate = updatedClients;
-      _realtimeDebounce?.cancel();
-      _realtimeDebounce = Timer(const Duration(milliseconds: 500), () {
-        if (_pendingUpdate != null && !_isProcessingBulkOperation) {
-          clinets.value = _pendingUpdate!;
-          searchQueryChanged(query.value);
-          _pendingUpdate = null;
+    final repository = BackendServices.instance.clientRepository;
+    if (repository is SupabaseClientRepository) {
+      _clientSubscription = repository
+          .getBasicRealtimeClients(currentAccount)
+          .listen((updatedClients) {
+        if (_isProcessingBulkOperation) return;
+
+        final now = DateTime.now();
+        if (_lastRealtimeUpdate != null &&
+            now.difference(_lastRealtimeUpdate!) < _realtimeThrottleDuration) {
+          return;
         }
+
+        _pendingUpdate = updatedClients;
+        _realtimeDebounce?.cancel();
+        _realtimeDebounce = Timer(_realtimeBatchWindow, () {
+          if (_pendingUpdate != null && !_isProcessingBulkOperation) {
+            clinets.value = _pendingUpdate!;
+            resetPagination();
+            _pendingUpdate = null;
+            _lastRealtimeUpdate = DateTime.now();
+            clearFullDataCache();
+            update(['client-list']);
+          }
+        });
       });
-    });
+    }
   }
 
   @override
   void onReady() async {
     isLoading.value = true;
     if (currentAccount.id != -1) {
-      clinets.value = await BackendServices.instance.clientRepository
-          .getAllClientsByAccount(currentAccount);
+      final repository = BackendServices.instance.clientRepository;
+      if (repository is SupabaseClientRepository) {
+        // Use optimized database function for faster loading
+        final summaries = await repository.getClientsSummary(
+          accountId: currentAccount.id as int,
+        );
+        
+        // Convert summaries to basic Client objects
+        clinets.value = summaries.map((summary) {
+          return Client(
+            id: summary.id,
+            createdAt: summary.createdAt,
+            name: summary.name,
+            totalCash: summary.totalCash ?? 0,
+            expireDate: summary.expireDate,
+            accountId: summary.accountId,
+            // Store phone numbers and system names for display
+            numbers: summary.phoneNumbers?.map((phone) => 
+              PhoneNumber(
+                id: -1,
+                phoneNumber: phone,
+                clientId: summary.id,
+                createdAt: DateTime.now(),
+              )
+            ).toList(),
+          );
+        }).toList();
+      }
+      resetPagination();
     }
 
     isLoading.value = false;
@@ -94,34 +234,22 @@ class AccountClientInfo extends GetxController {
     _clientSubscription.cancel();
     _searchDebounce?.cancel();
     _realtimeDebounce?.cancel();
+    _fullDataCache.clear();
     super.onClose();
   }
 
+  // For backward compatibility
   List<Client> getCurrentClients() {
-    if (query.value.isEmpty) {
-      return clinets;
+    return displayedClients;
+  }
+
+  // For backward compatibility
+  List<Client> searchClients(String searchQuery) {
+    if (searchQuery.isEmpty) {
+      return displayedClients;
     }
-
-    final normalizedQuery = normalizeArabic(query.value);
-    return clinets.where((client) {
-      // Search in client name
-      if (normalizeArabic(client.name ?? '').contains(normalizedQuery)) {
-        return true;
-      }
-
-      // Search in phone numbers
-      if (client.numbers != null) {
-        for (var number in client.numbers!) {
-          if (number.phoneNumber?.contains(normalizedQuery) ?? false) {
-            return true;
-          }
-        }
-      }
-
-      // Search in notes if exists
-
-      return false;
-    }).toList();
+    // When searching, return all matching results (not paginated)
+    return _getFilteredClients();
   }
 
   void updateCurrnetClinets() async {
@@ -130,18 +258,17 @@ class AccountClientInfo extends GetxController {
         .getAllClientsByAccount(currentAccount);
     clinets.clear();
     clinets.addAll(newClinets);
-    _queryClinets.clear();
-    final currentQuery = query.value;
-    query.value = "";
-    query.value = currentQuery;
+    resetPagination();
     searchQueryChanged(searchController.text);
     isLoading.value = false;
   }
 
-  void searchQueryChanged(String query) {
+  void searchQueryChanged(String searchQuery) {
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
-      this.query.value = normalizeArabic(query);
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      query.value = normalizeArabic(searchQuery);
+      resetPagination(); // Reset pagination when search changes
+      update(['client-list']);
     });
   }
 
@@ -179,7 +306,9 @@ class AccountClientInfo extends GetxController {
     final clients = clinets;
     final total = clinets.length;
 
-    print("the total number is ${clinets.length}");
+    if (kDebugMode) {
+      print("the total number is ${clinets.length}");
+    }
 
     int count = 0;
 
@@ -197,17 +326,20 @@ class AccountClientInfo extends GetxController {
       c.totalCash = newBalance;
       BackendServices.instance.clientRepository.update(c);
       count += 1;
-      print("$count of $total");
+      if (kDebugMode) {
+        print("$count of $total");
+      }
     }
   }
 
   Future<void> automaticPaymentAtStartup() async {
     try {
-      // Pause realtime updates during bulk operation
       _isProcessingBulkOperation = true;
       Loaders.to.paymentIsLoading.value = true;
 
-      print(" the length is ${clinets.length}");
+      if (kDebugMode) {
+        print(" the length is ${clinets.length}");
+      }
 
       countPaid.value = 0;
       countNotPaid.value = 0;
@@ -234,38 +366,31 @@ class AccountClientInfo extends GetxController {
 
       countPaid.value = clinets.length - toBePaidClients.length;
 
-      // Process payments without individual fetches
       for (Client client in toBePaidClients) {
         currentPayingClient = client.obs;
         countPaid++;
-        
+
         await BackendServices.instance.clientRepository
             .paySystemsBills(client, month, year);
-        
-        // Update local balance without fetching - calculate new balance
+
         final index = clinets.indexWhere((c) => c.id == client.id);
         if (index != -1) {
           double bills = client.systemsCost();
-          
-          // Apply discount if it exists
+
           if (client.discountPercentage != null &&
               client.discountEndDate != null &&
               client.discountEndDate!.isAfter(DateTime.now())) {
             double discountAmount = bills * (client.discountPercentage! / 100);
             bills -= discountAmount;
           }
-          
-          // Update local balance immediately
+
           clinets[index].totalCash = clinets[index].totalCash - bills;
         }
       }
-      
-      // Single refresh at the end instead of after each payment
+
       clinets.refresh();
-      
-      // Fetch fresh data once after all payments
       await _refreshClientsAfterBulkOperation();
-      
+
       Loaders.to.paymentIsLoading.value = false;
       _isProcessingBulkOperation = false;
     } catch (e) {
@@ -278,15 +403,41 @@ class AccountClientInfo extends GetxController {
       ));
     }
   }
-  
+
   Future<void> _refreshClientsAfterBulkOperation() async {
     try {
-      // Fetch all clients once after bulk operation completes
-      final freshClients = await BackendServices.instance.clientRepository
-          .getAllClientsByAccount(currentAccount);
-      clinets.value = freshClients;
+      final repository = BackendServices.instance.clientRepository;
+      if (repository is SupabaseClientRepository) {
+        // Use optimized function for refresh too
+        final summaries = await repository.getClientsSummary(
+          accountId: currentAccount.id as int,
+        );
+        
+        clinets.value = summaries.map((summary) {
+          return Client(
+            id: summary.id,
+            createdAt: summary.createdAt,
+            name: summary.name,
+            totalCash: summary.totalCash ?? 0,
+            expireDate: summary.expireDate,
+            accountId: summary.accountId,
+            numbers: summary.phoneNumbers?.map((phone) => 
+              PhoneNumber(
+                id: -1,
+                phoneNumber: phone,
+                clientId: summary.id,
+                createdAt: DateTime.now(),
+              )
+            ).toList(),
+          );
+        }).toList();
+        resetPagination();
+        clearFullDataCache();
+      }
     } catch (e) {
-      print('Error refreshing clients after bulk operation: $e');
+      if (kDebugMode) {
+        print('Error refreshing clients after bulk operation: $e');
+      }
     }
   }
 
@@ -300,22 +451,25 @@ class AccountClientInfo extends GetxController {
             onTimeout: () => throw Exception('Request timed out'),
           );
       clinets.value = newClients;
+      resetPagination();
       isLoading.value = false;
     } catch (e) {
-      print('Error fetching clients: $e');
+      if (kDebugMode) {
+        print('Error fetching clients: $e');
+      }
       isLoading.value = false;
-      
+
       String errorMessage = 'حدث خطأ أثناء تحميل بيانات العملاء';
-      if (e.toString().contains('SocketException') || 
+      if (e.toString().contains('SocketException') ||
           e.toString().contains('Connection') ||
           e.toString().contains('timed out')) {
         errorMessage = 'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت.';
       }
-      
+
       Get.snackbar(
         'خطأ',
         errorMessage,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.8),
+        backgroundColor: Get.theme.colorScheme.error.withValues(alpha: 0.8),
         colorText: Colors.white,
         duration: const Duration(seconds: 4),
         snackPosition: SnackPosition.BOTTOM,
@@ -328,20 +482,22 @@ class AccountClientInfo extends GetxController {
       final allClientsData =
           await BackendServices.instance.clientRepository.getAllClientsData();
       allClients.value = allClientsData;
-      print("Fetched ${allClientsData.length} total clients");
+      if (kDebugMode) {
+        print("Fetched ${allClientsData.length} total clients");
+      }
     } catch (e) {
-      print('Error fetching all clients: $e');
+      if (kDebugMode) {
+        print('Error fetching all clients: $e');
+      }
     }
   }
 
   void toggleMultiSelection() {
     enableMulipleClientPrint.value = !enableMulipleClientPrint.value;
-    // Clear selections when disabling
     if (!enableMulipleClientPrint.value) {
       clientPrintAdded.clear();
     }
-    // Force UI update
-    update();
+    update(['toolbar', 'client-list']);
   }
 
   void selectClient(Client client) {

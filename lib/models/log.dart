@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:get/get.dart';
 import 'package:phone_system_app/models/model.dart';
+import 'package:phone_system_app/models/client.dart';
+import 'package:phone_system_app/models/user.dart';
+import 'package:phone_system_app/services/backend/auth.dart';
+import 'package:phone_system_app/controllers/account_client_info_data.dart';
 
 enum TransactionType {
   moneyAdded,
@@ -119,5 +124,27 @@ class Log extends Model {
       Log.phoneIdColumnName: phoneId,
       Log.createdByColumnName: createdBy
     };
+  }
+}
+
+// Helper class for logs with user and client information
+class LogWidthUser {
+  Log log;
+  AppUser? user;
+  Client? client;
+
+  LogWidthUser({required this.log}) {
+    // Import required: package:phone_system_app/services/backend/auth.dart
+    user = SupabaseAuthentication.allUser?.firstWhereOrNull(
+      (element) => element.id == log.createdBy,
+    );
+
+    // Import required: package:phone_system_app/controllers/account_client_info_data.dart
+    // Import required: package:get/get.dart
+    if (log.clientId != null && Get.isRegistered<AccountClientInfo>()) {
+      client = AccountClientInfo.to.clinets.firstWhereOrNull(
+        (element) => element.id == log.clientId,
+      );
+    }
   }
 }

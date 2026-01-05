@@ -709,7 +709,6 @@ class AccountsView extends StatelessWidget {
 
   Widget _buildFloatingActionButton() {
     return Container(
-      
       child: FloatingActionButton(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -717,8 +716,7 @@ class AccountsView extends StatelessWidget {
           // Add refresh functionality here
           controller.refreshAccounts();
         },
-        
-    ),
+      ),
     );
   }
 }
@@ -1032,8 +1030,6 @@ class _ModernAccountCardState extends State<ModernAccountCard>
                             horizontal: 16,
                             vertical: 8,
                           ),
-                          
-                          
                         ),
                       ],
                     ),
@@ -1053,6 +1049,15 @@ class _ModernAccountCardState extends State<ModernAccountCard>
                           // Add haptic feedback
                           HapticFeedback.lightImpact();
 
+                          // Delete old controller if exists
+                          if (Get.isRegistered<AccountClientInfo>()) {
+                            Get.delete<AccountClientInfo>();
+                          }
+                          if (Get.isRegistered<ProfitController>()) {
+                            Get.delete<ProfitController>();
+                          }
+
+                          // Create new controllers with fresh data
                           Get.put(
                             AccountClientInfo(currentAccount: widget.account),
                           );

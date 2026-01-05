@@ -6,6 +6,8 @@ import 'package:phone_system_app/views/pages/login_page.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 class WelcomePage extends StatefulWidget {
+  const WelcomePage({super.key});
+
   @override
   _WelcomePageState createState() => _WelcomePageState();
 }
@@ -42,9 +44,9 @@ class _WelcomePageState extends State<WelcomePage>
     _controller = AnimationController(
         duration: Duration(milliseconds: 1500), vsync: this);
 
-    _backgroundController = AnimationController(
-        duration: Duration(seconds: 20), vsync: this)
-      ..repeat();
+    _backgroundController =
+        AnimationController(duration: Duration(seconds: 20), vsync: this)
+          ..repeat();
 
     _floatingController =
         AnimationController(duration: Duration(seconds: 2), vsync: this)
@@ -178,15 +180,19 @@ class _WelcomePageState extends State<WelcomePage>
                   ),
                 ),
               ),
-              
+
               // Stars in the sky
               ..._stars.map((star) {
-                final progress = (_backgroundController.value + star.offset) % 1.0;
+                final progress =
+                    (_backgroundController.value + star.offset) % 1.0;
                 return Positioned(
                   left: star.x * MediaQuery.of(context).size.width,
-                  top: star.y * MediaQuery.of(context).size.height * 0.7, // Only in upper 70% of screen
+                  top: star.y *
+                      MediaQuery.of(context).size.height *
+                      0.7, // Only in upper 70% of screen
                   child: Opacity(
-                    opacity: star.brightness * (0.3 + 0.7 * math.sin(progress * math.pi)),
+                    opacity: star.brightness *
+                        (0.3 + 0.7 * math.sin(progress * math.pi)),
                     child: Container(
                       width: star.size,
                       height: star.size,
@@ -195,7 +201,7 @@ class _WelcomePageState extends State<WelcomePage>
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.white.withOpacity(0.7),
+                            color: Colors.white.withValues(alpha: 0.7),
                             blurRadius: star.size,
                             spreadRadius: star.size * 0.2,
                           ),
@@ -205,7 +211,7 @@ class _WelcomePageState extends State<WelcomePage>
                   ),
                 );
               }).toList(),
-              
+
               // Green hill at bottom
               Positioned(
                 bottom: 0,
@@ -236,11 +242,11 @@ class _WelcomePageState extends State<WelcomePage>
                   ),
                 ),
               ),
-              
+
               // Animated clouds
               ..._clouds.map((cloud) {
                 return Positioned(
-                  left: ((cloud.x + _cloudsController.value) % 1.2 - 0.1) * 
+                  left: ((cloud.x + _cloudsController.value) % 1.2 - 0.1) *
                       MediaQuery.of(context).size.width,
                   top: cloud.y * MediaQuery.of(context).size.height * 0.5,
                   child: Opacity(
@@ -249,16 +255,18 @@ class _WelcomePageState extends State<WelcomePage>
                   ),
                 );
               }).toList(),
-              
+
               // Grazing sheep
               ..._sheepFlock.map((sheep) {
                 return AnimatedBuilder(
                   animation: sheep.controller,
                   builder: (context, child) {
                     return Positioned(
-                      left: (sheep.x + sheep.moveAnimation.value * 0.1) * 
+                      left: (sheep.x + sheep.moveAnimation.value * 0.1) *
                           MediaQuery.of(context).size.width,
-                      bottom: sheep.y * MediaQuery.of(context).size.height * 0.2 + 20,
+                      bottom:
+                          sheep.y * MediaQuery.of(context).size.height * 0.2 +
+                              20,
                       child: Transform.scale(
                         scale: 0.8 + sheep.hopAnimation.value * 0.2,
                         child: Transform.translate(
@@ -270,7 +278,7 @@ class _WelcomePageState extends State<WelcomePage>
                   },
                 );
               }).toList(),
-                
+
               // Main content
               SafeArea(
                 child: Center(
@@ -290,7 +298,8 @@ class _WelcomePageState extends State<WelcomePage>
                                 children: [
                                   // Crescent moon or Eid symbol
                                   Transform.scale(
-                                    scale: 1.0 + _crescentController.value * 0.05,
+                                    scale:
+                                        1.0 + _crescentController.value * 0.05,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
@@ -302,7 +311,8 @@ class _WelcomePageState extends State<WelcomePage>
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.amber.withOpacity(0.3),
+                                            color: Colors.amber
+                                                .withValues(alpha: 0.3),
                                             blurRadius: 20,
                                             spreadRadius: 5,
                                           ),
@@ -335,12 +345,14 @@ class _WelcomePageState extends State<WelcomePage>
                                     color: Colors.amber.shade300,
                                     shadows: [
                                       Shadow(
-                                        color: Colors.amber.withOpacity(0.8),
+                                        color:
+                                            Colors.amber.withValues(alpha: 0.8),
                                         blurRadius: 15,
                                         offset: Offset(0, 5),
                                       ),
                                       Shadow(
-                                        color: Colors.amber.withOpacity(0.4),
+                                        color:
+                                            Colors.amber.withValues(alpha: 0.4),
                                         blurRadius: 25,
                                         offset: Offset(0, 8),
                                       ),
@@ -353,7 +365,7 @@ class _WelcomePageState extends State<WelcomePage>
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 24,
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.white.withValues(alpha: 0.9),
                                     letterSpacing: 1.2,
                                   ),
                                 ),
@@ -397,7 +409,7 @@ class _WelcomePageState extends State<WelcomePage>
                   ),
                 ),
               ),
-              
+
               // Jumping sheep animation (shown on button press)
               if (_showJumpingSheep)
                 AnimatedBuilder(
@@ -436,8 +448,8 @@ class _WelcomePageState extends State<WelcomePage>
           padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
-            color: Colors.white.withOpacity(0.2),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
+            color: Colors.white.withValues(alpha: 0.2),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black12,
@@ -465,10 +477,10 @@ class _WelcomePageState extends State<WelcomePage>
       child: Text(
         text,
         style: TextStyle(
-          color: Colors.white.withOpacity(0.9),
+          color: Colors.white.withValues(alpha: 0.9),
           fontSize: 16,
           decoration: TextDecoration.underline,
-          decorationColor: Colors.white.withOpacity(0.5),
+          decorationColor: Colors.white.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -488,7 +500,7 @@ class _WelcomePageState extends State<WelcomePage>
               width: 50 * scale,
               height: 50 * scale,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 shape: BoxShape.circle,
               ),
             ),
@@ -500,7 +512,7 @@ class _WelcomePageState extends State<WelcomePage>
               width: 40 * scale,
               height: 40 * scale,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 shape: BoxShape.circle,
               ),
             ),
@@ -512,7 +524,7 @@ class _WelcomePageState extends State<WelcomePage>
               width: 45 * scale,
               height: 45 * scale,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 shape: BoxShape.circle,
               ),
             ),
@@ -547,10 +559,10 @@ class _WelcomePageState extends State<WelcomePage>
               ),
             ),
           ),
-          
+
           // Sheep Wool (fluffy texture)
           ..._generateWoolPuffs(),
-          
+
           // Sheep Head
           Positioned(
             left: 5,
@@ -571,7 +583,7 @@ class _WelcomePageState extends State<WelcomePage>
               ),
             ),
           ),
-          
+
           // Sheep Eyes
           Positioned(
             left: 10,
@@ -585,7 +597,7 @@ class _WelcomePageState extends State<WelcomePage>
               ),
             ),
           ),
-          
+
           // Sheep Legs
           Positioned(
             left: 15,
@@ -609,16 +621,16 @@ class _WelcomePageState extends State<WelcomePage>
       ),
     );
   }
-  
+
   List<Widget> _generateWoolPuffs() {
     List<Widget> puffs = [];
     final random = math.Random(42); // Fixed seed for consistent look
-    
+
     for (int i = 0; i < 12; i++) {
       double left = random.nextDouble() * 45 + 10;
       double top = random.nextDouble() * 20 + 5;
       double size = random.nextDouble() * 10 + 12;
-      
+
       puffs.add(
         Positioned(
           left: left,
@@ -631,7 +643,7 @@ class _WelcomePageState extends State<WelcomePage>
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   blurRadius: 2,
                   spreadRadius: 1,
                 ),
@@ -641,7 +653,7 @@ class _WelcomePageState extends State<WelcomePage>
         ),
       );
     }
-    
+
     return puffs;
   }
 
@@ -673,15 +685,15 @@ class _WelcomePageState extends State<WelcomePage>
                 ),
               ),
             ),
-            
+
             // Jumping Sheep Wool (more fluffy)
-            ..._generateWoolPuffs().map((puff) => 
-              Transform.scale(
-                scale: 1.2,
-                child: puff,
-              )
-            ).toList(),
-            
+            ..._generateWoolPuffs()
+                .map((puff) => Transform.scale(
+                      scale: 1.2,
+                      child: puff,
+                    ))
+                .toList(),
+
             // Jumping Sheep Head
             Positioned(
               left: 15,
@@ -702,7 +714,7 @@ class _WelcomePageState extends State<WelcomePage>
                 ),
               ),
             ),
-            
+
             // Jumping Sheep Eyes
             Positioned(
               left: 20,
@@ -716,7 +728,7 @@ class _WelcomePageState extends State<WelcomePage>
                 ),
               ),
             ),
-            
+
             // Jumping Sheep Legs (tucked up for jumping)
             Positioned(
               left: 30,
@@ -781,7 +793,7 @@ class Sheep {
   late Animation<double> hopAnimation;
   final math.Random _random;
   final TickerProvider _vsync;
-  
+
   Sheep(this._random, this._vsync)
       : x = _random.nextDouble() * 0.7 + 0.1,
         y = _random.nextDouble() * 0.7 {
@@ -789,7 +801,7 @@ class Sheep {
       duration: Duration(seconds: 5 + (_random.nextInt(5))),
       vsync: _vsync,
     );
-    
+
     moveAnimation = Tween<double>(
       begin: -0.1,
       end: 0.1,
@@ -799,7 +811,7 @@ class Sheep {
         curve: Curves.easeInOut,
       ),
     );
-    
+
     hopAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -810,11 +822,11 @@ class Sheep {
       ),
     );
   }
-  
+
   void startMoving() {
     controller.repeat(reverse: true);
   }
-  
+
   void dispose() {
     controller.dispose();
   }
