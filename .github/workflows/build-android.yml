@@ -10,10 +10,16 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Create .env file
+      run: |
+        echo "SUPABASE_URL=https://kmtimujsqhpltmzrycxw.supabase.co" > .env
+        echo "SUPABASE_ANON_KEY=placeholder" >> .env
     
     - name: Setup Java
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
@@ -21,17 +27,21 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.35.3'
         channel: 'stable'
     
-    - name: Install dependencies
+    - name: Get dependencies
       run: flutter pub get
     
+    - name: Analyze code
+      run: flutter analyze --no-fatal-infos
+      continue-on-error: true
+    
     - name: Build APK
-      run: flutter build apk --release
+      run: flutter build apk --release --no-tree-shake-icons
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: app-release
         path: build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 7
