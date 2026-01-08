@@ -1,528 +1,621 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:phone_system_app/views/pages/auth_raper.dart';
 import 'package:phone_system_app/views/pages/login_page.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 class WelcomePage extends StatefulWidget {
+  const WelcomePage({super.key});
+
   @override
-  _WelcomePageState createState() => _WelcomePageState();
+  State<WelcomePage> createState() => _WelcomePageState();
 }
 
 class _WelcomePageState extends State<WelcomePage>
     with TickerProviderStateMixin {
-  late AnimationController _controller;
-  late AnimationController _backgroundController;
-  late AnimationController _floatingController;
-  late AnimationController _supermanController;
-  late AnimationController _morphController;
-  late AnimationController _sparkleController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _scaleAnimation;
-  late Animation<Offset> _supermanSlideAnimation;
-  late Animation<double> _supermanScaleAnimation;
-  late Animation<double> _morphAnimation;
-  late Animation<double> _sparkleAnimation;
+  late AnimationController _mainController;
+  late AnimationController _meshController;
+  late AnimationController _floatController;
+  late AnimationController _pulseController;
+  late AnimationController _orbController;
+
+  late Animation<double> _fadeIn;
+  late Animation<double> _slideUp;
+  late Animation<double> _scaleIn;
+
   final AudioPlayer _audioPlayer = AudioPlayer();
   final List<FloatingOrb> _orbs = [];
-  final List<SparkleParticle> _sparkles = [];
-  bool _showSuperman = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeAnimations();
+    _initAnimations();
     _generateOrbs();
-    _generateSparkles();
   }
 
-  void _initializeAnimations() {
-    _controller = AnimationController(
-        duration: Duration(milliseconds: 2000), vsync: this);
-
-    _backgroundController =
-        AnimationController(duration: Duration(seconds: 15), vsync: this)
-          ..repeat();
-
-    _floatingController =
-        AnimationController(duration: Duration(seconds: 3), vsync: this)
-          ..repeat(reverse: true);
-
-    _supermanController = AnimationController(
-      duration: Duration(milliseconds: 1800),
+  void _initAnimations() {
+    // Main entrance animation
+    _mainController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
 
-    _morphController = AnimationController(
-      duration: Duration(seconds: 8),
+    // Mesh gradient rotation
+    _meshController = AnimationController(
+      duration: const Duration(seconds: 20),
       vsync: this,
     )..repeat();
 
-    _sparkleController = AnimationController(
-      duration: Duration(milliseconds: 2500),
+    // Floating animation for elements
+    _floatController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    // Pulse animation for glow effects
+    _pulseController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    // Orb movement
+    _orbController = AnimationController(
+      duration: const Duration(seconds: 8),
       vsync: this,
     )..repeat();
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: Offset(0, 0.8),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Interval(0.2, 0.8, curve: Curves.easeOutBack),
-    ));
-
-    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _fadeIn = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: Interval(0.1, 0.7, curve: Curves.elasticOut),
+        parent: _mainController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
       ),
     );
 
-    _supermanSlideAnimation = Tween<Offset>(
-      begin: Offset(-1.2, 0.3),
-      end: Offset(1.8, -0.7),
-    ).animate(CurvedAnimation(
-      parent: _supermanController,
-      curve: Curves.easeInOutCubic,
-    ));
-
-    _supermanScaleAnimation = Tween<double>(
-      begin: 1.5,
-      end: 0.1,
-    ).animate(CurvedAnimation(
-      parent: _supermanController,
-      curve: Curves.easeInCubic,
-    ));
-
-    _morphAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _morphController, curve: Curves.easeInOut),
+    _slideUp = Tween<double>(begin: 60.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _mainController,
+        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+      ),
     );
 
-    _sparkleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _sparkleController, curve: Curves.easeInOut),
+    _scaleIn = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _mainController,
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOutBack),
+      ),
     );
 
-    _controller.forward();
+    _mainController.forward();
   }
 
   void _generateOrbs() {
     final random = math.Random();
-    for (int i = 0; i < 8; i++) {
-      _orbs.add(FloatingOrb(random));
+    for (int i = 0; i < 6; i++) {
+      _orbs.add(FloatingOrb(
+        x: random.nextDouble(),
+        y: random.nextDouble(),
+        size: random.nextDouble() * 150 + 80,
+        speed: random.nextDouble() * 0.5 + 0.3,
+        color: _getOrbColor(i),
+      ));
     }
   }
 
-  void _generateSparkles() {
-    final random = math.Random();
-    for (int i = 0; i < 15; i++) {
-      _sparkles.add(SparkleParticle(random));
-    }
-  }
-
-  void _startSupermanAnimation() async {
-    setState(() => _showSuperman = true);
-    await _supermanController.forward();
-    setState(() => _showSuperman = false);
+  Color _getOrbColor(int index) {
+    final colors = [
+      const Color(0xFF667eea),
+      const Color(0xFF764ba2),
+      const Color(0xFF00d4ff),
+      const Color(0xFFf093fb),
+      const Color(0xFF4facfe),
+      const Color(0xFF43e97b),
+    ];
+    return colors[index % colors.length];
   }
 
   @override
   void dispose() {
-    _controller.dispose();
-    _backgroundController.dispose();
-    _floatingController.dispose();
-    _supermanController.dispose();
-    _morphController.dispose();
-    _sparkleController.dispose();
+    _mainController.dispose();
+    _meshController.dispose();
+    _floatController.dispose();
+    _pulseController.dispose();
+    _orbController.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
 
-  Future<void> _playButtonSound() async {
+  Future<void> _playSound() async {
     try {
       await _audioPlayer.play(AssetSource('sounds/button_click.wav'));
-    } catch (e) {
-      // Handle audio error silently
-    }
+    } catch (_) {}
+  }
+
+  void _navigateToAuth() async {
+    await _playSound();
+    await _mainController.reverse();
+    Get.off(() => AuthRaper());
+  }
+
+  void _navigateToLogin() async {
+    await _playSound();
+    await _mainController.reverse();
+    Get.off(() => const LoginPage());
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      body: AnimatedBuilder(
-        animation: Listenable.merge([_backgroundController, _morphController, _sparkleController]),
+      body: Stack(
+        children: [
+          // Animated Mesh Gradient Background
+          _buildMeshBackground(size, isDark),
+
+          // Floating Orbs
+          ..._buildFloatingOrbs(size),
+
+          // Noise Texture Overlay
+          _buildNoiseOverlay(),
+
+          // Main Content
+          _buildMainContent(size, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMeshBackground(Size size, bool isDark) {
+    return AnimatedBuilder(
+      animation: _meshController,
+      builder: (context, child) {
+        return Container(
+          width: size.width,
+          height: size.height,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDark
+                  ? const [
+                      Color(0xFF0a0a0f),
+                      Color(0xFF1a1a2e),
+                      Color(0xFF16213e),
+                      Color(0xFF0f0f23),
+                    ]
+                  : const [
+                      Color(0xFFf8f9ff),
+                      Color(0xFFe8ecff),
+                      Color(0xFFf0e6ff),
+                      Color(0xFFe6f4ff),
+                    ],
+              stops: const [0.0, 0.3, 0.7, 1.0],
+              transform:
+                  GradientRotation(_meshController.value * 2 * math.pi * 0.1),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildFloatingOrbs(Size size) {
+    return _orbs.asMap().entries.map((entry) {
+      final index = entry.key;
+      final orb = entry.value;
+
+      return AnimatedBuilder(
+        animation: _orbController,
         builder: (context, child) {
-          return Stack(
-            children: [
-              // Dynamic gradient background
-              Container(
-                width: double.infinity,
-                height: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF667eea),
-                      Color(0xFF764ba2),
-                      Color(0xFF6B73FF),
-                      Color(0xFF000DFF),
-                    ],
-                    stops: [
-                      0.0,
-                      _morphAnimation.value * 0.5,
-                      0.7 + _morphAnimation.value * 0.2,
-                      1.0,
-                    ],
-                    transform: GradientRotation(
-                        _backgroundController.value * 2 * math.pi * 0.3),
-                  ),
+          final progress = (_orbController.value + orb.speed) % 1.0;
+          final xOffset = math.sin(progress * 2 * math.pi + index) * 30;
+          final yOffset = math.cos(progress * 2 * math.pi + index * 0.5) * 40;
+
+          return Positioned(
+            left: orb.x * size.width + xOffset - orb.size / 2,
+            top: orb.y * size.height + yOffset - orb.size / 2,
+            child: Container(
+              width: orb.size,
+              height: orb.size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    orb.color.withValues(alpha: 0.4),
+                    orb.color.withValues(alpha: 0.1),
+                    orb.color.withValues(alpha: 0.0),
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
                 ),
               ),
-
-              // Mesh gradient overlay
-              Container(
-                width: double.infinity,
-                height: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment(
-                      math.sin(_morphAnimation.value * 2 * math.pi) * 0.3,
-                      math.cos(_morphAnimation.value * 2 * math.pi) * 0.3,
-                    ),
-                    radius: 1.5,
-                    colors: [
-                      Colors.cyan.withOpacity(0.1),
-                      Colors.purple.withOpacity(0.05),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                child: Container(),
               ),
+            ),
+          );
+        },
+      );
+    }).toList();
+  }
 
-              // Floating orbs
-              ..._orbs.asMap().entries.map((entry) {
-                final i = entry.key;
-                final orb = entry.value;
-                final progress = (_backgroundController.value + orb.offset) % 1.0;
-                final float = math.sin((progress + i * 0.3) * 2 * math.pi) * 20;
-                
-                return Positioned(
-                  left: orb.x * size.width + math.sin(progress * 2 * math.pi + i) * 50,
-                  top: orb.y * size.height + float,
-                  child: Transform.scale(
-                    scale: 0.5 + math.sin(progress * math.pi) * 0.5,
-                    child: Container(
-                      width: orb.size,
-                      height: orb.size,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            orb.color.withOpacity(0.3),
-                            orb.color.withOpacity(0.1),
-                            Colors.transparent,
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: orb.color.withOpacity(0.2),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
+  Widget _buildNoiseOverlay() {
+    return Positioned.fill(
+      child: Opacity(
+        opacity: 0.03,
+        child: Image.asset(
+          'assets/images/MKQ.png',
+          repeat: ImageRepeat.repeat,
+          fit: BoxFit.none,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        ),
+      ),
+    );
+  }
 
-              // Sparkle particles
-              ..._sparkles.map((sparkle) {
-                final progress = (_sparkleAnimation.value + sparkle.offset) % 1.0;
-                final opacity = math.sin(progress * math.pi);
-                
-                return Positioned(
-                  left: sparkle.x * size.width,
-                  top: sparkle.y * size.height,
-                  child: Transform.rotate(
-                    angle: progress * 4 * math.pi,
-                    child: Opacity(
-                      opacity: opacity * 0.8,
-                      child: Icon(
-                        Icons.auto_awesome,
-                        color: Colors.white,
-                        size: sparkle.size,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-
-              // Main content
-              Center(
+  Widget _buildMainContent(Size size, bool isDark) {
+    return SafeArea(
+      child: AnimatedBuilder(
+        animation: _mainController,
+        builder: (context, child) {
+          return Opacity(
+            opacity: _fadeIn.value,
+            child: Transform.translate(
+              offset: Offset(0, _slideUp.value),
+              child: Transform.scale(
+                scale: _scaleIn.value,
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 32.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Floating logo with glassmorphism
-                      AnimatedBuilder(
-                        animation: _floatingController,
-                        builder: (context, child) {
-                          return Transform.translate(
-                            offset: Offset(
-                                0,
-                                15 * math.sin(_floatingController.value * math.pi)),
-                            child: ScaleTransition(
-                              scale: _scaleAnimation,
-                              child: Container(
-                                height: 180,
-                                width: 180,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Colors.white.withOpacity(0.2),
-                                      Colors.white.withOpacity(0.1),
-                                    ],
-                                  ),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.3),
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 30,
-                                      spreadRadius: 5,
-                                    ),
-                                    BoxShadow(
-                                      color: Colors.white.withOpacity(0.1),
-                                      blurRadius: 20,
-                                      spreadRadius: 2,
-                                      offset: Offset(-5, -5),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  Icons.smartphone,
-                                  size: 90,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                      const Spacer(flex: 2),
 
-                      SizedBox(height: 60),
+                      // Logo Section
+                      _buildLogoSection(isDark),
 
-                      // Title with premium typography
-                      SlideTransition(
-                        position: _slideAnimation,
-                        child: FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: Column(
-                            children: [
-                              ShaderMask(
-                                shaderCallback: (bounds) => LinearGradient(
-                                  colors: [
-                                    Colors.white,
-                                    Colors.white70,
-                                    Colors.white,
-                                  ],
-                                  stops: [0.0, 0.5, 1.0],
-                                ).createShader(bounds),
-                                child: Text(
-                                  'مرحباً بك',
-                                  style: TextStyle(
-                                    fontSize: 48,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                    letterSpacing: -1,
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.black.withOpacity(0.3),
-                                        blurRadius: 20,
-                                        offset: Offset(0, 8),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 20),
-                              Text(
-                                'نظام إدارة الهواتف المتطور',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  color: Colors.white.withOpacity(0.85),
-                                  letterSpacing: 0.5,
-                                  fontWeight: FontWeight.w300,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 48),
 
-                      SizedBox(height: 80),
+                      // Welcome Text
+                      _buildWelcomeText(isDark),
 
-                      // Premium buttons
-                      SlideTransition(
-                        position: _slideAnimation,
-                        child: FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: Column(
-                            children: [
-                              _buildPremiumButton(
-                                'ابدأ رحلتك',
-                                primary: true,
-                                onPressed: () async {
-                                  await _playButtonSound();
-                                  _startSupermanAnimation();
-                                  _controller.reverse().then((_) {
-                                    Get.off(() => AuthRaper());
-                                  });
-                                },
-                              ),
-                              SizedBox(height: 24),
-                              _buildPremiumButton(
-                                'لديك حساب؟ سجل دخول',
-                                primary: false,
-                                onPressed: () async {
-                                  await _playButtonSound();
-                                  _controller.reverse().then((_) {
-                                    Get.off(() => LoginPage());
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      const Spacer(flex: 2),
+
+                      // Action Buttons
+                      _buildActionButtons(isDark),
+
+                      const SizedBox(height: 48),
                     ],
                   ),
                 ),
               ),
-
-              // Superman/Logo animation
-              if (_showSuperman)
-                AnimatedBuilder(
-                  animation: _supermanController,
-                  builder: (context, child) {
-                    return Positioned(
-                      left: size.width * 0.5 - 100,
-                      top: size.height * 0.4,
-                      child: Transform.translate(
-                        offset: _supermanSlideAnimation.value * size.width * 0.4,
-                        child: Transform.scale(
-                          scale: _supermanScaleAnimation.value,
-                          child: Opacity(
-                            opacity: 1 - (_supermanController.value * 0.8),
-                            child: Container(
-                              width: 200,
-                              height: 200,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: RadialGradient(
-                                  colors: [
-                                    Colors.cyan.withOpacity(0.3),
-                                    Colors.blue.withOpacity(0.2),
-                                    Colors.transparent,
-                                  ],
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.cyan.withOpacity(0.3),
-                                    blurRadius: 30,
-                                    spreadRadius: 10,
-                                  ),
-                                ],
-                              ),
-                              child: Image.asset(
-                                'assets/images/MKQ.png',
-                                width: 120,
-                                height: 120,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(
-                                    Icons.rocket_launch_rounded,
-                                    color: Colors.white,
-                                    size: 100,
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-            ],
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildPremiumButton(String text, {required bool primary, required VoidCallback onPressed}) {
-    return Container(
-      width: double.infinity,
-      height: 65,
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 200),
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primary 
-                ? Colors.white.withOpacity(0.15)
-                : Colors.transparent,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(35),
-              side: BorderSide(
-                color: Colors.white.withOpacity(primary ? 0.4 : 0.2),
-                width: primary ? 2 : 1,
-              ),
-            ),
-            padding: EdgeInsets.symmetric(horizontal: 40, vertical: 18),
-          ).copyWith(
-            overlayColor: MaterialStateProperty.all(
-              Colors.white.withOpacity(0.1),
+  Widget _buildLogoSection(bool isDark) {
+    return AnimatedBuilder(
+      animation: _floatController,
+      builder: (context, child) {
+        final floatOffset = math.sin(_floatController.value * math.pi) * 8;
+
+        return Transform.translate(
+          offset: Offset(0, floatOffset),
+          child: AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) {
+              final glowIntensity = 0.3 + (_pulseController.value * 0.2);
+
+              return Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF667eea)
+                          .withValues(alpha: glowIntensity),
+                      blurRadius: 60,
+                      spreadRadius: 10,
+                    ),
+                    BoxShadow(
+                      color: const Color(0xFF764ba2)
+                          .withValues(alpha: glowIntensity * 0.5),
+                      blurRadius: 80,
+                      spreadRadius: 20,
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: isDark
+                              ? [
+                                  Colors.white.withValues(alpha: 0.15),
+                                  Colors.white.withValues(alpha: 0.05),
+                                ]
+                              : [
+                                  Colors.white.withValues(alpha: 0.8),
+                                  Colors.white.withValues(alpha: 0.4),
+                                ],
+                        ),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.2)
+                              : Colors.white.withValues(alpha: 0.6),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Center(
+                        child: ShaderMask(
+                          shaderCallback: (bounds) => const LinearGradient(
+                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                          ).createShader(bounds),
+                          child: const Icon(
+                            Icons.phone_android_rounded,
+                            size: 70,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWelcomeText(bool isDark) {
+    return Column(
+      children: [
+        // Main Title with Gradient
+        ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [
+              Color(0xFF667eea),
+              Color(0xFF764ba2),
+              Color(0xFFf093fb),
+            ],
+          ).createShader(bounds),
+          child: Text(
+            'مرحباً بك',
+            style: TextStyle(
+              fontSize: 48,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: 2,
+              height: 1.2,
+              shadows: [
+                Shadow(
+                  color: const Color(0xFF667eea).withValues(alpha: 0.5),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
           ),
-          child: Container(
-            decoration: primary ? BoxDecoration(
-              borderRadius: BorderRadius.circular(35),
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withOpacity(0.1),
-                  Colors.white.withOpacity(0.05),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+        ),
+
+        const SizedBox(height: 16),
+
+        // Subtitle
+        Text(
+          'نظام إدارة الهواتف المتطور',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.7)
+                : const Color(0xFF64748b),
+            letterSpacing: 0.5,
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // Feature Pills
+        _buildFeaturePills(isDark),
+      ],
+    );
+  }
+
+  Widget _buildFeaturePills(bool isDark) {
+    final features = ['سريع', 'آمن', 'سهل الاستخدام'];
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: features.map((feature) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [
+                      Colors.white.withValues(alpha: 0.1),
+                      Colors.white.withValues(alpha: 0.05),
+                    ]
+                  : [
+                      const Color(0xFF667eea).withValues(alpha: 0.1),
+                      const Color(0xFF764ba2).withValues(alpha: 0.1),
+                    ],
+            ),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : const Color(0xFF667eea).withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.check_circle_rounded,
+                size: 16,
+                color:
+                    isDark ? const Color(0xFF667eea) : const Color(0xFF667eea),
               ),
-            ) : null,
+              const SizedBox(width: 6),
+              Text(
+                feature,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.8)
+                      : const Color(0xFF334155),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildActionButtons(bool isDark) {
+    return Column(
+      children: [
+        // Primary Button - Glass Effect
+        _buildPrimaryButton(isDark),
+
+        const SizedBox(height: 16),
+
+        // Secondary Button
+        _buildSecondaryButton(isDark),
+      ],
+    );
+  }
+
+  Widget _buildPrimaryButton(bool isDark) {
+    return GestureDetector(
+      onTap: _navigateToAuth,
+      child: AnimatedBuilder(
+        animation: _pulseController,
+        builder: (context, child) {
+          final glowIntensity = 0.4 + (_pulseController.value * 0.2);
+
+          return Container(
+            width: double.infinity,
+            height: 60,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      const Color(0xFF667eea).withValues(alpha: glowIntensity),
+                  blurRadius: 25,
+                  offset: const Offset(0, 10),
+                  spreadRadius: -5,
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'ابدأ رحلتك',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSecondaryButton(bool isDark) {
+    return GestureDetector(
+      onTap: _navigateToLogin,
+      child: Container(
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.8),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.15)
+                : const Color(0xFF667eea).withValues(alpha: 0.3),
+            width: 1.5,
+          ),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Center(
               child: Text(
-                text,
+                'لديك حساب؟ سجل دخول',
                 style: TextStyle(
-                  fontSize: primary ? 20 : 16,
-                  fontWeight: primary ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.9)
+                      : const Color(0xFF667eea),
                   letterSpacing: 0.5,
                 ),
               ),
@@ -534,36 +627,19 @@ class _WelcomePageState extends State<WelcomePage>
   }
 }
 
+// Floating Orb Model
 class FloatingOrb {
   final double x;
   final double y;
   final double size;
-  final double offset;
+  final double speed;
   final Color color;
 
-  FloatingOrb(math.Random random)
-      : x = random.nextDouble(),
-        y = random.nextDouble(),
-        size = random.nextDouble() * 80 + 40,
-        offset = random.nextDouble(),
-        color = [
-          Colors.cyan,
-          Colors.purple,
-          Colors.pink,
-          Colors.blue,
-          Colors.indigo,
-        ][random.nextInt(5)];
-}
-
-class SparkleParticle {
-  final double x;
-  final double y;
-  final double size;
-  final double offset;
-
-  SparkleParticle(math.Random random)
-      : x = random.nextDouble(),
-        y = random.nextDouble(),
-        size = random.nextDouble() * 16 + 8,
-        offset = random.nextDouble();
+  FloatingOrb({
+    required this.x,
+    required this.y,
+    required this.size,
+    required this.speed,
+    required this.color,
+  });
 }

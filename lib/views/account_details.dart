@@ -1,22 +1,14 @@
 import 'dart:ui';
+import 'dart:math' as math;
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
-
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
-
-import 'package:phone_system_app/controllers/account_details_controller.dart'
-    as ctrl;
 import 'package:phone_system_app/controllers/account_details_controller.dart';
 import 'package:phone_system_app/controllers/account_profit_controller.dart';
-import 'package:phone_system_app/controllers/money_display_loading.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
-import 'package:phone_system_app/views/client_list_view.dart';
-import 'package:phone_system_app/views/pages/account_management.dart';
 import 'package:phone_system_app/views/pages/all_clinets_page.dart';
 import 'package:phone_system_app/views/pages/dues.dart';
 import 'package:phone_system_app/views/pages/dues_management.dart';
@@ -25,15 +17,12 @@ import 'package:phone_system_app/views/pages/for_sale_number.dart';
 import 'package:phone_system_app/views/pages/offers.dart';
 import 'package:phone_system_app/views/pages/profit_management_page.dart';
 import 'package:phone_system_app/views/pages/system_list.dart';
-import 'package:phone_system_app/views/pages/create_user_page.dart';
-import 'package:phone_system_app/pages/user_management_page.dart'; // Add this import
+import 'package:phone_system_app/pages/user_management_page.dart';
 import 'package:phone_system_app/views/pages/letter_of_waiver.dart';
 import 'package:phone_system_app/views/pages/filter_systems.dart';
 import 'package:phone_system_app/views/pages/create_subscription_page.dart';
 import 'package:phone_system_app/views/pages/clients_recets.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'animated_profile_avatar.dart';
-import 'package:image_picker/image_picker.dart';
 
 class Page {
   Widget content;
@@ -49,754 +38,625 @@ class Page {
   });
 }
 
-class AccountDetails extends StatelessWidget {
-  // Cache size calculation
-  final Size screenSize = Size.zero;
-
-  // Use const constructor for static pages list
-  static final List<Page> _pages = [
-    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
-      Page(
-        roles: [UserRoles.manager],
-        content: AllClientsPage(),
-        title: "بيانات العملاء",
-        icon: const Icon(
-          Icons.supervised_user_circle,
-          color: Colors.black54,
-        ),
-      ),
-    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
-        SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
-      Page(
-        roles: [UserRoles.manager, UserRoles.assistant],
-        content: DuesManagement(),
-        title: "المستحقات",
-        icon: const Icon(
-          Icons.payment,
-          color: Colors.black54,
-        ),
-      ),
-    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
-        SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
-      Page(
-        roles: [UserRoles.manager, UserRoles.assistant],
-        content: const ClientsReceipts(),
-        title: "الفواتير الشهرية",
-        icon: const Icon(
-          Icons.receipt_long,
-          color: Colors.black54,
-        ),
-      ),
-    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
-        SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
-      Page(
-        roles: [UserRoles.manager, UserRoles.assistant],
-        content: const DuesPage(),
-        title: "المديونات",
-        icon: const Icon(
-          Icons.attach_money_rounded,
-          color: Colors.black54,
-        ),
-      ),
-    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
-      Page(
-        roles: [UserRoles.manager],
-        content: OfferManagement(),
-        title: "العروض المطلوبة",
-        icon: const Icon(
-          Icons.card_giftcard_rounded,
-          color: Colors.black54,
-        ),
-      ),
-    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
-      Page(
-        roles: [UserRoles.manager],
-        content: Container(
-          height: double.infinity,
-          color: Colors.white,
-          child: SystemList(),
-        ),
-        icon: const Icon(
-          Icons.play_lesson,
-          color: Colors.black54,
-        ),
-        title: "الباقات المتاحة",
-      ),
-    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
-      Page(
-        roles: [UserRoles.manager],
-        content: Container(
-          color: Colors.white,
-          constraints: const BoxConstraints.expand(),
-          child: ProfitManagement(),
-        ),
-        icon: const Icon(
-          Icons.account_balance_wallet,
-          color: Colors.black54,
-        ),
-        title: "الربح و الاحصاء",
-      ),
-    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
-      Page(
-        roles: [UserRoles.manager],
-        content: Container(
-          color: Colors.white,
-          constraints: const BoxConstraints.expand(),
-          child: FilterSystemsPage(),
-        ),
-        icon: const Icon(
-          Icons.assessment,
-          color: Colors.black54,
-        ),
-        title: "احصاء الانظمة",
-      ),
-    Page(
-      roles: [UserRoles.manager, UserRoles.assistant],
-      content: Container(
-        color: Colors.white,
-        constraints: const BoxConstraints.expand(),
-        child: ForSaleNumbers(),
-      ),
-      icon: const Icon(
-        Icons.phone_android,
-        color: Colors.black54,
-      ),
-      title: "أرقام للبيع",
-    ),
-    Page(
-      roles: [UserRoles.manager, UserRoles.assistant],
-      content: Container(
-        color: Colors.white,
-        constraints: const BoxConstraints.expand(),
-        child: Follow(),
-      ),
-      icon: const Icon(
-        Icons.toc_rounded,
-        color: Colors.black54,
-      ),
-      title: "المتابعة",
-    ),
-    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
-      Page(
-        roles: [UserRoles.manager],
-        content: Container(
-          color: Colors.white,
-          constraints: const BoxConstraints.expand(),
-          child: UserManagementPage(),
-        ),
-        icon: const Icon(
-          Icons.supervised_user_circle_sharp,
-          color: Colors.black54,
-        ),
-        title: "إدارة المستخدمين",
-      ),
-    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
-      Page(
-        roles: [UserRoles.manager],
-        content: Container(
-          color: Colors.white,
-          constraints: const BoxConstraints.expand(),
-          child: LetterOfWaiver(),
-        ),
-        icon: const Icon(
-          Icons.description,
-          color: Colors.black54,
-        ),
-        title: "خطاب تنازل",
-      ),
-    if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
-      Page(
-        roles: [UserRoles.manager],
-        content: const CreateSubscriptionPage(),
-        icon: const Icon(
-          Icons.add_circle_outline,
-          color: Colors.black54,
-        ),
-        title: "اشتراك جديد",
-      ),
-  ];
-
-  // Memoize filtered pages
-  late final filteredPages = _pages
-      .where((page) =>
-          (page.roles
-              .map((role) => role.index)
-              .contains(SupabaseAuthentication.myUser!.role)) ||
-          (page.title == "انشاء مستخدم" &&
-              SupabaseAuthentication.myUser!.role == UserRoles.admin.index))
-      .toList();
-
-  ctrl.AccountDetailsController pageController =
-      Get.put(ctrl.AccountDetailsController());
-  final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
+class AccountDetails extends StatefulWidget {
+  const AccountDetails({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Cache MediaQuery result
-    final size = MediaQuery.of(context).size;
-    final isMobile = size.width < 1200;
-    final colors = Get.theme.colorScheme;
-    final content = _pages
-        .map(
-          (e) => e.content,
-        )
-        .toList();
-
-    // Move controller initialization to the beginning of build method
-    final accountDetailsController = Get.put(AccountDetailsController());
-
-    return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA), // Modern light background
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF1a237e), // Dark blue
-          elevation: 0,
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF1a237e), // Dark blue
-                  Color(0xFF0d47a1), // Slightly lighter blue
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-          leading: (MediaQuery.of(context).size.width < 1200)
-              ? Builder(
-                  builder: (BuildContext context) {
-                    return IconButton(
-                      icon: const Icon(Icons.menu,
-                          color: Colors.white), // Updated color
-                      onPressed: () {
-                        Scaffold.of(context).openDrawer();
-                      },
-                    );
-                  },
-                )
-              : const SizedBox(),
-          actions: [
-            Text(
-              "${AccountClientInfo.to.currentAccount.day}",
-              style: const TextStyle(
-                  color: Colors.white, // Updated color
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22),
-            ),
-            const SizedBox(width: 5),
-            IconButton(
-                tooltip: "يوم التحصيل الشهري",
-                onPressed: () async {
-                  final startDate =
-                      DateTime.now().subtract(const Duration(days: 30));
-                  final endDate = DateTime.now().add(const Duration(days: 30));
-                  final data = await showDatePicker(
-                    context: context,
-                    firstDate: startDate,
-                    lastDate: endDate,
-                  );
-
-                  if (data != null) {
-                    final currentAccount = AccountClientInfo.to.currentAccount;
-                    currentAccount.day = data.day;
-                    await BackendServices.instance.accountRepository
-                        .update(currentAccount);
-                  }
-                },
-                icon: const Icon(Icons.calendar_today,
-                    color: Colors.white)), // Updated color
-            Builder(
-              builder: (BuildContext context) {
-                return IconButton(
-                  icon: const Icon(Icons.keyboard_arrow_left,
-                      color: Colors.white), // Updated color
-                  onPressed: () {
-                    Get.delete<AccountDetailsController>(force: true);
-                    Get.delete<AccountClientInfo>(force: true);
-                    Get.delete<ProfitController>(force: true);
-                    Get.delete<FollowController>(force: true);
-
-                    Get.back();
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-        drawer: (isMobile)
-            ? Stack(
-                children: [
-                  Positioned.fill(
-                      child: Container(
-                    color: Colors.black.withOpacity(0.5),
-                  )),
-                  Positioned.fill(
-                    child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            IconButton(
-                                onPressed: () => Get.back(),
-                                icon: const Icon(Icons.arrow_back)),
-                            Expanded(
-                                child: SideBar(
-                              pages: _pages
-                                  .where((page) =>
-                                      (page.roles
-                                          .map((role) => role.index)
-                                          .contains(SupabaseAuthentication
-                                              .myUser!.role)) ||
-                                      (page.title == "انشاء مستخدم" &&
-                                          SupabaseAuthentication.myUser!.role ==
-                                              UserRoles.admin.index))
-                                  .toList(),
-                            )),
-                          ],
-                        )),
-                  ),
-                ],
-              )
-            : null,
-        bottomNavigationBar: isMobile
-            ? Obx(() {
-                final currentIndex = pageController.selectedIndex.value;
-
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF1a237e), // Dark blue
-                        Color(0xFF0d47a1), // Slightly lighter blue
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 12,
-                        offset: const Offset(0, -4),
-                      ),
-                    ],
-                  ),
-                  child: CurvedNavigationBar(
-                    key: _bottomNavigationKey,
-                    index: currentIndex,
-                    height: 65.0,
-                    items: filteredPages
-                        .map((page) => Container(
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(
-                                (page.icon as Icon).icon!,
-                                size: 28,
-                                color: Colors.white,
-                              ),
-                            ))
-                        .toList(),
-                    color: const Color(0xFF1a237e), // Dark blue
-                    buttonBackgroundColor:
-                        const Color(0xFF2196F3), // Accent blue for selected
-                    backgroundColor: Colors.transparent,
-                    animationCurve: Curves.easeInOutCubic,
-                    animationDuration: const Duration(milliseconds: 300),
-                    onTap: (index) =>
-                        pageController.selectedIndex.value = index,
-                    letIndexChange: (_) => true,
-                  ),
-                );
-              })
-            : null,
-        body: isMobile
-            ? Obx(() {
-                final accountClientController = Get.find<AccountClientInfo>();
-                final currentPage = _pages[pageController.selectedIndex.value];
-
-                if (currentPage.title == "العروض المطلوبة") {
-                  // Instead of immediately navigating, return the ExpiredSystemsPage directly
-                  final expiredSystemsClients = accountClientController
-                      .clinets.value
-                      .where((client) => client.numbers!.any(
-                          (number) => number.getExpiredSystems().isNotEmpty))
-                      .toList();
-                  return ExpiredSystemsPage(clients: expiredSystemsClients);
-                }
-
-                return Container(
-                  color: colors.background,
-                  child: content[pageController.selectedIndex.value],
-                );
-              })
-            : Row(
-                children: [
-                  Container(
-                    color: colors.background,
-                    width: 250,
-                    child: SideBar(
-                      pages: _pages
-                          .where((page) =>
-                              (page.roles.map((role) => role.index).contains(
-                                  SupabaseAuthentication.myUser!.role)) ||
-                              (page.title == "انشاء مستخدم" &&
-                                  SupabaseAuthentication.myUser!.role ==
-                                      UserRoles.admin.index))
-                          .toList(),
-                    ),
-                  ),
-                  Obx(
-                    () => Expanded(
-                        child: Card(
-                      margin: const EdgeInsets.all(0),
-                      elevation: 0,
-                      child: Container(
-                          decoration: BoxDecoration(),
-                          padding: const EdgeInsets.all(10),
-                          child: () {
-                            print(_pages[pageController.selectedIndex.value]
-                                .title);
-                            final accountClientController =
-                                Get.find<AccountClientInfo>();
-                            if (_pages[pageController.selectedIndex.value]
-                                    .title ==
-                                "العروض المطلوبة") {
-                              print("GETTING THE VERY PAGE");
-                              final expiredSystemsClients =
-                                  accountClientController.clinets.value
-                                      .where((client) => client.numbers!.any(
-                                          (number) => number
-                                              .getExpiredSystems()
-                                              .isNotEmpty))
-                                      .toList();
-                              // Get.to(() => ExpiredSystemsPage(clients: expiredSystemsClients));
-                              return ExpiredSystemsPage(
-                                  clients: expiredSystemsClients);
-                            } else {
-                              return content[
-                                  pageController.selectedIndex.value];
-                            }
-                          }()),
-                    )),
-                  ),
-                ],
-              ));
-  }
+  State<AccountDetails> createState() => _AccountDetailsState();
 }
 
-class SideBar extends StatelessWidget {
-  List<Page> pages;
-  final AccountDetailsController controller;
+class _AccountDetailsState extends State<AccountDetails>
+    with TickerProviderStateMixin {
+  final AccountDetailsController pageController =
+      Get.put(AccountDetailsController());
+  late AnimationController _waveController;
 
-  SideBar({
-    super.key,
-    required this.pages,
-  }) : controller = Get.find<AccountDetailsController>();
+  static List<Page> get _pages => [
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+          Page(
+            roles: [UserRoles.manager],
+            content: const AllClientsPage(),
+            title: "بيانات العملاء",
+            icon: const Icon(Icons.people_rounded),
+          ),
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
+            SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
+          Page(
+            roles: [UserRoles.manager, UserRoles.assistant],
+            content: DuesManagement(),
+            title: "المستحقات",
+            icon: const Icon(Icons.payment_rounded),
+          ),
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
+            SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
+          Page(
+            roles: [UserRoles.manager, UserRoles.assistant],
+            content: const ClientsReceipts(),
+            title: "الفواتير الشهرية",
+            icon: const Icon(Icons.receipt_long_rounded),
+          ),
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
+            SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
+          Page(
+            roles: [UserRoles.manager, UserRoles.assistant],
+            content: const DuesPage(),
+            title: "المديونات",
+            icon: const Icon(Icons.attach_money_rounded),
+          ),
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+          Page(
+            roles: [UserRoles.manager],
+            content: OfferManagement(),
+            title: "العروض المطلوبة",
+            icon: const Icon(Icons.card_giftcard_rounded),
+          ),
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+          Page(
+            roles: [UserRoles.manager],
+            content: SystemList(),
+            icon: const Icon(Icons.play_lesson_rounded),
+            title: "الباقات المتاحة",
+          ),
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+          Page(
+            roles: [UserRoles.manager],
+            content: ProfitManagement(),
+            icon: const Icon(Icons.account_balance_wallet_rounded),
+            title: "الربح و الاحصاء",
+          ),
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+          Page(
+            roles: [UserRoles.manager],
+            content: FilterSystemsPage(),
+            icon: const Icon(Icons.assessment_rounded),
+            title: "احصاء الانظمة",
+          ),
+        Page(
+          roles: [UserRoles.manager, UserRoles.assistant],
+          content: ForSaleNumbers(),
+          icon: const Icon(Icons.phone_android_rounded),
+          title: "أرقام للبيع",
+        ),
+        Page(
+          roles: [UserRoles.manager, UserRoles.assistant],
+          content: Follow(),
+          icon: const Icon(Icons.toc_rounded),
+          title: "المتابعة",
+        ),
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+          Page(
+            roles: [UserRoles.manager],
+            content: UserManagementPage(),
+            icon: const Icon(Icons.admin_panel_settings_rounded),
+            title: "إدارة المستخدمين",
+          ),
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+          Page(
+            roles: [UserRoles.manager],
+            content: LetterOfWaiver(),
+            icon: const Icon(Icons.description_rounded),
+            title: "خطاب تنازل",
+          ),
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+          Page(
+            roles: [UserRoles.manager],
+            content: const CreateSubscriptionPage(),
+            icon: const Icon(Icons.add_circle_outline_rounded),
+            title: "اشتراك جديد",
+          ),
+      ];
+
+  List<Page> get filteredPages => _pages
+      .where((page) => page.roles
+          .map((r) => r.index)
+          .contains(SupabaseAuthentication.myUser!.role))
+      .toList();
+
+  @override
+  void initState() {
+    super.initState();
+    _waveController = AnimationController(
+      duration: const Duration(seconds: 4),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _waveController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final colors = Get.theme.colorScheme;
-    List<String> titles = pages.map((e) => e.title).toList();
-    List<Widget> icons = pages.map((e) => e.icon).toList();
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 1200;
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFF1a237e), // Dark blue
-            const Color(0xFF0d47a1), // Slightly lighter blue
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 20,
-            offset: const Offset(5, 0),
+    return Scaffold(
+      backgroundColor: const Color(0xFF0a0a0a),
+      appBar: _buildAppBar(),
+      drawer: isMobile ? _buildDrawer() : null,
+      bottomNavigationBar: isMobile ? _buildBottomNav() : null,
+      body: Stack(
+        children: [
+          // Animated Background
+          AnimatedBuilder(
+            animation: _waveController,
+            builder: (context, child) {
+              return CustomPaint(
+                painter: _BackgroundPainter(animation: _waveController.value),
+                size: Size.infinite,
+              );
+            },
+          ),
+          // Grid
+          Opacity(
+            opacity: 0.02,
+            child: CustomPaint(
+              painter: _GridPainter(),
+              size: Size.infinite,
+            ),
+          ),
+          // Content
+          isMobile
+              ? Obx(() {
+                  final currentPage =
+                      filteredPages[pageController.selectedIndex.value];
+                  if (currentPage.title == "العروض المطلوبة") {
+                    final controller = Get.find<AccountClientInfo>();
+                    final expiredClients = controller.clinets.value
+                        .where((c) => c.numbers!
+                            .any((n) => n.getExpiredSystems().isNotEmpty))
+                        .toList();
+                    return ExpiredSystemsPage(clients: expiredClients);
+                  }
+                  return currentPage.content;
+                })
+              : Row(
+                  children: [
+                    _buildSidebar(),
+                    Expanded(
+                      child: Obx(() {
+                        final currentPage =
+                            filteredPages[pageController.selectedIndex.value];
+                        if (currentPage.title == "العروض المطلوبة") {
+                          final controller = Get.find<AccountClientInfo>();
+                          final expiredClients = controller.clinets.value
+                              .where((c) => c.numbers!
+                                  .any((n) => n.getExpiredSystems().isNotEmpty))
+                              .toList();
+                          return ExpiredSystemsPage(clients: expiredClients);
+                        }
+                        return currentPage.content;
+                      }),
+                    ),
+                  ],
+                ),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: const Color(0xFF0a0a0a),
+      elevation: 0,
+      leading: Builder(
+        builder: (context) {
+          if (MediaQuery.of(context).size.width < 1200) {
+            return IconButton(
+              icon: const Icon(Icons.menu_rounded, color: Colors.white),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            );
+          }
+          return const SizedBox();
+        },
+      ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
+              ),
+            ),
+            child: Text(
+              '${AccountClientInfo.to.currentAccount.day}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Container(
-            height: 220,
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(vertical: 25),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF1a237e).withOpacity(0.95),
-                  const Color(0xFF0d47a1).withOpacity(0.90),
+      centerTitle: true,
+      actions: [
+        IconButton(
+          tooltip: "يوم التحصيل",
+          icon: const Icon(Icons.calendar_today_rounded, color: Colors.white),
+          onPressed: () async {
+            final data = await showDatePicker(
+              context: context,
+              firstDate: DateTime.now().subtract(const Duration(days: 30)),
+              lastDate: DateTime.now().add(const Duration(days: 30)),
+            );
+            if (data != null) {
+              final account = AccountClientInfo.to.currentAccount;
+              account.day = data.day;
+              await BackendServices.instance.accountRepository.update(account);
+            }
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+          onPressed: () {
+            Get.delete<AccountDetailsController>(force: true);
+            Get.delete<AccountClientInfo>(force: true);
+            Get.delete<ProfitController>(force: true);
+            Get.delete<FollowController>(force: true);
+            Get.back();
+          },
+        ),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return Obx(() {
+      final currentIndex = pageController.selectedIndex.value;
+
+      return Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1a1a1a),
+          border: Border(
+            top: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: filteredPages.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final page = entry.value;
+                  final isSelected = currentIndex == index;
+
+                  return GestureDetector(
+                    onTap: () => pageController.selectedIndex.value = index,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        gradient: isSelected
+                            ? const LinearGradient(
+                                colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
+                              )
+                            : null,
+                        color: isSelected
+                            ? null
+                            : Colors.white.withValues(alpha: 0.05),
+                      ),
+                      child: Icon(
+                        (page.icon as Icon).icon,
+                        color: isSelected
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.5),
+                        size: 22,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: const Color(0xFF0a0a0a),
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: () => pageController.uploadNewImage(),
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                const Color(0xFFff6b6b).withValues(alpha: 0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: Obx(() {
+                          final images = pageController.userImages;
+                          final latestImage =
+                              images.isNotEmpty ? images.last : null;
+                          return AnimatedProfileAvatar(
+                            imagePath: latestImage ?? 'assets/images/owner.png',
+                            isNetworkImage: latestImage != null,
+                          );
+                        }),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'كابتن / إسلام النني',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                    ),
+                  ),
                 ],
               ),
             ),
-            child: Stack(
-              alignment: Alignment.center,
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              height: 1,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+            // Menu Items
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: filteredPages.length,
+                itemBuilder: (context, index) {
+                  return Obx(() {
+                    final isSelected =
+                        pageController.selectedIndex.value == index;
+                    final page = filteredPages[index];
+
+                    return GestureDetector(
+                      onTap: () {
+                        pageController.selectedIndex.value = index;
+                        Navigator.pop(context);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          gradient: isSelected
+                              ? const LinearGradient(
+                                  colors: [
+                                    Color(0xFFff6b6b),
+                                    Color(0xFFfeca57)
+                                  ],
+                                )
+                              : null,
+                          color: isSelected
+                              ? null
+                              : Colors.white.withValues(alpha: 0.05),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              (page.icon as Icon).icon,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.6),
+                              size: 22,
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Text(
+                                page.title,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.white.withValues(alpha: 0.7),
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            if (isSelected)
+                              const Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebar() {
+    return Container(
+      width: 280,
+      decoration: BoxDecoration(
+        color: const Color(0xFF0f0f0f),
+        border: Border(
+          right: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
               children: [
-                // Decorative circle background
-                Container(
-                  width: 160,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.blue[300]!.withOpacity(0.2),
-                        Colors.blue[400]!.withOpacity(0.1),
-                      ],
-                    ),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.1),
-                      width: 2,
-                    ),
-                  ),
-                ),
-                // Main avatar container
                 GestureDetector(
-                  onTap: () => controller.uploadNewImage(),
+                  onTap: () => pageController.uploadNewImage(),
                   child: Container(
-                    width: 130,
-                    height: 130,
+                    width: 120,
+                    height: 120,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.blue[400]!,
-                          Colors.blue[600]!,
-                        ],
+                      borderRadius: BorderRadius.circular(35),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        ),
-                        BoxShadow(
-                          color: Colors.blue[300]!.withOpacity(0.5),
-                          blurRadius: 30,
-                          offset: const Offset(0, 5),
+                          color: const Color(0xFFff6b6b).withValues(alpha: 0.3),
+                          blurRadius: 25,
+                          offset: const Offset(0, 12),
                         ),
                       ],
                     ),
-                    child: Stack(
-                      children: [
-                        // Avatar image
-                        Obx(() {
-                          final images = controller.userImages;
-                          final latestImage =
-                              images.isNotEmpty ? images.last : null;
-
-                          return Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 3,
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(65),
-                              child: AnimatedProfileAvatar(
-                                imagePath:
-                                    latestImage ?? 'assets/images/owner.png',
-                                isNetworkImage: latestImage != null,
-                              ),
-                            ),
-                          );
-                        }),
-                        // Edit button with animated hover effect
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  const Color(0xFF2196f3),
-                                  const Color(0xFF1976d2),
-                                ],
-                              ),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.blue[400]!.withOpacity(0.5),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.add_photo_alternate,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ).addHover,
-                        ),
-                      ],
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(35),
+                      child: Obx(() {
+                        final images = pageController.userImages;
+                        final latestImage =
+                            images.isNotEmpty ? images.last : null;
+                        return AnimatedProfileAvatar(
+                          imagePath: latestImage ?? 'assets/images/owner.png',
+                          isNetworkImage: latestImage != null,
+                        );
+                      }),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'كابتن / إسلام النني',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'كابتن / إسلام النني',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 5),
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            height: 2,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withOpacity(0.1),
-                  Colors.white.withOpacity(0.3),
-                  Colors.white.withOpacity(0.1),
-                ],
-              ),
-            ),
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            height: 1,
+            color: Colors.white.withValues(alpha: 0.1),
           ),
+          // Menu Items
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              itemCount: titles.length,
+              padding: const EdgeInsets.all(16),
+              itemCount: filteredPages.length,
               itemBuilder: (context, index) {
-                return TweenAnimationBuilder(
-                  tween: Tween<double>(begin: 0, end: 1),
-                  duration: Duration(milliseconds: 400 + (index * 100)),
-                  builder: (context, double value, child) {
-                    return Transform.translate(
-                      offset: Offset(50 * (1 - value), 0),
-                      child: Opacity(
-                        opacity: value,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          child: Obx(() {
-                            final isSelected =
-                                controller.selectedIndex.value == index;
-                            return AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                gradient: isSelected
-                                    ? LinearGradient(
-                                        colors: [
-                                          const Color(0xFF4FC3F7),
-                                          const Color(0xFF2196F3),
-                                        ],
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                      )
-                                    : null,
-                                boxShadow: isSelected
-                                    ? [
-                                        BoxShadow(
-                                          color: const Color(0xFF2196F3)
-                                              .withOpacity(0.3),
-                                          blurRadius: 12,
-                                          offset: const Offset(0, 4),
-                                        )
-                                      ]
-                                    : null,
-                              ),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
-                                  onTap: () =>
-                                      controller.selectedIndex.value = index,
-                                  hoverColor: Colors.white.withOpacity(0.1),
-                                  splashColor: Colors.white.withOpacity(0.2),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 16,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        AnimatedContainer(
-                                          duration:
-                                              const Duration(milliseconds: 200),
-                                          decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? Colors.white.withOpacity(0.2)
-                                                : Colors.white.withOpacity(0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          padding: const EdgeInsets.all(8),
-                                          child: IconTheme(
-                                            data: IconThemeData(
-                                              color: isSelected
-                                                  ? Colors.white
-                                                  : Colors.white70,
-                                              size: 22,
-                                            ),
-                                            child: icons[index],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                titles[index],
-                                                style: TextStyle(
-                                                  color: isSelected
-                                                      ? Colors.white
-                                                      : Colors.white70,
-                                                  fontWeight: isSelected
-                                                      ? FontWeight.bold
-                                                      : FontWeight.w500,
-                                                  fontSize:
-                                                      isSelected ? 15 : 14,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        if (isSelected)
-                                          Container(
-                                            padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  Colors.white.withOpacity(0.2),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: const Icon(
-                                              Icons.arrow_forward_ios_rounded,
-                                              color: Colors.white,
-                                              size: 14,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
+                return Obx(() {
+                  final isSelected =
+                      pageController.selectedIndex.value == index;
+                  final page = filteredPages[index];
+
+                  return GestureDetector(
+                    onTap: () => pageController.selectedIndex.value = index,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: isSelected
+                            ? const LinearGradient(
+                                colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
+                              )
+                            : null,
+                        color: isSelected ? null : Colors.transparent,
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xFFff6b6b)
+                                      .withValues(alpha: 0.3),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
                                 ),
-                              ),
-                            );
-                          }),
-                        ),
+                              ]
+                            : null,
                       ),
-                    );
-                  },
-                );
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: isSelected
+                                  ? Colors.white.withValues(alpha: 0.2)
+                                  : Colors.white.withValues(alpha: 0.05),
+                            ),
+                            child: Icon(
+                              (page.icon as Icon).icon,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.6),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              page.title,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.7),
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          if (isSelected)
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                              child: const Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                });
               },
             ),
           ),
@@ -806,22 +666,78 @@ class SideBar extends StatelessWidget {
   }
 }
 
-// Add this extension method at the end of the file
-extension HoverExtensions on Widget {
-  Widget get addHover {
-    return StatefulBuilder(
-      builder: (context, setState) {
-        bool isHovered = false;
-        return MouseRegion(
-          onEnter: (_) => setState(() => isHovered = true),
-          onExit: (_) => setState(() => isHovered = false),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            transform: Matrix4.identity()..scale(isHovered ? 1.05 : 1.0),
-            child: this,
-          ),
-        );
-      },
-    );
+// Background Painter
+class _BackgroundPainter extends CustomPainter {
+  final double animation;
+
+  _BackgroundPainter({required this.animation});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    // Top glow
+    paint.shader = RadialGradient(
+      center: const Alignment(-0.5, -0.5),
+      radius: 1.5,
+      colors: [
+        const Color(0xFFff6b6b).withValues(alpha: 0.08),
+        const Color(0xFFff6b6b).withValues(alpha: 0.0),
+      ],
+    ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height * 0.5), paint);
+
+    // Bottom wave
+    paint.shader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        const Color(0xFFfeca57).withValues(alpha: 0.05),
+        const Color(0xFFfeca57).withValues(alpha: 0.0),
+      ],
+    ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final path = Path();
+    path.moveTo(0, size.height * 0.9);
+
+    for (double i = 0; i <= size.width; i++) {
+      final y = size.height * 0.9 +
+          math.sin((i / size.width * 2 * math.pi) + (animation * 2 * math.pi)) *
+              15;
+      path.lineTo(i, y);
+    }
+
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+
+    canvas.drawPath(path, paint);
   }
+
+  @override
+  bool shouldRepaint(_BackgroundPainter oldDelegate) =>
+      animation != oldDelegate.animation;
+}
+
+// Grid Painter
+class _GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 1;
+
+    const spacing = 50.0;
+
+    for (double x = 0; x < size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+
+    for (double y = 0; y < size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GridPainter oldDelegate) => false;
 }

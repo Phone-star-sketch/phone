@@ -1,22 +1,13 @@
 import 'dart:math';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/get_core.dart';
-import 'package:get/get_navigation/get_navigation.dart';
-import 'package:phone_system_app/components/money_display.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/controllers/client_bottom_sheet_controller.dart';
 import 'package:phone_system_app/controllers/money_display_loading.dart';
 import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/system.dart';
-import 'package:phone_system_app/models/system_type.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
@@ -26,62 +17,50 @@ import 'package:phone_system_app/views/bottom_sheet_dialogs/other_services_exclu
 import 'package:phone_system_app/views/pages/system_choice.dart';
 import 'package:phone_system_app/views/pages/successfull_payment.dart';
 
-Future showClientInfoSheet(
-  BuildContext? context,
-  Client client,
-) async {
-  // Use Get.context as fallback if provided context is null or invalid
+Future showClientInfoSheet(BuildContext? context, Client client) async {
   final effectiveContext = context ?? Get.context;
   if (effectiveContext == null) {
     Get.snackbar('خطأ', 'لا يمكن فتح صفحة معلومات العميل');
     return;
   }
 
-  // Check if context is still mounted
   if (effectiveContext is Element && !effectiveContext.mounted) {
     Get.snackbar('خطأ', 'السياق غير صالح');
     return;
   }
 
-  final colors = Get.theme.colorScheme;
-
-  // Remove any existing controller
   if (Get.isRegistered<ClientBottomSheetController>()) {
     Get.delete<ClientBottomSheetController>(force: true);
   }
 
-  // Initialize excluded systems manager
   if (!Get.isRegistered<ExcludedSystemsManager>()) {
     Get.put(ExcludedSystemsManager());
   } else {
-    // Clear previous exclusions when opening new client sheet
     Get.find<ExcludedSystemsManager>().clearExclusions();
   }
 
-  // Create and initialize the controller
   final controller = Get.put(ClientBottomSheetController());
-  // Wait for initialization to complete
   await controller.setClient(client);
 
   return showModalBottomSheet(
-    backgroundColor: Colors.white,
+    backgroundColor: const Color(0xFFF8FAFC),
     enableDrag: true,
-    showDragHandle: true,
+    showDragHandle: false,
     isScrollControlled: true,
     barrierLabel: "بيانات العميل",
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
     constraints: BoxConstraints.expand(
-      width: min(MediaQuery.maybeOf(effectiveContext)?.size.width ?? 800, 800),
+      width: min(MediaQuery.maybeOf(effectiveContext)?.size.width ?? 600, 600),
     ),
     context: effectiveContext,
     builder: (builderContext) {
-      final height = MediaQuery.of(builderContext).size.height;
       return GetBuilder<ClientBottomSheetController>(
         builder: (controller) => GetBuilder<ExcludedSystemsManager>(
-          builder: (excludedManager) => ClientDataWidget(
-            colors: colors,
-            height: height,
+          builder: (excludedManager) => _ModernClientSheet(
             client: client,
-            controller: controller, // Pass controller explicitly
+            controller: controller,
           ),
         ),
       );
@@ -96,1095 +75,630 @@ Future showClientInfoSheet(
   });
 }
 
-Future<void> showDangerDialog(
-    String title, String message, Function() action) async {
-  await Get.defaultDialog(
-      backgroundColor: Colors.white,
-      confirm: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-            shape: const StadiumBorder(),
-            backgroundColor: Colors.red[900],
-            padding: const EdgeInsets.all(10)),
-        onPressed: () async {
-          await action();
-          Get.back();
-        },
-        child:
-            const Text("تأكيد", style: TextStyle(fontWeight: FontWeight.bold)),
+class _ModernClientSheet extends StatelessWidget {
+  final Client client;
+  final ClientBottomSheetController controller;
+
+  const _ModernClientSheet({required this.client, required this.controller});
+
+  Color _getStatusColor(num cash) {
+    if (cash > 10) return const Color(0xFF10b981);
+    if (cash >= 0) return const Color(0xFFf59e0b);
+    return const Color(0xFFef4444);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentClient = controller.getClient() ?? client;
+    final systems = controller.getClientSystems() ?? [];
+    final logs = controller.getClientLogs() ?? [];
+    final cash = currentClient.totalCash ?? 0;
+    final statusColor = _getStatusColor(cash);
+    final isManager =
+        SupabaseAuthentication.myUser!.role != UserRoles.assistant.index;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.9,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      title: title,
-      content: Center(child: Text(message)));
-}
-
-Future<void> showEditSystemDialog(System system) async {
-  final TextEditingController nameController =
-      TextEditingController(text: system.name);
-
-  await Get.dialog(
-    AlertDialog(
-      title: const Text('تعديل النظام'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
         children: [
-          Text('النظام: ${system.type!.name}'),
-          const SizedBox(height: 16),
-          TextField(
-            controller: nameController,
-            decoration: const InputDecoration(
-              labelText: 'الملاحظات',
-              border: OutlineInputBorder(),
+          // Drag Handle
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
             ),
-            maxLines: 3,
+          ),
+
+          // Header Card
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [statusColor, statusColor.withOpacity(0.8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: statusColor.withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Avatar
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Center(
+                    child: Text(
+                      currentClient.name?[0].toUpperCase() ?? '؟',
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        currentClient.name ?? 'غير محدد',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.phone_rounded,
+                              size: 14, color: Colors.white70),
+                          const SizedBox(width: 4),
+                          Text(
+                            currentClient.getFormattedPhoneNumber(),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Balance
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${cash.abs().toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const Text('ج.م',
+                        style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Quick Actions
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _QuickActionButton(
+                    icon: Icons.add_rounded,
+                    label: 'إضافة',
+                    color: const Color(0xFF10b981),
+                    onTap: () => showMoneyDialog(context, currentClient, true),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _QuickActionButton(
+                    icon: Icons.remove_rounded,
+                    label: 'تسديد',
+                    color: const Color(0xFF3b82f6),
+                    onTap: () => showMoneyDialog(context, currentClient, false),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _QuickActionButton(
+                    icon: Icons.print_rounded,
+                    label: 'طباعة',
+                    color: const Color(0xFF8b5cf6),
+                    onTap: () => Get.to(
+                        () => PrintClientsReceipts(clients: [currentClient])),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _QuickActionButton(
+                    icon: Icons.apps_rounded,
+                    label: 'الباقات',
+                    color: const Color(0xFFf59e0b),
+                    onTap: () =>
+                        showModernSystemChoiceSheet(context, currentClient),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Content
+          Expanded(
+            child: DefaultTabController(
+              length: isManager ? 3 : 1,
+              child: Column(
+                children: [
+                  // Tab Bar
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TabBar(
+                      labelColor: const Color(0xFF3b82f6),
+                      unselectedLabelColor: Colors.grey[500],
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      dividerColor: Colors.transparent,
+                      indicator: BoxDecoration(
+                        color: const Color(0xFF3b82f6).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      tabs: [
+                        const Tab(text: 'السجل'),
+                        if (isManager) const Tab(text: 'البيانات'),
+                        if (isManager) const Tab(text: 'الإعدادات'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Tab Content
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _LogsTab(logs: logs, client: currentClient),
+                        if (isManager)
+                          _InfoTab(client: currentClient, systems: systems),
+                        if (isManager) _SettingsTab(client: currentClient),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Get.back(),
-          child: const Text('إلغاء'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            try {
-              system.name = nameController.text;
-              await BackendServices.instance.systemRepository.update(system);
-              Get.back();
-              Get.snackbar(
-                'نجاح',
-                'تم تحديث الملاحظات بنجاح',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-              // Update UI in both views
-              Get.find<ClientBottomSheetController>().updateClient();
-            } catch (e) {
-              Get.snackbar(
-                'خطأ',
-                'حدث خطأ أثناء تحديث الملاحظات',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            }
-          },
-          child: const Text('حفظ', style: TextStyle(color: Colors.black)),
-        ),
-      ],
-    ),
-  );
+    );
+  }
 }
 
-class ClientDataWidget extends StatelessWidget {
-  final ClientBottomSheetController controller;
-  final ColorScheme colors;
-  final double height;
-  final Client client;
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
 
-  const ClientDataWidget({
-    super.key,
-    required this.colors,
-    required this.height,
-    required this.client,
-    required this.controller,
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<ClientBottomSheetController>(builder: (controller) {
-      // Get client data from controller, fallback to provided client if null
-      final currentClient = controller.getClient() ?? client;
-      final systems = controller.getClientSystems() ?? [];
-      final logs = controller.getClientLogs() ?? [];
-
-      // Use loading indicator only if both controller client and provided client are null
-      if (currentClient == null) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      }
-
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: Colors.grey[50],
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return ListView(
-              shrinkWrap: true,
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                // Header Section
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.blue[700]!, Colors.blue[900]!],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.blue[200]!.withOpacity(0.5),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundColor: Colors.white,
-                        child: Text(
-                          currentClient.name?[0].toUpperCase() ?? 'N/A',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[900],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        currentClient.name ?? 'غير محدد',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                  color: color, fontSize: 11, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-                // Money Display Section with enhanced styling
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15),
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey[300]!,
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: MoneyDisplay(
-                    value: currentClient.totalCash,
-                    title: "صافي مستحقات و ديون العميل",
-                    onAdd: () async {
-                      await showMoneyDialog(context, currentClient, true);
-                    },
-                    onSubtraction: () async {
-                      await showMoneyDialog(context, currentClient, false);
-                    },
-                  ),
-                ),
+class _LogsTab extends StatelessWidget {
+  final List<Log> logs;
+  final Client client;
 
-                // For assistants, don't show anything else
-                if (SupabaseAuthentication.myUser!.role !=
-                    UserRoles.assistant.index)
-                  Column(
-                    children: [
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            shape: const StadiumBorder(),
-                            backgroundColor: Colors.red[900],
-                            padding: const EdgeInsets.all(10)),
-                        onPressed: () async {
-                          await showDangerDialog("حذف عميل",
-                              "هل أنت متأكد من أنك تريد محو بيانات العميل ${client.name}؟",
-                              () async {
-                            await BackendServices.instance.clientRepository
-                                .delete(client);
-                            AccountClientInfo.to.updateCurrnetClinets();
-                            Get.back(); // Close the dialog
-                            Get.back(); // Close the bottom sheet
-                          });
-                        },
-                        child: const Text(
-                          "حذف",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16),
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 15,
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            shape: const StadiumBorder(),
-                            backgroundColor: Colors.green[900],
-                            padding: const EdgeInsets.all(10)),
-                        onPressed: () async {
-                          final firstDate =
-                              DateTime.now().subtract(const Duration(days: 50));
-                          DateTime lastDate = DateTime(firstDate.year + 10);
+  const _LogsTab({required this.logs, required this.client});
 
-                          final data = await showDatePicker(
-                              context: context,
-                              initialDate: DateTime.now(),
-                              firstDate: firstDate,
-                              lastDate: lastDate);
-
-                          if (data != null) {
-                            client.expireDate = data;
-                            await BackendServices.instance.clientRepository
-                                .update(client);
-                            AccountClientInfo.to.updateCurrnetClinets();
-                            Get.back();
-                          }
-                        },
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.date_range,
-                              color: Colors.white,
-                            ),
-                            SizedBox(
-                              width: 10,
-                            ),
-                            Text(
-                              "تغيير تاريخ انتهاء العرض",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            shape: const StadiumBorder(),
-                            backgroundColor: Colors.orange[900],
-                            padding: const EdgeInsets.all(10)),
-                        onPressed: () async {
-                          await showDiscountDialog(context, client);
-                        },
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.discount,
-                              color: Colors.white,
-                            ),
-                            SizedBox(
-                              width: 10,
-                            ),
-                            Text(
-                              "إضافة خصم",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Client Details Card Moved Here
-                      Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildInfoRow(
-                                icon: Icons.credit_card,
-                                title: 'الرقم القومي',
-                                value: client.nationalId ?? 'غير متوفر',
-                                iconColor: Colors.blue[700]!,
-                              ),
-                              const Divider(height: 24),
-                              _buildInfoRow(
-                                icon: Icons.location_on,
-                                title: 'العنوان',
-                                value: client.address ?? 'غير متوفر',
-                                iconColor: Colors.red[700]!,
-                              ),
-                              const Divider(height: 24),
-                              _buildInfoRow(
-                                icon: Icons.phone_android,
-                                title: 'رقم الخط',
-                                value: client.getFormattedPhoneNumber(),
-                                iconColor: Colors.green[700]!,
-                              ),
-                              if (client.expireDate != null) ...[
-                                const Divider(height: 24),
-                                _buildInfoRow(
-                                  icon: Icons.event,
-                                  title: 'تاريخ انتهاء العرض',
-                                  value: fullExpressionArabicDate(
-                                      client.expireDate!),
-                                  iconColor: Colors.orange[700]!,
-                                ),
-                              ],
-                              const Divider(height: 24),
-                              _buildInfoRow(
-                                icon: Icons.calendar_today,
-                                title: 'تاريخ البداية',
-                                value:
-                                    fullExpressionArabicDate(client.createdAt!),
-                                iconColor: Colors.teal[700]!,
-                              ),
-                              const Divider(height: 24),
-                              _buildInfoRow(
-                                icon: Icons.event_available,
-                                title: 'تاريخ نهاية الاشتراك',
-                                value: systems.isNotEmpty &&
-                                        systems.first.endDate != null
-                                    ? fullExpressionArabicDate(
-                                        systems.first.endDate!)
-                                    : 'غير محدد',
-                                iconColor: Colors.purple[700]!,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(6.0),
-                            child: Container(
-                              //height: double.maxFinite,
-                              decoration: BoxDecoration(
-                                  color: colors.primary,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(style: BorderStyle.solid)),
-                              child: Column(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16, horizontal: 20),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.blue[700] ?? Colors.blue,
-                                          Colors.blue[900] ?? Colors.blue,
-                                        ],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      ),
-                                      borderRadius: const BorderRadius.only(
-                                        topLeft: Radius.circular(20),
-                                        topRight: Radius.circular(20),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.start,
-                                            textDirection: TextDirection.rtl,
-                                            children: [
-                                              const Icon(
-                                                Icons.history,
-                                                color: Colors.white,
-                                                size: 24,
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: Text(
-                                                  'سجل التعاملات المالية',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Flexible(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              ElevatedButton.icon(
-                                                icon: Icon(
-                                                  Icons.print_rounded,
-                                                  color: Colors.blue[900],
-                                                  size: 18,
-                                                ),
-                                                label: Text(
-                                                  'طباعة',
-                                                  style: TextStyle(
-                                                    color: Colors.blue[900],
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.white,
-                                                  elevation: 2,
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 6,
-                                                  ),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            20),
-                                                  ),
-                                                ),
-                                                onPressed: () async {
-                                                  Get.to(() => PrintClientsReceipts(
-                                                    clients: [client],
-                                                  ));
-                                                },
-                                              ),
-                                              const SizedBox(height: 4),
-                                              ElevatedButton.icon(
-                                                icon: Icon(
-                                                  Icons.view_list,
-                                                  color: Colors.blue[900],
-                                                  size: 18,
-                                                ),
-                                                label: Text(
-                                                  'الباقات',
-                                                  style: TextStyle(
-                                                    color: Colors.blue[900],
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.white,
-                                                  elevation: 2,
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 6,
-                                                  ),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            20),
-                                                  ),
-                                                ),
-                                                onPressed: () async {
-                                                  await showModernSystemChoiceSheet(
-                                                      context, currentClient);
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(10.0),
-                                    child: SingleChildScrollView(
-                                      child: SizedBox(
-                                        height: 0.5 * height,
-                                        child: ListView.builder(
-                                          itemCount: logs.length,
-                                          itemBuilder: (context, index) {
-                                            final currentLog = logs[index];
-                                            return LogCardWidget(
-                                              currentLog: currentLog,
-                                              currentClient: client,
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(6.0),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                  color: colors.primary,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(style: BorderStyle.solid)),
-                              child: Column(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(10.0),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 16, horizontal: 20),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Colors.blue[700] ?? Colors.blue,
-                                            Colors.blue[900] ?? Colors.blue,
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        borderRadius: const BorderRadius.only(
-                                          topLeft: Radius.circular(20),
-                                          topRight: Radius.circular(20),
-                                        ),
-                                      ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            textDirection: TextDirection.rtl,
-                                            children: [
-                                              const Icon(
-                                                Icons.verified_outlined,
-                                                color: Colors.white,
-                                                size: 24,
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Text(
-                                                "الخدمات المقدمة",
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Column(
-                                            children: [
-                                              Text(
-                                                "التكلفة الكلية للخدمات المقدمة",
-                                                style: TextStyle(
-                                                  color: Colors.white70,
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons.paid_rounded,
-                                                    color: Colors.white,
-                                                    size: 18,
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Text(
-                                                    // Always show saved totalServicesPrice if available, else fallback to calculated
-                                                    "${(currentClient.totalServicesPrice ?? _calculateTotalServicesPrice(systems)).toStringAsFixed(0)} جنيهاً",
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              ElevatedButton.icon(
-                                                onPressed: () {
-                                                  showOtherServicesExcludeSheet(
-                                                      context, systems);
-                                                },
-                                                icon: Icon(
-                                                  Icons.visibility_off,
-                                                  size: 16,
-                                                  color: Colors.blue[900],
-                                                ),
-                                                label: Text(
-                                                  'استبعاد خدمات',
-                                                  style: TextStyle(
-                                                    color: Colors.blue[900],
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.white,
-                                                  elevation: 2,
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 4,
-                                                  ),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            20),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 12),
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green[600],
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 12, horizontal: 20),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        elevation: 4,
-                                      ),
-                                      onPressed: () =>
-                                          showSystemAddDialog(client),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.add_circle_outline,
-                                            color: Colors.white,
-                                            size: 22,
-                                          ),
-                                          SizedBox(width: 10),
-                                          Text(
-                                            'إضافة باقة جديدة',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(10.0),
-                                    child: SingleChildScrollView(
-                                      child: SizedBox(
-                                        height: height * 0.5,
-                                        child: Builder(
-                                          builder: (context) {
-                                            final visibleSystems =
-                                                _getVisibleSystems(systems);
-                                            return GridView.builder(
-                                              itemCount:
-                                                  visibleSystems.length,
-                                              gridDelegate:
-                                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                                childAspectRatio: 1.8,
-                                                crossAxisCount:
-                                                    MediaQuery.of(context)
-                                                                .size
-                                                                .width >
-                                                            600
-                                                        ? 3
-                                                        : 2,
-                                                crossAxisSpacing: 8,
-                                                mainAxisSpacing: 8,
-                                              ),
-                                              itemBuilder: (context, index) {
-                                                final system =
-                                                    visibleSystems[index];
-
-                                                return Stack(
-                                                  children: [
-                                                    Positioned.fill(
-                                                      child: Card(
-                                                        margin: const EdgeInsets.all(0),
-                                                        child: Container(
-                                                          decoration: BoxDecoration(
-                                                            image: DecorationImage(
-                                                              opacity: 0.1,
-                                                              image: system.type!.image != null
-                                                                  ? CachedNetworkImageProvider(system.type!.image!) as ImageProvider
-                                                                  : AssetImage(system.type!.category!.icon()),
-                                                              fit: BoxFit.contain,
-                                                            ),
-                                                          ),
-                                                          width: 150,
-                                                          padding: const EdgeInsets.all(4),
-                                                          child: Column(
-                                                            mainAxisAlignment: MainAxisAlignment.center,
-                                                            children: [
-                                                              Flexible(
-                                                                child: Text(
-                                                                  system.type!.name!,
-                                                                  style: const TextStyle(
-                                                                    fontSize: 14,
-                                                                    fontWeight: FontWeight.bold,
-                                                                  ),
-                                                                  textAlign: TextAlign.center,
-                                                                  maxLines: 2,
-                                                                  overflow: TextOverflow.ellipsis,
-                                                                ),
-                                                              ),
-                                                              const SizedBox(height: 2),
-                                                              Text(
-                                                                "${system.type!.price ?? 0} جنيه",
-                                                                style: const TextStyle(fontSize: 12),
-                                                              ),
-                                                              const SizedBox(height: 2),
-                                                              Flexible(
-                                                                child: Row(
-                                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                                  children: [
-                                                                    Flexible(
-                                                                      child: IconButton(
-                                                                        icon: const Icon(Icons.edit, size: 18),
-                                                                        onPressed: () => showEditSystemDialog(system),
-                                                                        padding: EdgeInsets.zero,
-                                                                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                                                      ),
-                                                                    ),
-                                                                    if (system.type!.category == SystemCategory.mobileInternet)
-                                                                      Flexible(
-                                                                        child: IconButton(
-                                                                          icon: Icon(
-                                                                            _isSystemPaid(system) ? Icons.paid : Icons.payment,
-                                                                            color: _isSystemPaid(system) ? Colors.green : Colors.orange,
-                                                                            size: 18,
-                                                                          ),
-                                                                          onPressed: () => _toggleSystemPayment(system),
-                                                                          tooltip: _isSystemPaid(system) ? "مدفوع" : "غير مدفوع",
-                                                                          padding: EdgeInsets.zero,
-                                                                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                                                        ),
-                                                                      ),
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    Positioned(
-                                                      top: 2,
-                                                      left: 2,
-                                                      child: IconButton(
-                                                        onPressed: () async {
-                                                          await showDangerDialog(
-                                                            "الغاء اشتراك باقة",
-                                                            "هل حقاً تريد الغاء اشتراك باقة العميل من نوع ${system.name} ؟",
-                                                            () async {
-                                                              await BackendServices.instance.systemRepository.delete(system);
-                                                            },
-                                                          );
-                                                        },
-                                                        icon: const Icon(Icons.remove_circle, color: Colors.red, size: 20),
-                                                        padding: EdgeInsets.zero,
-                                                        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                );
-                                              },
-                                            );
-                                          }),
-                                    ),
-                                  ),
-                              )],
-                              ),
-                            ),
-                          )
-                        ],
-                      )
-                    ],
-                  )
-              ],
-            );
-          },
+  @override
+  Widget build(BuildContext context) {
+    if (logs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.receipt_long_rounded, size: 48, color: Colors.grey[300]),
+            const SizedBox(height: 12),
+            Text('لا توجد تعاملات', style: TextStyle(color: Colors.grey[400])),
+          ],
         ),
       );
-    });
-  }
+    }
 
-  Widget _buildInfoRow({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color iconColor,
-  }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: logs.length,
+      itemBuilder: (context, index) {
+        final log = logs[index];
+        final isAddition = log.transactionType == TransactionType.addition ||
+            log.transactionType == TransactionType.moneyAdded;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: iconColor),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: (isAddition
+                          ? const Color(0xFFef4444)
+                          : const Color(0xFF10b981))
+                      .withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isAddition
+                      ? Icons.arrow_upward_rounded
+                      : Icons.arrow_downward_rounded,
+                  color: isAddition
+                      ? const Color(0xFFef4444)
+                      : const Color(0xFF10b981),
+                  size: 20,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      log.systemType.isNotEmpty
+                          ? log.systemType
+                          : (isAddition ? 'إضافة مبلغ' : 'تسديد مبلغ'),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800],
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      log.createdAt != null
+                          ? fullExpressionArabicDate(log.createdAt!)
+                          : '',
+                      style: TextStyle(color: Colors.grey[400], fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
               Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                '${log.price.toStringAsFixed(0)} ج.م',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: isAddition
+                      ? const Color(0xFFef4444)
+                      : const Color(0xFF10b981),
                 ),
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+}
+
+class _InfoTab extends StatelessWidget {
+  final Client client;
+  final List<System> systems;
+
+  const _InfoTab({required this.client, required this.systems});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      children: [
+        _InfoCard(
+          items: [
+            _InfoItem(
+                icon: Icons.badge_rounded,
+                label: 'الرقم القومي',
+                value: client.nationalId ?? 'غير متوفر'),
+            _InfoItem(
+                icon: Icons.location_on_rounded,
+                label: 'العنوان',
+                value: client.address ?? 'غير متوفر'),
+            _InfoItem(
+                icon: Icons.phone_rounded,
+                label: 'رقم الخط',
+                value: client.getFormattedPhoneNumber()),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _InfoCard(
+          items: [
+            _InfoItem(
+              icon: Icons.calendar_today_rounded,
+              label: 'تاريخ البداية',
+              value: client.createdAt != null
+                  ? fullExpressionArabicDate(client.createdAt!)
+                  : 'غير محدد',
+            ),
+            if (client.expireDate != null)
+              _InfoItem(
+                icon: Icons.event_rounded,
+                label: 'تاريخ انتهاء العرض',
+                value: fullExpressionArabicDate(client.expireDate!),
+              ),
+            _InfoItem(
+              icon: Icons.event_available_rounded,
+              label: 'نهاية الاشتراك',
+              value: systems.isNotEmpty && systems.first.endDate != null
+                  ? fullExpressionArabicDate(systems.first.endDate!)
+                  : 'غير محدد',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  final List<_InfoItem> items;
+
+  const _InfoCard({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: items.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+          return Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3b82f6).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(item.icon,
+                        color: const Color(0xFF3b82f6), size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.label,
+                            style: TextStyle(
+                                color: Colors.grey[500], fontSize: 12)),
+                        const SizedBox(height: 2),
+                        Text(
+                          item.value,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[800]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (index < items.length - 1)
+                Divider(height: 24, color: Colors.grey[100]),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _InfoItem {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  _InfoItem({required this.icon, required this.label, required this.value});
+}
+
+class _SettingsTab extends StatelessWidget {
+  final Client client;
+
+  const _SettingsTab({required this.client});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      children: [
+        _SettingButton(
+          icon: Icons.calendar_month_rounded,
+          label: 'تغيير تاريخ انتهاء العرض',
+          color: const Color(0xFF10b981),
+          onTap: () async {
+            final data = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime.now().subtract(const Duration(days: 50)),
+              lastDate: DateTime(DateTime.now().year + 10),
+            );
+            if (data != null) {
+              client.expireDate = data;
+              await BackendServices.instance.clientRepository.update(client);
+              AccountClientInfo.to.updateCurrnetClinets();
+              Get.back();
+            }
+          },
+        ),
+        const SizedBox(height: 10),
+        _SettingButton(
+          icon: Icons.discount_rounded,
+          label: 'إضافة خصم',
+          color: const Color(0xFFf59e0b),
+          onTap: () => showDiscountDialog(context, client),
+        ),
+        const SizedBox(height: 10),
+        _SettingButton(
+          icon: Icons.delete_rounded,
+          label: 'حذف العميل',
+          color: const Color(0xFFef4444),
+          onTap: () => _showDeleteDialog(client),
         ),
       ],
     );
   }
 
-  // Add these helper methods at the end of the ClientDataWidget class
-  double _calculateTotalServicesPrice(List<System> systems) {
-    double total = 0;
-
-    // Get excluded systems from manager if available
-    List<System> excludedSystems = [];
-    try {
-      if (Get.isRegistered<ExcludedSystemsManager>()) {
-        excludedSystems =
-            Get.find<ExcludedSystemsManager>().getExcludedSystems();
-      }
-    } catch (e) {
-      excludedSystems = [];
-    }
-
-    for (var system in systems) {
-      if (system.type!.category == SystemCategory.mobileInternet) {
-        // Skip excluded systems (temporarily hidden, not deleted)
-        if (excludedSystems.any((excluded) => excluded.id == system.id)) {
-          continue;
-        }
-
-        // For other services, only add to total if not paid
-        bool isPaid = _isSystemPaid(system);
-        if (!isPaid) {
-          total += system.type!.price ?? 0;
-        } else {
-        }
-      } else {
-        // For flex systems, always add to total
-        total += system.type!.price ?? 0;
-      }
-    }
-    return total;
-  }
-
-  List<System> _getVisibleSystems(List<System> systems) {
-    return systems.where((system) {
-      if (system.type!.category == SystemCategory.mobileInternet) {
-        // Show other services only if not paid and within collection period
-        bool isPaid = _isSystemPaid(system);
-        bool shouldShow = shouldShowSystem(system);
-        return !isPaid && shouldShow;
-      }
-      // Always show flex systems
-      return true;
-    }).toList();
-  }
-
-  bool _isSystemPaid(System system) {
-    // Check if system is marked as paid
-    bool isPaid = system.name?.contains('[مدفوع]') ?? false;
-    return isPaid;
-  }
-
-  void _toggleSystemPayment(System system) async {
-    try {
-      bool wasPayd = _isSystemPaid(system);
-
-      if (wasPayd) {
-        // Mark as unpaid - remove [مدفوع] from name
-        system.name = system.name?.replaceAll('[مدفوع]', '').trim();
-        if (system.name?.isEmpty ?? true) {
-          system.name = null;
-        }
-      } else {
-        // Mark as paid - add [مدفوع] to name
-        String currentName = system.name?.trim() ?? '';
-        system.name = currentName.isEmpty ? '[مدفوع]' : '$currentName [مدفوع]';
-      }
-
-      await BackendServices.instance.systemRepository.update(system);
-
-      // Force complete rebuild of the widget
-      controller.update();
-
-      final message = _isSystemPaid(system)
-          ? 'تم تسجيل الدفع بنجاح'
-          : 'تم إلغاء تسجيل الدفع';
-
-      Get.snackbar(
-        'نجاح',
-        message,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green[100],
-        colorText: Colors.green[900],
-      );
-    } catch (e) {
-      Get.snackbar(
-        'خطأ',
-        'حدث خطأ أثناء تحديث حالة الدفع: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[900],
-      );
-    }
+  void _showDeleteDialog(Client client) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('حذف العميل',
+            style: TextStyle(
+                color: Colors.grey[800], fontWeight: FontWeight.w600)),
+        content: Text('هل أنت متأكد من حذف "${client.name}"؟',
+            style: TextStyle(color: Colors.grey[600])),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('إلغاء', style: TextStyle(color: Colors.grey[500])),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await BackendServices.instance.clientRepository.delete(client);
+              AccountClientInfo.to.updateCurrnetClinets();
+              Get.back();
+              Get.back();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFef4444),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('حذف', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 }
 
-class LogCardWidget extends StatelessWidget {
-  const LogCardWidget({
-    super.key,
-    required this.currentLog,
-    required this.currentClient,
+class _SettingButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _SettingButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
   });
-  final Client currentClient;
-  final Log currentLog;
 
   @override
   Widget build(BuildContext context) {
-    // Determine text color based on transaction type
-    final priceColor = currentLog.transactionType == TransactionType.addition
-        ? Colors.red
-        : Colors.black87;
-
-    return Card(
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 14),
             Expanded(
-              child: Row(
-                children: [
-                  Icon(
-                    currentLog.transactionType.icon(),
-                    color: currentLog.transactionType.color(),
-                  ),
-                  const VerticalDivider(),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          currentLog.transactionType.name(),
-                          overflow: TextOverflow.clip,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          fullExpressionArabicDate(currentLog.createdAt!),
-                          overflow: TextOverflow.clip,
-                          style: const TextStyle(
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                ],
+              child: Text(
+                label,
+                style: TextStyle(
+                    fontWeight: FontWeight.w600, color: Colors.grey[800]),
               ),
             ),
-            Row(
-              children: [
-                Column(
-                  children: [
-                    const Text(
-                      "المبلغ",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      "${currentLog.price} جنيه",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: priceColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(
-                  width: 10,
-                ),
-                Visibility(
-                  visible: SupabaseAuthentication.myUser!.role ==
-                          UserRoles.admin.index ||
-                      SupabaseAuthentication.myUser!.role ==
-                          UserRoles.manager.index,
-                  child: Column(
-                    children: [
-                      IconButton(
-                        onPressed: () async {
-                          await BackendServices.instance.logRepository
-                              .reverseLog(currentLog, currentClient);
-                        },
-                        icon: const Icon(
-                          Icons.replay_circle_filled,
-                          color: Colors.blue,
-                        ),
-                        tooltip: "عكس العملية",
-                      ),
-                      IconButton(
-                        onPressed: () async {
-                          showDangerDialog("حذف معاملة",
-                              "تحذير : حذف المعاملة قد يؤدي الي جعل بعض الاموال مجهولة المصدر عليك التأكد انك فعلا تريد حذف تلك المعاملة بدلا من عكسها",
-                              () async {
-                            await BackendServices.instance.logRepository
-                                .delete(currentLog);
-                          });
-                        },
-                        icon: const Icon(
-                          Icons.delete,
-                          color: Colors.red,
-                        ),
-                        tooltip: "حذف",
-                      ),
-                    ],
-                  ),
-                )
-              ],
-            ),
+            Icon(Icons.chevron_left_rounded, color: Colors.grey[400]),
           ],
         ),
       ),
@@ -1192,151 +706,91 @@ class LogCardWidget extends StatelessWidget {
   }
 }
 
-void showSystemAddDialog(Client clinet) async {
-  SystemType? currentType;
-
-  final controller = Get.find<ClientBottomSheetController>();
-  final loaders = Get.put(Loaders());
-
-  await Get.defaultDialog(
-      title: "أضف خدمة",
-      backgroundColor: Colors.white,
-      content: Obx(
-        () => Column(
-          children: [
-            DropdownMenu(
-              menuHeight: 200,
-              enableFilter: true,
-              requestFocusOnTap: true,
-              enableSearch: true,
-              dropdownMenuEntries: controller
-                  .getAllTypes()
-                  .map(
-                    (systemTypeObject) => DropdownMenuEntry(
-                      value: systemTypeObject,
-                      label: systemTypeObject.name!,
-                    ),
-                  )
-                  .toList(),
-              onSelected: (value) {
-                currentType = value;
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.all(15.0),
-              child: ElevatedButton(
-                  style:
-                      ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  onPressed: (loaders.systemIsLoading.value)
-                      ? null
-                      : () async {
-                          if (currentType != null) {
-                            loaders.manageSystemType(clinet, currentType!);
-                          }
-                          Get.back();
-                        },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.check_rounded),
-                          Text("اضافة"),
-                        ],
-                      ),
-                      Visibility(
-                          visible: loaders.systemIsLoading.value,
-                          child: const CustomIndicator())
-                    ],
-                  )),
-            ),
-          ],
-        ),
-      ));
-}
-
-class CustomIndicator extends StatelessWidget {
-  const CustomIndicator({super.key, this.title = "تحميل"});
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        CircularProgressIndicator(
-          semanticsLabel: title,
-          strokeWidth: 10,
-          strokeCap: StrokeCap.butt,
-          backgroundColor: Colors.amber,
-          color: Colors.purple,
-        ),
-        SizedBox(
-          height: 10,
-        ),
-        Text(title)
-      ],
-    );
-  }
-}
-
+// Money Dialog
 Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
     [bool both = false]) async {
   final controller = TextEditingController();
   final loaders = Get.put(Loaders());
 
-  await Get.defaultDialog(
+  await Get.dialog(
+    AlertDialog(
       backgroundColor: Colors.white,
-      title: (adding) ? "التعاملات النقدية(ايداع)" : "التعاملات النقدية(حذف)",
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color:
+                  (adding ? const Color(0xFFef4444) : const Color(0xFF3b82f6))
+                      .withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              adding ? Icons.add_rounded : Icons.remove_rounded,
+              color: adding ? const Color(0xFFef4444) : const Color(0xFF3b82f6),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            adding ? 'إضافة مبلغ' : 'تسديد مبلغ',
+            style: TextStyle(
+                color: Colors.grey[800],
+                fontWeight: FontWeight.w600,
+                fontSize: 18),
+          ),
+        ],
+      ),
       content: Obx(
         () => Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(10.0),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: TextField(
-                cursorColor: Colors.red,
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.allow(
-                      RegExp((both) ? r'[0-9.]' : r'[0-9]')),
-                ],
                 controller: controller,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(FontAwesomeIcons.cashRegister),
-                  border: OutlineInputBorder(),
-                  hintText: 'أدخل المبلغ',
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(both ? r'[0-9.]' : r'[0-9]'))
+                ],
+                style: TextStyle(
+                    color: Colors.grey[800],
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+                decoration: InputDecoration(
+                  hintText: '0',
+                  hintStyle: TextStyle(color: Colors.grey[400]),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(16),
+                  suffixText: 'ج.م',
+                  suffixStyle: TextStyle(color: Colors.grey[500]),
                 ),
               ),
             ),
-            ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: (adding) ? Colors.red : Colors.blue),
-                onPressed: (loaders.moneyIsLoading.value)
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: loaders.moneyIsLoading.value
                     ? null
                     : () async {
                         try {
-                          if (controller.text.isEmpty) {
+                          if (controller.text.isEmpty)
                             throw 'الرجاء إدخال مبلغ صحيح';
-                          }
-
                           final amount = int.tryParse(controller.text);
-                          if (amount == null) {
-                            throw 'الرجاء إدخال مبلغ صحيح';
-                          }
+                          if (amount == null) throw 'الرجاء إدخال مبلغ صحيح';
 
                           await loaders.changeMoneyValue(
                               client, controller.text, adding);
 
-                          final message = adding
-                              ? 'تم إضافة المبلغ بنجاح'
-                              : 'تم تسديد المبلغ بنجاح';
+                          if (context.mounted) Navigator.pop(context);
 
-                          // First dismiss the dialog using context
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                          }
-
-                          // Navigate to successful payment page
                           Get.to(() => SuccessfulPaymentPage(
                                 amount: '${controller.text} جنيه',
                                 transactionId:
@@ -1349,394 +803,312 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                             'خطأ',
                             e.toString(),
                             snackPosition: SnackPosition.BOTTOM,
-                            backgroundColor: Colors.red[100],
-                            colorText: Colors.red[900],
-                            duration: const Duration(seconds: 3),
+                            backgroundColor:
+                                const Color(0xFFef4444).withOpacity(0.1),
+                            colorText: const Color(0xFFef4444),
                           );
                         }
                       },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(adding ? Icons.add : Icons.payment),
-                        Text(adding ? "تأكيد" : "تأكيد"),
-                      ],
-                    ),
-                    Visibility(
-                        visible: loaders.moneyIsLoading.value,
-                        child: const CustomIndicator())
-                  ],
-                )),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: adding
+                      ? const Color(0xFFef4444)
+                      : const Color(0xFF3b82f6),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: loaders.moneyIsLoading.value
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text('تأكيد',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w600)),
+              ),
+            ),
           ],
         ),
-      ));
+      ),
+    ),
+  );
 }
 
+// Discount Dialog
 Future<void> showDiscountDialog(BuildContext context, Client client) async {
-  // Initialize with current values if they exist
   final amountController =
       TextEditingController(text: client.discountPercentage?.toString() ?? '');
-  final loaders = Get.put(Loaders());
-
-  final discountAmount = (client.discountPercentage ?? 0.0).obs;
   final selectedDate = (client.discountEndDate ?? DateTime.now()).obs;
-  final endDate = (client.discountEndDate ?? DateTime.now()).obs;
-  final isLongPressed = false.obs;
 
-  // Update preview when inputs change
-  void updatePreview() {
-    final amount = double.tryParse(amountController.text) ?? 0.0;
-    discountAmount.value = amount;
-    endDate.value = selectedDate.value;
-  }
-
-  void applyDiscount() async {
-    try {
-      final discountAmount = double.tryParse(amountController.text);
-
-      if (discountAmount == null) {
-        Get.snackbar(
-          'خطأ',
-          'الرجاء إدخال نسبة خصم صحيحة',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-        return;
-      }
-
-      if (discountAmount <= 0 || discountAmount > 100) {
-        Get.snackbar(
-          'خطأ',
-          'نسبة الخصم يجب أن تكون بين 0 و 100',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-        return;
-      }
-
-      if (selectedDate.value.isBefore(DateTime.now())) {
-        Get.snackbar(
-          'خطأ',
-          'تاريخ الانتهاء يجب أن يكون في المستقبل',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-        return;
-      }
-
-      // Apply discount and update database
-      client.discountPercentage = discountAmount;
-      client.discountEndDate = selectedDate.value;
-
-      // Calculate discounted amount for money transactions
-      if (client.totalCash != null && client.totalCash! > 0) {
-        final discountedAmount = client.totalCash! * (discountAmount / 100);
-        client.totalCash = client.totalCash! - discountedAmount;
-      }
-
-      await BackendServices.instance.clientRepository.update(client);
-
-      // Update UI controllers
-      Get.find<ClientBottomSheetController>().updateClient();
-
-      Get.back();
-      Get.snackbar(
-        'نجاح',
-        'تم إضافة الخصم وتطبيقه على المبلغ المستحق بنجاح',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } catch (e) {
-      Get.snackbar(
-        'خطأ',
-        'حدث خطأ أثناء إضافة الخصم: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
-  }
-
-  amountController.addListener(updatePreview);
-
-  await Get.defaultDialog(
+  await Get.dialog(
+    AlertDialog(
       backgroundColor: Colors.white,
-      title: "إضافة خصم",
-      content: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.8,
-        child: Obx(
-          () => SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Preview Card with fixed width
-                SizedBox(
-                  width: double.infinity,
-                  child: Card(
-                    color: Colors.orange[50],
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12.0, horizontal: 8.0),
-                      child: Column(
-                        children: [
-                          const Text(
-                            "معاينة الخصم",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          // Discount amount
-                          Text("نسبة الخصم: ${discountAmount.value}%",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange[900],
-                              ),
-                              textAlign: TextAlign.center),
-                          const SizedBox(height: 8),
-                          // End date with ellipsis
-                          Text(
-                            "تاريخ الانتهاء: ${fullExpressionArabicDate(endDate.value)}",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange[900],
-                            ),
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ],
-                      ),
-                    ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFFf59e0b).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.discount_rounded, color: Color(0xFFf59e0b)),
+          ),
+          const SizedBox(width: 12),
+          Text('إضافة خصم',
+              style: TextStyle(
+                  color: Colors.grey[800],
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18)),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              style: TextStyle(
+                  color: Colors.grey[800],
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                hintText: '0',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.all(16),
+                suffixText: '%',
+                suffixStyle: TextStyle(color: Colors.grey[500]),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Obx(() => GestureDetector(
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate.value,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime(DateTime.now().year + 5),
+                  );
+                  if (date != null) selectedDate.value = date;
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-                const SizedBox(height: 16),
-                // Input Fields
-                Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: GestureDetector(
-                    onLongPress: () {
-                      isLongPressed.value = true;
-                      Future.delayed(const Duration(milliseconds: 500), () {
-                        isLongPressed.value = false;
-                      });
-                    },
-                    child: Theme(
-                      data: Theme.of(context).copyWith(
-                        textSelectionTheme: TextSelectionThemeData(
-                          selectionColor: Colors.orange[200],
-                          selectionHandleColor: Colors.orange[900],
-                          cursorColor: Colors.orange[900],
-                        ),
-                      ),
-                      child: TextField(
-                        controller: amountController,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'نسبة الخصم (%)',
-                          prefixIcon: const Icon(Icons.percent),
-                          border: const OutlineInputBorder(),
-                          suffixIcon: Icon(
-                            Icons.discount,
-                            color: discountAmount.value > 0
-                                ? Colors.green
-                                : Colors.grey,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                                color: Colors.orange[900]!, width: 2),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey[400]!),
-                          ),
-                          labelStyle: TextStyle(
-                            color: Colors.orange[900],
-                            fontWeight: FontWeight.bold,
-                          ),
-                          floatingLabelStyle: TextStyle(
-                            color: Colors.orange[900],
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                          hintText: 'أدخل نسبة الخصم',
-                          hintStyle: TextStyle(color: Colors.grey[400]),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 15),
-                          filled: true,
-                          fillColor: isLongPressed.value
-                              ? Colors.blue[50]
-                              : Colors.grey[50],
-                        ),
-                        onChanged: (value) {
-                          updatePreview();
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: GestureDetector(
-                    onLongPress: () {
-                      isLongPressed.value = true;
-                      Future.delayed(const Duration(milliseconds: 500), () {
-                        isLongPressed.value = false;
-                      });
-                    },
-                    child: InkWell(
-                      onTap: () async {
-                        final DateTime? picked = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate.value,
-                          firstDate: DateTime.now(),
-                          lastDate:
-                              DateTime.now().add(const Duration(days: 365)),
-                          builder: (context, child) {
-                            return Theme(
-                              data: Theme.of(context).copyWith(
-                                colorScheme: ColorScheme.light(
-                                  primary: Colors.orange[900]!,
-                                  onPrimary: Colors.white,
-                                  surface: Colors.white,
-                                  onSurface: Colors.black,
-                                ),
-                              ),
-                              child: child!,
-                            );
-                          },
-                        );
-                        if (picked != null) {
-                          final TimeOfDay? time = await showTimePicker(
-                            context: context,
-                            initialTime:
-                                TimeOfDay.fromDateTime(selectedDate.value),
-                            builder: (context, child) {
-                              return Theme(
-                                data: Theme.of(context).copyWith(
-                                  colorScheme: ColorScheme.light(
-                                    primary: Colors.orange[900]!,
-                                    onPrimary: Colors.white,
-                                    surface: Colors.white,
-                                    onSurface: Colors.black,
-                                  ),
-                                ),
-                                child: child!,
-                              );
-                            },
-                          );
-                          if (time != null) {
-                            selectedDate.value = DateTime(
-                              picked.year,
-                              picked.month,
-                              picked.day,
-                              time.hour,
-                              time.minute,
-                            );
-                            updatePreview();
-                          }
-                        }
-                      },
-                      child: InputDecorator(
-                        decoration: InputDecoration(
-                          labelText: 'تاريخ الانتهاء',
-                          prefixIcon: const Icon(Icons.calendar_today),
-                          border: const OutlineInputBorder(),
-                          suffixIcon: Icon(
-                            Icons.timer,
-                            color: selectedDate.value.isAfter(DateTime.now())
-                                ? Colors.green
-                                : Colors.grey,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                                color: Colors.orange[900]!, width: 2),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey[400]!),
-                          ),
-                          labelStyle: TextStyle(
-                            color: Colors.orange[900],
-                            fontWeight: FontWeight.bold,
-                          ),
-                          floatingLabelStyle: TextStyle(
-                            color: Colors.orange[900],
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 15),
-                          filled: true,
-                          fillColor: isLongPressed.value
-                              ? Colors.blue[50]
-                              : Colors.grey[50],
-                        ),
-                        child: Text(
-                          fullExpressionArabicDate(selectedDate.value),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // Submit Button
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange[900],
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
-                  ),
-                  onPressed:
-                      loaders.discountIsLoading.value ? null : applyDiscount,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.check, color: Colors.white),
+                      Icon(Icons.calendar_today_rounded,
+                          color: Colors.grey[500], size: 18),
                       const SizedBox(width: 8),
-                      const Text(
-                        'تأكيد',
-                        style: TextStyle(color: Colors.white),
+                      Text(
+                        fullExpressionArabicDate(selectedDate.value),
+                        style: TextStyle(
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w500),
                       ),
-                      if (loaders.discountIsLoading.value)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8.0),
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
-              ],
+              )),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () async {
+                try {
+                  final discountAmount = double.tryParse(amountController.text);
+                  if (discountAmount == null ||
+                      discountAmount <= 0 ||
+                      discountAmount > 100) {
+                    throw 'نسبة الخصم يجب أن تكون بين 0 و 100';
+                  }
+
+                  client.discountPercentage = discountAmount;
+                  client.discountEndDate = selectedDate.value;
+                  await BackendServices.instance.clientRepository
+                      .update(client);
+
+                  if (Get.isRegistered<ClientBottomSheetController>()) {
+                    Get.find<ClientBottomSheetController>().updateClient();
+                  }
+
+                  Get.back();
+                  Get.snackbar(
+                    'نجاح',
+                    'تم إضافة الخصم بنجاح',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: const Color(0xFF10b981).withOpacity(0.1),
+                    colorText: const Color(0xFF10b981),
+                  );
+                } catch (e) {
+                  Get.snackbar(
+                    'خطأ',
+                    e.toString(),
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: const Color(0xFFef4444).withOpacity(0.1),
+                    colorText: const Color(0xFFef4444),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFf59e0b),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('تطبيق الخصم',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
             ),
           ),
-        ),
-      ));
+        ],
+      ),
+    ),
+  );
 }
 
-// Add this function at the top level of the file
+// Danger Dialog
+Future<void> showDangerDialog(
+    String title, String message, Function() action) async {
+  await Get.dialog(
+    AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(title,
+          style:
+              TextStyle(color: Colors.grey[800], fontWeight: FontWeight.w600)),
+      content: Text(message, style: TextStyle(color: Colors.grey[600])),
+      actions: [
+        TextButton(
+          onPressed: () => Get.back(),
+          child: Text('إلغاء', style: TextStyle(color: Colors.grey[500])),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            await action();
+            Get.back();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFef4444),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: const Text('تأكيد', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
+}
+
+// Edit System Dialog
+Future<void> showEditSystemDialog(System system) async {
+  final nameController = TextEditingController(text: system.name);
+
+  await Get.dialog(
+    AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text('تعديل النظام',
+          style:
+              TextStyle(color: Colors.grey[800], fontWeight: FontWeight.w600)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('النظام: ${system.type!.name}',
+              style: TextStyle(color: Colors.grey[600])),
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              controller: nameController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'الملاحظات',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.all(14),
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Get.back(),
+          child: Text('إلغاء', style: TextStyle(color: Colors.grey[500])),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            try {
+              system.name = nameController.text;
+              await BackendServices.instance.systemRepository.update(system);
+              Get.back();
+              Get.snackbar('نجاح', 'تم تحديث الملاحظات بنجاح',
+                  snackPosition: SnackPosition.BOTTOM);
+              if (Get.isRegistered<ClientBottomSheetController>()) {
+                Get.find<ClientBottomSheetController>().updateClient();
+              }
+            } catch (e) {
+              Get.snackbar('خطأ', 'حدث خطأ أثناء تحديث الملاحظات',
+                  snackPosition: SnackPosition.BOTTOM);
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF3b82f6),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: const Text('حفظ', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
+}
+
+// Helper functions
 bool shouldShowSystem(System system) {
-  if (system.type!.category == SystemCategory.mobileInternet) {
-    if (system.createdAt != null) {
-      final collectionDay = AccountClientInfo.to.currentAccount.day;
-      final nextCollection = DateTime(
-        system.createdAt!.month == 12
-            ? system.createdAt!.year + 1
-            : system.createdAt!.year,
-        system.createdAt!.month == 12 ? 1 : system.createdAt!.month + 1,
-        collectionDay,
-      );
-      return !DateTime.now().isAfter(nextCollection);
-    }
-  }
   return true;
+}
+
+class CustomIndicator extends StatelessWidget {
+  final String? title;
+
+  const CustomIndicator({super.key, this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+              strokeWidth: 2.5, color: Color(0xFF3b82f6)),
+        ),
+        if (title != null && title!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(title!, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+        ],
+      ],
+    );
+  }
 }

@@ -276,6 +276,7 @@ class _DuesManagementState extends State<DuesManagement>
                               return client_page.ModernClientCard(
                                 client: filteredData[index],
                                 index: index,
+                                lightTheme: false,
                               );
                             },
                           ),
