@@ -164,7 +164,24 @@ class _AccountDetailsState extends State<AccountDetails>
   @override
   void dispose() {
     _waveController.dispose();
+    // Clean up controllers when leaving the page
+    _cleanupControllers();
     super.dispose();
+  }
+
+  void _cleanupControllers() {
+    if (Get.isRegistered<AccountDetailsController>()) {
+      Get.delete<AccountDetailsController>(force: true);
+    }
+    if (Get.isRegistered<AccountClientInfo>()) {
+      Get.delete<AccountClientInfo>(force: true);
+    }
+    if (Get.isRegistered<ProfitController>()) {
+      Get.delete<ProfitController>(force: true);
+    }
+    if (Get.isRegistered<FollowController>()) {
+      Get.delete<FollowController>(force: true);
+    }
   }
 
   @override

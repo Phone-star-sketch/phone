@@ -497,9 +497,20 @@ class _AccountCardState extends State<_AccountCard>
 
   void _navigateToAccount() {
     HapticFeedback.lightImpact();
+
+    // Delete old controllers if they exist
+    if (Get.isRegistered<AccountClientInfo>()) {
+      Get.delete<AccountClientInfo>(force: true);
+    }
+    if (Get.isRegistered<ProfitController>()) {
+      Get.delete<ProfitController>(force: true);
+    }
+
+    // Create new controllers with the selected account
     Get.put(AccountClientInfo(currentAccount: widget.account));
     final p = Get.put(ProfitController());
     p.updateTheProfitByAccount(widget.account);
+
     Get.to(
       AccountDetails(),
       arguments: widget.account,
