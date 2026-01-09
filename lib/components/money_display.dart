@@ -1,29 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 class MoneyDisplay extends StatelessWidget {
-  double value;
-  double? size;
-  Color? textColor;
-  String? title;
-  Function()? onAdd;
-  Function()? onSubtraction;
+  final double value;
+  final double size;
+  final Color textColor;
+  final String title;
+  final Function()? onAdd;
+  final Function()? onSubtraction;
 
-  MoneyDisplay(
-      {super.key,
-      required this.value,
-      this.size = 50,
-      this.textColor = Colors.black,
-      this.onAdd,
-      this.onSubtraction,
-      this.title = ""});
-
-  final AudioPlayer _audioPlayer = AudioPlayer();
-
-  Future<void> _playPaymentSound() async {
-    await _audioPlayer.play(AssetSource('sounds/payment.wav'));
-  }
+  const MoneyDisplay({
+    super.key,
+    required this.value,
+    this.size = 50,
+    this.textColor = Colors.black,
+    this.onAdd,
+    this.onSubtraction,
+    this.title = "",
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -42,15 +35,13 @@ class MoneyDisplay extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
-                  title!,
+                  title,
                   style: const TextStyle(fontSize: 15),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(
-                  height: 20,
-                ),
+                const SizedBox(height: 20),
                 Container(
-                  padding: EdgeInsets.all(size! + 10),
+                  padding: EdgeInsets.all(size + 10),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(width: 1),
@@ -66,17 +57,11 @@ class MoneyDisplay extends StatelessWidget {
                     children: [
                       Text(
                         b.toString(),
-                        style: TextStyle(
-                          fontSize: size! / 2,
-                          color: textColor,
-                        ),
+                        style: TextStyle(fontSize: size / 2, color: textColor),
                       ),
                       Text(
                         ".",
-                        style: TextStyle(
-                          fontSize: size!,
-                          color: textColor,
-                        ),
+                        style: TextStyle(fontSize: size, color: textColor),
                       ),
                       Text(
                         a.toString(),
@@ -87,18 +72,15 @@ class MoneyDisplay extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        (isNeg) ? "" : "",
-                        style: TextStyle(
-                          fontSize: size,
-                          color: textColor,
-                        ),
+                        isNeg ? "" : "",
+                        style: TextStyle(fontSize: size, color: textColor),
                       ),
                       Align(
                         alignment: Alignment.topCenter,
                         child: Text(
                           "جنيه",
                           style:
-                              TextStyle(fontSize: size! / 3, color: textColor),
+                              TextStyle(fontSize: size / 3, color: textColor),
                         ),
                       )
                     ],
@@ -107,43 +89,39 @@ class MoneyDisplay extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(
-            height: 20,
-          ),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                  onPressed: () async {
-                    await _playPaymentSound();
-                    if (onAdd != null) {
-                      onAdd!();
-                    }
-                  },
-                  style: IconButton.styleFrom(
-                      backgroundColor: Colors.redAccent,
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10))),
-                  icon: const Text("تسديد",
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold))),
-              const SizedBox(
-                width: 10,
+                onPressed: onAdd,
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: const Text(
+                  "تسديد",
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
               ),
+              const SizedBox(width: 10),
               IconButton(
                 onPressed: onSubtraction,
                 style: IconButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10))),
+                  backgroundColor: Colors.blue,
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
                 icon: const Text(
                   "اضافة مبلغ",
                   style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
