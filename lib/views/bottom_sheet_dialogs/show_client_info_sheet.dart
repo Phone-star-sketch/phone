@@ -11,11 +11,12 @@ import 'package:phone_system_app/models/system.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
-import 'package:phone_system_app/views/print_clients_receipts.dart';
+import 'package:phone_system_app/views/print_client_full_report.dart';
 import 'package:phone_system_app/views/pages/all_clinets_page.dart';
 import 'package:phone_system_app/views/bottom_sheet_dialogs/other_services_exclude_price.dart';
 import 'package:phone_system_app/views/pages/system_choice.dart';
 import 'package:phone_system_app/views/pages/successfull_payment.dart';
+import 'package:phone_system_app/models/system_type.dart';
 
 Future showClientInfoSheet(BuildContext? context, Client client) async {
   final effectiveContext = context ?? Get.context;
@@ -233,11 +234,24 @@ class _ModernClientSheet extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _QuickActionButton(
+                    icon: Icons.add_box_rounded,
+                    label: 'باقة جديدة',
+                    color: const Color(0xFF10b981),
+                    onTap: () => showSystemAddDialog(currentClient),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _QuickActionButton(
                     icon: Icons.print_rounded,
                     label: 'طباعة',
                     color: const Color(0xFF8b5cf6),
-                    onTap: () => Get.to(
-                        () => PrintClientsReceipts(clients: [currentClient])),
+                    onTap: () {
+                      final clientLogs = controller.getClientLogs() ?? [];
+                      final clientSystems = controller.getClientSystems() ?? [];
+                      showPrintClientReport(context, currentClient,
+                          logs: clientLogs, systems: clientSystems);
+                    },
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -480,7 +494,7 @@ class _InfoTab extends StatelessWidget {
           items: [
             _InfoItem(
               icon: Icons.calendar_today_rounded,
-              label: 'تاريخ البداية',
+              label: 'تاريخ بداية الاشتراك',
               value: client.createdAt != null
                   ? fullExpressionArabicDate(client.createdAt!)
                   : 'غير محدد',
@@ -1086,6 +1100,144 @@ Future<void> showEditSystemDialog(System system) async {
 // Helper functions
 bool shouldShowSystem(System system) {
   return true;
+}
+
+// Add System Dialog - إضافة باقة جديدة للعميل
+void showSystemAddDialog(Client client) async {
+  SystemType? currentType;
+  final controller = Get.find<ClientBottomSheetController>();
+  final loaders = Get.put(Loaders());
+
+  await Get.dialog(
+    AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFF10b981).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child:
+                const Icon(Icons.add_circle_outline, color: Color(0xFF10b981)),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'إضافة باقة جديدة',
+            style: TextStyle(
+              color: Colors.grey[800],
+              fontWeight: FontWeight.w600,
+              fontSize: 18,
+            ),
+          ),
+        ],
+      ),
+      content: Obx(
+        () => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: DropdownMenu<SystemType>(
+                width: 250,
+                menuHeight: 300,
+                enableFilter: true,
+                requestFocusOnTap: true,
+                enableSearch: true,
+                hintText: 'اختر الباقة',
+                inputDecorationTheme: InputDecorationTheme(
+                  border: InputBorder.none,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  hintStyle: TextStyle(color: Colors.grey[400]),
+                ),
+                dropdownMenuEntries: controller
+                    .getAllTypes()
+                    .map(
+                      (systemTypeObject) => DropdownMenuEntry(
+                        value: systemTypeObject,
+                        label: systemTypeObject.name ?? '',
+                        leadingIcon: Icon(
+                          systemTypeObject.category == SystemCategory.values
+                              ? Icons.wifi
+                              : Icons.smartphone,
+                          color: const Color(0xFF3b82f6),
+                          size: 20,
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onSelected: (value) {
+                  currentType = value;
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: loaders.systemIsLoading.value
+                    ? null
+                    : () async {
+                        if (currentType != null) {
+                          await loaders.manageSystemType(client, currentType!);
+                          Get.back();
+                          Get.snackbar(
+                            'نجاح',
+                            'تم إضافة الباقة بنجاح',
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor:
+                                const Color(0xFF10b981).withValues(alpha: 0.1),
+                            colorText: const Color(0xFF10b981),
+                          );
+                        } else {
+                          Get.snackbar(
+                            'تنبيه',
+                            'الرجاء اختيار باقة أولاً',
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor:
+                                const Color(0xFFf59e0b).withValues(alpha: 0.1),
+                            colorText: const Color(0xFFf59e0b),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10b981),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: loaders.systemIsLoading.value
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_rounded, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text('إضافة',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class CustomIndicator extends StatelessWidget {

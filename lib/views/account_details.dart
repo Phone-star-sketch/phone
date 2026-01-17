@@ -137,13 +137,13 @@ class _AccountDetailsState extends State<AccountDetails>
             icon: const Icon(Icons.description_rounded),
             title: "خطاب تنازل",
           ),
-        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
-          Page(
-            roles: [UserRoles.manager],
-            content: const CreateSubscriptionPage(),
-            icon: const Icon(Icons.add_circle_outline_rounded),
-            title: "اشتراك جديد",
-          ),
+        // if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+        //   Page(
+        //     roles: [UserRoles.manager],
+        //     content: const CreateSubscriptionPage(),
+        //     icon: const Icon(Icons.add_circle_outline_rounded),
+        //     title: "اشتراك جديد",
+        //   ),
       ];
 
   List<Page> get filteredPages => _pages

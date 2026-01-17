@@ -106,7 +106,7 @@ class SupabaseClientRepository extends ClientRepository
         phoneId: client.numbers![0].id,
         createdBy: SupabaseAuthentication.myUser!.id,
         price: amount,
-        systemType: "تعامل مالي : $amount جنيه",
+        systemType: "قيمة تجديد الباقة : $amount جنيه",
         transactionType: (amount > 0)
             ? TransactionType.moneyAdded
             : TransactionType.moneyDeducted,

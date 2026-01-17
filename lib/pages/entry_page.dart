@@ -45,56 +45,77 @@ class _WelcomePageState extends State<WelcomePage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const Spacer(flex: 2),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/bg-logo.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.3),
+                Colors.black.withValues(alpha: 0.6),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      const Spacer(flex: 2),
 
-                  // Logo
-                  _buildLogo(),
+                      // Logo
+                      _buildLogo(),
 
-                  const SizedBox(height: 48),
+                      const SizedBox(height: 48),
 
-                  // Title
-                  Text(
-                    'مرحباً بك',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.grey[800],
-                    ),
+                      // Title
+                      const Text(
+                        'مرحباً بك',
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Subtitle
+                      Text(
+                        'نظام إدارة الهواتف المتطور',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Features
+                      _buildFeatures(),
+
+                      const Spacer(flex: 3),
+
+                      // Buttons
+                      _buildButtons(),
+
+                      const SizedBox(height: 32),
+                    ],
                   ),
-
-                  const SizedBox(height: 12),
-
-                  // Subtitle
-                  Text(
-                    'نظام إدارة الهواتف المتطور',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Features
-                  _buildFeatures(),
-
-                  const Spacer(flex: 3),
-
-                  // Buttons
-                  _buildButtons(),
-
-                  const SizedBox(height: 32),
-                ],
+                ),
               ),
             ),
           ),
@@ -105,27 +126,42 @@ class _WelcomePageState extends State<WelcomePage>
 
   Widget _buildLogo() {
     return Container(
-      width: 120,
-      height: 120,
+      width: 140,
+      height: 140,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF3b82f6), Color(0xFF8b5cf6)],
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.1),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.3),
+          width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF3b82f6).withOpacity(0.3),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
           ),
         ],
       ),
-      child: const Icon(
-        Icons.smartphone_rounded,
-        size: 56,
-        color: Colors.white,
+      child: ClipOval(
+        child: Image.asset(
+          'assets/images/bg-logo.png',
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF3b82f6), Color(0xFF8b5cf6)],
+              ),
+            ),
+            child: const Icon(
+              Icons.smartphone_rounded,
+              size: 64,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -147,11 +183,15 @@ class _WelcomePageState extends State<WelcomePage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.3),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 8,
           ),
         ],
@@ -159,14 +199,14 @@ class _WelcomePageState extends State<WelcomePage>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: const Color(0xFF3b82f6)),
+          Icon(icon, size: 16, color: Colors.white),
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
+              color: Colors.white,
             ),
           ),
         ],
@@ -190,7 +230,7 @@ class _WelcomePageState extends State<WelcomePage>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF3b82f6).withOpacity(0.3),
+                  color: const Color(0xFF3b82f6).withValues(alpha: 0.3),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),
@@ -219,16 +259,18 @@ class _WelcomePageState extends State<WelcomePage>
             height: 52,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              color: Colors.white.withValues(alpha: 0.15),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+              ),
             ),
-            child: Center(
+            child: const Center(
               child: Text(
                 'لديك حساب؟ سجل دخول',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
+                  color: Colors.white,
                 ),
               ),
             ),

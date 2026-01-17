@@ -14,7 +14,7 @@
     
     <application
         android:hardwareAccelerated="true"
-        android:label="phone_system_app"
+        android:label="Phone System Beta"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
         android:enableOnBackInvokedCallback="true">

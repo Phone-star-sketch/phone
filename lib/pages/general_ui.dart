@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:phone_system_app/views/pages/auth_raper.dart';
 import 'package:phone_system_app/views/pages/login_page.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -25,7 +24,6 @@ class _WelcomePageState extends State<WelcomePage>
   late Animation<double> _slideUp;
   late Animation<double> _scaleIn;
 
-  final AudioPlayer _audioPlayer = AudioPlayer();
   final List<FloatingOrb> _orbs = [];
 
   @override
@@ -122,24 +120,15 @@ class _WelcomePageState extends State<WelcomePage>
     _floatController.dispose();
     _pulseController.dispose();
     _orbController.dispose();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
-  Future<void> _playSound() async {
-    try {
-      await _audioPlayer.play(AssetSource('sounds/button_click.wav'));
-    } catch (_) {}
-  }
-
   void _navigateToAuth() async {
-    await _playSound();
     await _mainController.reverse();
-    Get.off(() => AuthRaper());
+    Get.off(() => const AuthRaper());
   }
 
   void _navigateToLogin() async {
-    await _playSound();
     await _mainController.reverse();
     Get.off(() => const LoginPage());
   }
@@ -152,14 +141,14 @@ class _WelcomePageState extends State<WelcomePage>
     return Scaffold(
       body: Stack(
         children: [
-          // Animated Mesh Gradient Background
-          _buildMeshBackground(size, isDark),
+          // Background Image
+          _buildImageBackground(),
 
-          // Floating Orbs
+          // Dark Overlay
+          _buildDarkOverlay(),
+
+          // Floating Orbs (subtle)
           ..._buildFloatingOrbs(size),
-
-          // Noise Texture Overlay
-          _buildNoiseOverlay(),
 
           // Main Content
           _buildMainContent(size, isDark),
@@ -168,37 +157,46 @@ class _WelcomePageState extends State<WelcomePage>
     );
   }
 
-  Widget _buildMeshBackground(Size size, bool isDark) {
-    return AnimatedBuilder(
-      animation: _meshController,
-      builder: (context, child) {
-        return Container(
-          width: size.width,
-          height: size.height,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isDark
-                  ? const [
-                      Color(0xFF0a0a0f),
-                      Color(0xFF1a1a2e),
-                      Color(0xFF16213e),
-                      Color(0xFF0f0f23),
-                    ]
-                  : const [
-                      Color(0xFFf8f9ff),
-                      Color(0xFFe8ecff),
-                      Color(0xFFf0e6ff),
-                      Color(0xFFe6f4ff),
-                    ],
-              stops: const [0.0, 0.3, 0.7, 1.0],
-              transform:
-                  GradientRotation(_meshController.value * 2 * math.pi * 0.1),
+  Widget _buildImageBackground() {
+    return Positioned.fill(
+      child: Image.asset(
+        'assets/images/bg-logo.png',
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          // Fallback to gradient if image not found
+          return Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF0a0a0f),
+                  Color(0xFF1a1a2e),
+                  Color(0xFF16213e),
+                  Color(0xFF0f0f23),
+                ],
+              ),
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDarkOverlay() {
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black.withValues(alpha: 0.4),
+              Colors.black.withValues(alpha: 0.7),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -240,20 +238,6 @@ class _WelcomePageState extends State<WelcomePage>
         },
       );
     }).toList();
-  }
-
-  Widget _buildNoiseOverlay() {
-    return Positioned.fill(
-      child: Opacity(
-        opacity: 0.03,
-        child: Image.asset(
-          'assets/images/MKQ.png',
-          repeat: ImageRepeat.repeat,
-          fit: BoxFit.none,
-          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-        ),
-      ),
-    );
   }
 
   Widget _buildMainContent(Size size, bool isDark) {
@@ -337,36 +321,34 @@ class _WelcomePageState extends State<WelcomePage>
                     child: Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: isDark
-                              ? [
-                                  Colors.white.withValues(alpha: 0.15),
-                                  Colors.white.withValues(alpha: 0.05),
-                                ]
-                              : [
-                                  Colors.white.withValues(alpha: 0.8),
-                                  Colors.white.withValues(alpha: 0.4),
-                                ],
-                        ),
+                        color: Colors.white.withValues(alpha: 0.1),
                         border: Border.all(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.2)
-                              : Colors.white.withValues(alpha: 0.6),
-                          width: 1.5,
+                          color: Colors.white.withValues(alpha: 0.3),
+                          width: 2,
                         ),
                       ),
-                      child: Center(
-                        child: ShaderMask(
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                          ).createShader(bounds),
-                          child: const Icon(
-                            Icons.phone_android_rounded,
-                            size: 70,
-                            color: Colors.white,
-                          ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/bg-logo.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Center(
+                              child: ShaderMask(
+                                shaderCallback: (bounds) =>
+                                    const LinearGradient(
+                                  colors: [
+                                    Color(0xFF667eea),
+                                    Color(0xFF764ba2)
+                                  ],
+                                ).createShader(bounds),
+                                child: const Icon(
+                                  Icons.phone_android_rounded,
+                                  size: 70,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -392,7 +374,7 @@ class _WelcomePageState extends State<WelcomePage>
               Color(0xFFf093fb),
             ],
           ).createShader(bounds),
-          child: Text(
+          child: const Text(
             'مرحباً بك',
             style: TextStyle(
               fontSize: 48,
@@ -400,13 +382,6 @@ class _WelcomePageState extends State<WelcomePage>
               color: Colors.white,
               letterSpacing: 2,
               height: 1.2,
-              shadows: [
-                Shadow(
-                  color: const Color(0xFF667eea).withValues(alpha: 0.5),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                ),
-              ],
             ),
           ),
         ),
@@ -414,15 +389,13 @@ class _WelcomePageState extends State<WelcomePage>
         const SizedBox(height: 16),
 
         // Subtitle
-        Text(
+        const Text(
           'نظام إدارة الهواتف المتطور',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w500,
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.7)
-                : const Color(0xFF64748b),
+            color: Colors.white,
             letterSpacing: 0.5,
           ),
         ),
@@ -447,41 +420,26 @@ class _WelcomePageState extends State<WelcomePage>
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              colors: isDark
-                  ? [
-                      Colors.white.withValues(alpha: 0.1),
-                      Colors.white.withValues(alpha: 0.05),
-                    ]
-                  : [
-                      const Color(0xFF667eea).withValues(alpha: 0.1),
-                      const Color(0xFF764ba2).withValues(alpha: 0.1),
-                    ],
-            ),
+            color: Colors.white.withValues(alpha: 0.15),
             border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.1)
-                  : const Color(0xFF667eea).withValues(alpha: 0.2),
+              color: Colors.white.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 Icons.check_circle_rounded,
                 size: 16,
-                color:
-                    isDark ? const Color(0xFF667eea) : const Color(0xFF667eea),
+                color: Colors.white,
               ),
               const SizedBox(width: 6),
               Text(
                 feature,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.8)
-                      : const Color(0xFF334155),
+                  color: Colors.white,
                 ),
               ),
             ],
@@ -584,38 +542,23 @@ class _WelcomePageState extends State<WelcomePage>
         height: 56,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.white.withValues(alpha: 0.8),
+          color: Colors.white.withValues(alpha: 0.15),
           border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.15)
-                : const Color(0xFF667eea).withValues(alpha: 0.3),
+            color: Colors.white.withValues(alpha: 0.3),
             width: 1.5,
           ),
-          boxShadow: isDark
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(18),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Center(
+            child: const Center(
               child: Text(
                 'لديك حساب؟ سجل دخول',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.9)
-                      : const Color(0xFF667eea),
+                  color: Colors.white,
                   letterSpacing: 0.5,
                 ),
               ),

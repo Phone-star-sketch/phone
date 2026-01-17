@@ -1,21 +1,29 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/account.dart';
-import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/models/user.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart'; // Add this import
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:uuid/uuid.dart'; // Add this import at the top
 import 'package:flutter/services.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
+import 'package:image_picker/image_picker.dart';
 
-const Color mainColor = Color(0xFF00BFFF);
-const Color mainColorLight = Color(0x4000BFFF); // 40% opacity
-const Color mainColorLighter = Color(0x1000BFFF); // 10% opacity
+// Modern Color Palette
+const Color primaryColor = Color(0xFF6366F1);
+const Color secondaryColor = Color(0xFF8B5CF6);
+const Color accentColor = Color(0xFFEC4899);
+const Color backgroundColor = Color(0xFFF8FAFC);
+const Color surfaceColor = Color(0xFFFFFFFF);
+const Color textPrimary = Color(0xFF1E293B);
+const Color textSecondary = Color(0xFF64748B);
+
+// Legacy colors for compatibility
+const Color mainColor = primaryColor;
+const Color mainColorLight = Color(0x406366F1);
+const Color mainColorLighter = Color(0x106366F1);
 
 class UserManagementController extends GetxController {
   final accountInfo =
@@ -23,6 +31,7 @@ class UserManagementController extends GetxController {
   final RxList<AppUser> users = <AppUser>[].obs;
   final RxBool isLoading = false.obs;
   final RxString error = ''.obs;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void onInit() {
@@ -35,7 +44,7 @@ class UserManagementController extends GetxController {
       isLoading.value = true;
       final response = await Supabase.instance.client.from('users').select();
 
-      if (response == null) {
+      if (response.isEmpty) {
         error.value = 'No data returned from server';
         return;
       }
@@ -45,11 +54,9 @@ class UserManagementController extends GetxController {
           .map((user) => AppUser.fromJson(user))
           .toList();
 
-      // Sort users: role 1 first, then by name
       usersList.sort((a, b) {
         if (a.role == 1 && b.role != 1) return -1;
         if (a.role != 1 && b.role == 1) return 1;
-        // If roles are same, sort by name
         return (a.name ?? '').compareTo(b.name ?? '');
       });
 
@@ -62,19 +69,102 @@ class UserManagementController extends GetxController {
     }
   }
 
-  Future<void> updateUserPassword(String uid, String newPassword) async {
+  Future<String?> uploadUserImage(String userId) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (image == null) return null;
+
+      final bytes = await image.readAsBytes();
+      final fileExt = image.path.split('.').last;
+      final fileName =
+          'user_${userId}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      final filePath = 'user_avatars/$fileName';
+
+      await Supabase.instance.client.storage
+          .from('images')
+          .uploadBinary(filePath, bytes);
+
+      final imageUrl = Supabase.instance.client.storage
+          .from('images')
+          .getPublicUrl(filePath);
+
+      return imageUrl;
+    } catch (e) {
+      print('Error uploading image: $e');
+      Fluttertoast.showToast(
+        msg: "حدث خطأ أثناء رفع الصورة",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return null;
+    }
+  }
+
+  Future<void> updateUserAvatar(String uid, String avatarUrl) async {
     try {
       isLoading.value = true;
       await Supabase.instance.client
           .from('users')
-          .update({'password': newPassword})
-          .eq('uid', uid)
-          .select();
+          .update({'avatar_url': avatarUrl}).eq('uid', uid);
       await fetchUsers();
       Fluttertoast.showToast(
+        msg: "تم تحديث الصورة بنجاح",
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+      );
+    } catch (e) {
+      error.value = e.toString();
+      Fluttertoast.showToast(
+        msg: "حدث خطأ أثناء تحديث الصورة",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> updateUserName(String uid, String newName) async {
+    try {
+      isLoading.value = true;
+      await Supabase.instance.client
+          .from('users')
+          .update({'name': newName}).eq('uid', uid);
+      await fetchUsers();
+      Fluttertoast.showToast(
+        msg: "تم تحديث الاسم بنجاح",
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+      );
+    } catch (e) {
+      error.value = e.toString();
+      Fluttertoast.showToast(
+        msg: "حدث خطأ أثناء تحديث الاسم",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> updateUserPassword(String uid, String newPassword) async {
+    try {
+      isLoading.value = true;
+
+      await Supabase.instance.client.auth.admin.updateUserById(
+        uid,
+        attributes: AdminUserAttributes(password: newPassword),
+      );
+
+      Fluttertoast.showToast(
         msg: "تم تحديث كلمة المرور بنجاح",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
         backgroundColor: Colors.green,
         textColor: Colors.white,
       );
@@ -82,8 +172,6 @@ class UserManagementController extends GetxController {
       error.value = e.toString();
       Fluttertoast.showToast(
         msg: "حدث خطأ أثناء تحديث كلمة المرور",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
         backgroundColor: Colors.red,
         textColor: Colors.white,
       );
@@ -97,14 +185,10 @@ class UserManagementController extends GetxController {
       isLoading.value = true;
       await Supabase.instance.client
           .from('users')
-          .update({'secpass': newSecpass})
-          .eq('uid', uid)
-          .select();
+          .update({'secpass': newSecpass}).eq('uid', uid);
       await fetchUsers();
       Fluttertoast.showToast(
         msg: "تم تحديث كلمة المرور الثانية بنجاح",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
         backgroundColor: Colors.green,
         textColor: Colors.white,
       );
@@ -112,8 +196,30 @@ class UserManagementController extends GetxController {
       error.value = e.toString();
       Fluttertoast.showToast(
         msg: "حدث خطأ أثناء تحديث كلمة المرور الثانية",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> updateUserRole(String uid, int newRole) async {
+    try {
+      isLoading.value = true;
+      await Supabase.instance.client
+          .from('users')
+          .update({'role': newRole}).eq('uid', uid);
+      await fetchUsers();
+      Fluttertoast.showToast(
+        msg: "تم تحديث الصلاحية بنجاح",
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+      );
+    } catch (e) {
+      error.value = e.toString();
+      Fluttertoast.showToast(
+        msg: "حدث خطأ أثناء تحديث الصلاحية",
         backgroundColor: Colors.red,
         textColor: Colors.white,
       );
@@ -127,7 +233,6 @@ class UserManagementController extends GetxController {
     try {
       isLoading.value = true;
 
-      // First create the user in Supabase Auth
       final authResponse = await Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
@@ -137,23 +242,19 @@ class UserManagementController extends GetxController {
         throw Exception('Failed to create user authentication');
       }
 
-      // Get the UUID generated by Supabase Auth
       final userId = authResponse.user!.id;
 
-      // Now create the user record in the users table with the same UUID
       await Supabase.instance.client.from('users').insert({
-        'uid': userId, // Use the UUID from authentication
+        'uid': userId,
         'name': name,
         'role': role,
         'secpass': secpass,
         'created_at': DateTime.now().toIso8601String(),
-      }).select();
+      });
 
       await fetchUsers();
       Fluttertoast.showToast(
         msg: "تم إنشاء المستخدم بنجاح",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
         backgroundColor: Colors.green,
         textColor: Colors.white,
       );
@@ -161,12 +262,10 @@ class UserManagementController extends GetxController {
       error.value = e.toString();
       Fluttertoast.showToast(
         msg: "حدث خطأ أثناء إنشاء المستخدم: ${e.toString()}",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
         backgroundColor: Colors.red,
         textColor: Colors.white,
       );
-      rethrow; // Rethrow to handle in the UI
+      rethrow;
     } finally {
       isLoading.value = false;
     }
@@ -176,24 +275,20 @@ class UserManagementController extends GetxController {
     try {
       isLoading.value = true;
 
-      // Delete from users table first
       final deleteResponse = await Supabase.instance.client
           .from('users')
           .delete()
           .eq('uid', uid)
           .select('uid');
 
-      if (deleteResponse == null || (deleteResponse as List).isEmpty) {
+      if (deleteResponse.isEmpty) {
         throw Exception('Failed to delete user from database');
       }
 
-      // Update the local list by removing the deleted user
       users.removeWhere((user) => user.uid == uid);
 
       Fluttertoast.showToast(
         msg: "تم حذف المستخدم بنجاح",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
         backgroundColor: Colors.green,
         textColor: Colors.white,
       );
@@ -202,8 +297,6 @@ class UserManagementController extends GetxController {
       error.value = e.toString();
       Fluttertoast.showToast(
         msg: "حدث خطأ أثناء حذف المستخدم",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
         backgroundColor: Colors.red,
         textColor: Colors.white,
       );
@@ -216,22 +309,70 @@ class UserManagementController extends GetxController {
 
 class UserManagementPage extends StatelessWidget {
   final controller = Get.put(UserManagementController());
-  final accountInfo = Get.find<AccountClientInfo>();
   final currentUserEmail = Supabase.instance.client.auth.currentUser?.email;
+
+  UserManagementPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: mainColorLight,
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
     ));
 
     if (currentUserEmail != 'eslam.elnini@km.com') {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: backgroundColor,
         body: Center(
-          child: Text('غير مصرح لك بالدخول لهذه الصفحة',
-              style: TextStyle(fontSize: 18, color: Colors.red)),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            margin: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: surfaceColor,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.lock_rounded,
+                    size: 48,
+                    color: accentColor,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'غير مصرح لك بالدخول',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'ليس لديك صلاحية الوصول لهذه الصفحة',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -239,34 +380,65 @@ class UserManagementPage extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: mainColorLighter,
-        appBar: AppBar(
-          backgroundColor: mainColorLight,
-          elevation: 0,
-          iconTheme: IconThemeData(color: mainColor),
-          title: Text(
-            'إدارة المستخدمين',
-            style: TextStyle(
-              color: mainColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 24,
+        backgroundColor: backgroundColor,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(120),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [primaryColor, secondaryColor],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: primaryColor.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-          ),
-          bottom: TabBar(
-            indicatorColor: mainColor,
-            labelColor: mainColor,
-            unselectedLabelColor: mainColor.withOpacity(0.5),
-            indicatorWeight: 3,
-            tabs: [
-              Tab(
-                icon: Icon(Icons.people),
-                text: 'المستخدمين',
+            child: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              iconTheme: const IconThemeData(color: Colors.white),
+              title: const Row(
+                children: [
+                  Icon(Icons.admin_panel_settings_rounded,
+                      color: Colors.white, size: 28),
+                  SizedBox(width: 12),
+                  Text(
+                    'إدارة المستخدمين',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
+                  ),
+                ],
               ),
-              Tab(
-                icon: Icon(Icons.person_add),
-                text: 'إضافة مستخدم',
+              bottom: TabBar(
+                indicatorColor: Colors.white,
+                indicatorWeight: 3,
+                indicatorSize: TabBarIndicatorSize.label,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+                tabs: const [
+                  Tab(
+                    icon: Icon(Icons.people_rounded, size: 24),
+                    text: 'المستخدمين',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.person_add_rounded, size: 24),
+                    text: 'إضافة مستخدم',
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
         body: TabBarView(
@@ -283,7 +455,7 @@ class UserManagementPage extends StatelessWidget {
 class CreateUserTab extends StatefulWidget {
   final UserManagementController controller;
 
-  CreateUserTab({required this.controller});
+  const CreateUserTab({super.key, required this.controller});
 
   @override
   _CreateUserTabState createState() => _CreateUserTabState();
@@ -325,13 +497,13 @@ class _CreateUserTabState extends State<CreateUserTab> {
     Widget? suffixIcon,
   }) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 10),
       child: Theme(
         data: Theme.of(context).copyWith(
           textSelectionTheme: TextSelectionThemeData(
-            selectionColor: mainColorLight.withOpacity(0.3),
-            cursorColor: mainColor,
-            selectionHandleColor: mainColor,
+            selectionColor: primaryColor.withValues(alpha: 0.3),
+            cursorColor: primaryColor,
+            selectionHandleColor: primaryColor,
           ),
         ),
         child: TextFormField(
@@ -341,30 +513,45 @@ class _CreateUserTabState extends State<CreateUserTab> {
           validator: validator,
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.right,
-          cursorColor: mainColor,
-          style: TextStyle(color: Colors.black),
+          cursorColor: primaryColor,
+          style: const TextStyle(color: textPrimary, fontSize: 15),
           decoration: InputDecoration(
             labelText: label,
             helperText: helperText,
-            labelStyle: TextStyle(color: mainColor),
-            prefixIcon: Icon(icon, color: mainColor),
+            labelStyle: TextStyle(color: textSecondary, fontSize: 14),
+            helperStyle: TextStyle(color: textSecondary.withValues(alpha: 0.7)),
+            prefixIcon: Container(
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [primaryColor, secondaryColor],
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: Colors.white, size: 20),
+            ),
             suffixIcon: suffixIcon,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide(color: mainColorLight),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide(color: mainColorLight),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide(color: mainColor, width: 2),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: primaryColor, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: accentColor, width: 1.5),
             ),
             filled: true,
-            fillColor: Colors.white,
-            focusColor: mainColor,
-            hoverColor: mainColorLight.withOpacity(0.1),
+            fillColor: surfaceColor,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           ),
         ),
       ),
@@ -373,137 +560,201 @@ class _CreateUserTabState extends State<CreateUserTab> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              // Header
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: mainColor,
-                  borderRadius: BorderRadius.circular(15),
+    return Container(
+      color: backgroundColor,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [primaryColor, secondaryColor],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryColor.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.person_add_rounded,
+                          color: Colors.white, size: 32),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          'إضافة مستخدم جديد',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(Icons.person_add, color: Colors.white, size: 32),
-                    SizedBox(width: 16),
-                    Text(
-                      'إضافة مستخدم جديد',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(height: 24),
+                _buildAnimatedTextField(
+                  controller: _nameController,
+                  label: 'اسم المستخدم',
+                  icon: Icons.person_rounded,
+                  validator: (value) =>
+                      value?.isEmpty ?? true ? 'يرجى إدخال اسم المستخدم' : null,
+                ),
+                _buildAnimatedTextField(
+                  controller: _emailController,
+                  label: 'البريد الإلكتروني',
+                  icon: Icons.email_rounded,
+                  validator: _validateEmail,
+                  helperText: 'مثال: username@km.com',
+                ),
+                _buildAnimatedTextField(
+                  controller: _passwordController,
+                  label: 'كلمة المرور',
+                  icon: Icons.lock_rounded,
+                  isPassword: true,
+                  validator: (value) =>
+                      value!.length < 6 ? 'كلمة المرور قصيرة جداً' : null,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _showPassword
+                          ? Icons.visibility_rounded
+                          : Icons.visibility_off_rounded,
+                      color: textSecondary,
+                    ),
+                    onPressed: () =>
+                        setState(() => _showPassword = !_showPassword),
+                  ),
+                ),
+                _buildAnimatedTextField(
+                  controller: _secpassController,
+                  label: 'كلمة المرور الثانية',
+                  icon: Icons.security_rounded,
+                  keyboardType: TextInputType.number,
+                  validator: (value) => int.tryParse(value ?? '') == null
+                      ? 'أدخل رقماً صحيحاً'
+                      : null,
+                ),
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 20),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [primaryColor, secondaryColor],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                                Icons.admin_panel_settings_rounded,
+                                color: Colors.white,
+                                size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'نوع المستخدم',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      CupertinoSlidingSegmentedControl<int>(
+                        backgroundColor: backgroundColor,
+                        thumbColor: primaryColor,
+                        groupValue: _selectedRole,
+                        children: {
+                          2: _buildSegmentChild('مساعد', _selectedRole == 2),
+                          1: _buildSegmentChild('مشرف', _selectedRole == 1),
+                        },
+                        onValueChanged: (value) {
+                          if (value != null)
+                            setState(() => _selectedRole = value);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [primaryColor, secondaryColor],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryColor.withValues(alpha: 0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 20),
-
-              // Form Fields
-              _buildAnimatedTextField(
-                controller: _nameController,
-                label: 'اسم المستخدم',
-                icon: Icons.person,
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'يرجى إدخال اسم المستخدم' : null,
-              ),
-
-              _buildAnimatedTextField(
-                controller: _emailController,
-                label: 'البريد الإلكتروني',
-                icon: Icons.email,
-                validator: _validateEmail,
-                helperText: 'مثال: username@km.com',
-              ),
-
-              _buildAnimatedTextField(
-                controller: _passwordController,
-                label: 'كلمة المرور',
-                icon: Icons.lock,
-                isPassword: true,
-                validator: (value) =>
-                    value!.length < 6 ? 'كلمة المرور قصيرة جداً' : null,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _showPassword ? Icons.visibility : Icons.visibility_off,
-                    color: mainColor,
-                  ),
-                  onPressed: () =>
-                      setState(() => _showPassword = !_showPassword),
-                ),
-              ),
-
-              _buildAnimatedTextField(
-                controller: _secpassController,
-                label: 'كلمة المرور الثانية',
-                icon: Icons.security,
-                keyboardType: TextInputType.number,
-                validator: (value) => int.tryParse(value ?? '') == null
-                    ? 'أدخل رقماً صحيحاً'
-                    : null,
-              ),
-
-              // Role Selection
-              Container(
-                margin: EdgeInsets.symmetric(vertical: 20),
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: mainColorLight),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('نوع المستخدم',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 10),
-                    CupertinoSlidingSegmentedControl<int>(
-                      backgroundColor: Colors.grey.shade200,
-                      thumbColor: mainColor,
-                      groupValue: _selectedRole,
-                      children: {
-                        2: _buildSegmentChild('مساعد', _selectedRole == 2),
-                        1: _buildSegmentChild('مشرف', _selectedRole == 1),
-                      },
-                      onValueChanged: (value) {
-                        if (value != null)
-                          setState(() => _selectedRole = value);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              // Submit Button
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: mainColor,
-                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30)),
-                ),
-                onPressed: _submitForm,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text('إنشاء المستخدم',
-                        style: TextStyle(
-                            fontSize: 18,
+                    onPressed: _submitForm,
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_circle_rounded,
+                            color: Colors.white, size: 24),
+                        SizedBox(width: 12),
+                        Text(
+                          'إنشاء المستخدم',
+                          style: TextStyle(
+                            fontSize: 17,
                             color: Colors.white,
-                            fontWeight: FontWeight.bold)),
-                  ],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
@@ -512,12 +763,13 @@ class _CreateUserTabState extends State<CreateUserTab> {
 
   Widget _buildSegmentChild(String text, bool isSelected) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Text(
         text,
         style: TextStyle(
-          color: isSelected ? Colors.white : mainColor,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? Colors.white : textSecondary,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+          fontSize: 14,
         ),
       ),
     );
@@ -538,7 +790,7 @@ class _CreateUserTabState extends State<CreateUserTab> {
         _passwordController.clear();
         _secpassController.clear();
       } catch (e) {
-        // Error is already handled in the controller
+        // Error handled in controller
       }
     }
   }
@@ -546,10 +798,8 @@ class _CreateUserTabState extends State<CreateUserTab> {
 
 class _BuildUserList extends StatelessWidget {
   final UserManagementController controller;
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController secpassController = TextEditingController();
 
-  _BuildUserList({required this.controller});
+  const _BuildUserList({required this.controller});
 
   Widget _buildUserCard(AppUser user, BuildContext context) {
     final isOwner = user.role == 1;
@@ -561,200 +811,264 @@ class _BuildUserList extends StatelessWidget {
         verticalOffset: 50.0,
         child: FadeInAnimation(
           child: Container(
-            margin: EdgeInsets.symmetric(
-              horizontal: isOwner ? 12 : 16,
-              vertical: isOwner ? 16 : 8,
+            margin: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 10,
             ),
-            child: Card(
-              color: Colors.white,
-              elevation: isOwner ? 12 : 8,
-              shadowColor: mainColor.withOpacity(0.3),
-              shape: RoundedRectangleBorder(
+            child: Container(
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
-                side: isOwner
-                    ? BorderSide(color: mainColor, width: 2)
-                    : BorderSide.none,
+                gradient: isOwner
+                    ? const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFFEF3C7), Color(0xFFFDE68A)],
+                      )
+                    : null,
+                color: isOwner ? null : surfaceColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: isOwner
+                        ? const Color(0xFFF59E0B).withValues(alpha: 0.2)
+                        : Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: isOwner
-                      ? [
-                          BoxShadow(
-                            color: Colors.red.withOpacity(0.1),
-                            blurRadius: 15,
-                            spreadRadius: 2,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(isOwner ? 20.0 : 16.0),
-                  child: Column(
-                    children: [
-                      // Add this Row for the delete button
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (!isOwner) // Don't show delete button for owner
-                            IconButton(
-                              icon: Icon(Icons.delete, color: Colors.red),
-                              onPressed: () =>
-                                  _showDeleteConfirmation(context, user),
-                            ),
-                        ],
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: isOwner
+                            ? const Color(0xFFF59E0B).withValues(alpha: 0.3)
+                            : Colors.grey.withValues(alpha: 0.1),
+                        width: 1.5,
                       ),
-                      if (isOwner)
-                        const Chip(
-                          label: Text(
-                            "المالك",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          backgroundColor: const Color(0xFF00BFFF),
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        ),
-                      Row(
-                        children: [
-                          // Enhanced User Image
-                          Hero(
-                            tag: 'user_${user.uid}',
-                            child: Container(
-                              width: isOwner ? 100 : 80,
-                              height: isOwner ? 100 : 80,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isOwner
-                                      ? Colors.red
-                                      : Colors.red.shade200,
-                                  width: isOwner ? 3 : 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (isOwner ? Colors.red : Colors.black)
-                                        .withOpacity(0.2),
-                                    blurRadius: isOwner ? 15 : 10,
-                                    spreadRadius: isOwner ? 3 : 2,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Column(
+                      children: [
+                        // Header Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            if (isOwner)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFFF59E0B),
+                                      Color(0xFFEF4444)
+                                    ],
                                   ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child: isOwner
-                                    ? Stack(
-                                        children: [
-                                          Image.asset(
-                                            'assets/images/owner.png',
-                                            fit: BoxFit.cover,
-                                          ),
-                                          Container(
-                                            decoration: BoxDecoration(
-                                              gradient: LinearGradient(
-                                                begin: Alignment.topCenter,
-                                                end: Alignment.bottomCenter,
-                                                colors: [
-                                                  Colors.transparent,
-                                                  Colors.red.withOpacity(0.3),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    : Image.asset(
-                                        'assets/images/MKQ.png',
-                                        fit: BoxFit.cover,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFF59E0B)
+                                          .withValues(alpha: 0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.star_rounded,
+                                        color: Colors.white, size: 16),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      "المالك",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
                                       ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: isOwner ? 24 : 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  user.name ?? '',
-                                  style: TextStyle(
-                                    fontSize: isOwner ? 24 : 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: isOwner
-                                        ? Colors.red
-                                        : Colors.red.shade700,
-                                    letterSpacing: isOwner ? 0.5 : 0,
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(height: isOwner ? 8 : 4),
-                                Container(
-                                  padding: isOwner
-                                      ? EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6)
-                                      : null,
-                                  decoration: isOwner
-                                      ? BoxDecoration(
-                                          color: Colors.red.shade50,
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                        )
-                                      : null,
-                                  child: Text(
-                                    'كلمة المرور الثانية: ${user.secpass ?? 'غير محدد'}',
-                                    style: TextStyle(
-                                      fontSize: isOwner ? 18 : 16,
-                                      color: isOwner
-                                          ? Colors.red.shade700
-                                          : Colors.grey[600],
-                                      fontWeight: isOwner
-                                          ? FontWeight.w600
-                                          : FontWeight.normal,
+                              ),
+                            if (!isOwner) const SizedBox(),
+                            Row(
+                              children: [
+                                _buildIconButton(
+                                  icon: Icons.edit_rounded,
+                                  color: primaryColor,
+                                  onPressed: () =>
+                                      _showFullEditDialog(context, user),
+                                ),
+                                const SizedBox(width: 8),
+                                if (!isOwner)
+                                  _buildIconButton(
+                                    icon: Icons.delete_rounded,
+                                    color: accentColor,
+                                    onPressed: () =>
+                                        _showDeleteConfirmation(context, user),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // User Info Row
+                        Row(
+                          children: [
+                            // Avatar
+                            GestureDetector(
+                              onTap: () => _showImageOptions(context, user),
+                              child: Hero(
+                                tag: 'user_${user.uid}',
+                                child: Container(
+                                  width: isOwner ? 90 : 80,
+                                  height: isOwner ? 90 : 80,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: isOwner
+                                          ? [
+                                              const Color(0xFFF59E0B),
+                                              const Color(0xFFEF4444)
+                                            ]
+                                          : [primaryColor, secondaryColor],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: (isOwner
+                                                ? const Color(0xFFF59E0B)
+                                                : primaryColor)
+                                            .withValues(alpha: 0.4),
+                                        blurRadius: 15,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(3),
+                                  child: Container(
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white,
+                                    ),
+                                    padding: const EdgeInsets.all(3),
+                                    child: ClipOval(
+                                      child: user.avatarUrl != null
+                                          ? Image.network(
+                                              user.avatarUrl!,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error,
+                                                      stackTrace) =>
+                                                  _buildDefaultAvatar(isOwner),
+                                            )
+                                          : _buildDefaultAvatar(isOwner),
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: isOwner ? 24 : 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          ElevatedButton.icon(
-                            icon: Icon(
-                              isOwner ? Icons.admin_panel_settings : Icons.edit,
-                              color: Colors.white,
-                            ),
-                            label: Text(
-                              'تعديل كلمة المرور الثانية',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: isOwner ? 16 : 14,
                               ),
                             ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isOwner
-                                  ? Color(0xFF00BFFF)
-                                  : Color(0xFF00BFFF),
-                              padding: isOwner
-                                  ? EdgeInsets.symmetric(
-                                      horizontal: 24, vertical: 16)
-                                  : EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(isOwner ? 16 : 12),
+
+                            const SizedBox(width: 16),
+
+                            // User Details
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    user.name ?? 'غير محدد',
+                                    style: TextStyle(
+                                      fontSize: isOwner ? 22 : 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: isOwner
+                                          ? const Color(0xFF92400E)
+                                          : textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: isOwner
+                                          ? const Color(0xFFFEF3C7)
+                                          : primaryColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isOwner
+                                            ? const Color(0xFFF59E0B)
+                                            : primaryColor,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.security_rounded,
+                                          size: 14,
+                                          color: isOwner
+                                              ? const Color(0xFFF59E0B)
+                                              : primaryColor,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'كلمة المرور: ${user.secpass ?? 'غير محدد'}',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: isOwner
+                                                ? const Color(0xFF92400E)
+                                                : primaryColor,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              elevation: isOwner ? 6 : 4,
                             ),
-                            onPressed: () => _showEditDialog(context, user),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Action Buttons
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.end,
+                          children: [
+                            _buildActionChip(
+                              icon: Icons.person_rounded,
+                              label: 'تعديل الاسم',
+                              onPressed: () =>
+                                  _showEditNameDialog(context, user),
+                            ),
+                            _buildActionChip(
+                              icon: Icons.security_rounded,
+                              label: 'كلمة المرور الثانية',
+                              onPressed: () =>
+                                  _showEditSecpassDialog(context, user),
+                            ),
+                            _buildActionChip(
+                              icon: Icons.lock_rounded,
+                              label: 'كلمة المرور',
+                              onPressed: () =>
+                                  _showEditPasswordDialog(context, user),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -765,47 +1079,470 @@ class _BuildUserList extends StatelessWidget {
     );
   }
 
-  void _showEditDialog(BuildContext context, AppUser user) {
-    secpassController.text = user.secpass?.toString() ?? '';
+  Widget _buildIconButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: color, size: 20),
+        onPressed: onPressed,
+        padding: const EdgeInsets.all(8),
+        constraints: const BoxConstraints(),
+      ),
+    );
+  }
+
+  Widget _buildActionChip({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: textSecondary, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDefaultAvatar(bool isOwner) {
+    return Image.asset(
+      isOwner ? 'assets/images/owner.png' : 'assets/images/MKQ.png',
+      fit: BoxFit.cover,
+    );
+  }
+
+  void _showImageOptions(BuildContext context, AppUser user) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'تعديل الصورة',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: textPrimary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [primaryColor, secondaryColor],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.photo_library_rounded,
+                    color: Colors.white, size: 20),
+              ),
+              title: const Text('اختيار من المعرض'),
+              onTap: () async {
+                Navigator.pop(context);
+                final imageUrl = await controller.uploadUserImage(user.uid!);
+                if (imageUrl != null) {
+                  await controller.updateUserAvatar(user.uid!, imageUrl);
+                }
+              },
+            ),
+            if (user.avatarUrl != null)
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.delete_rounded,
+                      color: accentColor, size: 20),
+                ),
+                title: const Text('حذف الصورة'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await controller.updateUserAvatar(user.uid!, '');
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditNameDialog(BuildContext context, AppUser user) {
+    final nameController = TextEditingController(text: user.name);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text('تعديل كلمة المرور الثانية'),
+        backgroundColor: surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('تعديل الاسم',
+            style: TextStyle(color: textPrimary, fontWeight: FontWeight.bold)),
         content: TextField(
-          controller: secpassController,
+          controller: nameController,
           decoration: InputDecoration(
-            labelText: 'كلمة المرور الثانية الجديدة',
-            border: OutlineInputBorder(
+            labelText: 'الاسم الجديد',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: primaryColor, width: 2),
             ),
           ),
-          keyboardType: TextInputType.number,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('إلغاء'),
+            child: const Text('إلغاء', style: TextStyle(color: textSecondary)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primaryColor, secondaryColor],
               ),
+              borderRadius: BorderRadius.circular(12),
             ),
-            onPressed: () {
-              int? newSecpass = int.tryParse(secpassController.text);
-              if (newSecpass != null) {
-                controller.updateUserSecpass(user.uid!, newSecpass);
-                Navigator.pop(context);
-              }
-            },
-            child: Text('حفظ', style: TextStyle(color: Colors.white)),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                if (nameController.text.isNotEmpty) {
+                  controller.updateUserName(user.uid!, nameController.text);
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('حفظ', style: TextStyle(color: Colors.white)),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showEditPasswordDialog(BuildContext context, AppUser user) {
+    final passwordController = TextEditingController();
+    bool showPassword = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: surfaceColor,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('تعديل كلمة المرور',
+              style:
+                  TextStyle(color: textPrimary, fontWeight: FontWeight.bold)),
+          content: TextField(
+            controller: passwordController,
+            obscureText: !showPassword,
+            decoration: InputDecoration(
+              labelText: 'كلمة المرور الجديدة',
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: primaryColor, width: 2),
+              ),
+              suffixIcon: IconButton(
+                icon: Icon(
+                    showPassword
+                        ? Icons.visibility_rounded
+                        : Icons.visibility_off_rounded,
+                    color: textSecondary),
+                onPressed: () => setState(() => showPassword = !showPassword),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child:
+                  const Text('إلغاء', style: TextStyle(color: textSecondary)),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [primaryColor, secondaryColor],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  if (passwordController.text.length >= 6) {
+                    controller.updateUserPassword(
+                        user.uid!, passwordController.text);
+                    Navigator.pop(context);
+                  } else {
+                    Fluttertoast.showToast(
+                      msg: "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+                      backgroundColor: Colors.red,
+                      textColor: Colors.white,
+                    );
+                  }
+                },
+                child: const Text('حفظ', style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditSecpassDialog(BuildContext context, AppUser user) {
+    final secpassController =
+        TextEditingController(text: user.secpass?.toString() ?? '');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('تعديل كلمة المرور الثانية',
+            style: TextStyle(color: textPrimary, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: secpassController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'كلمة المرور الثانية الجديدة',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: primaryColor, width: 2),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء', style: TextStyle(color: textSecondary)),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primaryColor, secondaryColor],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                int? newSecpass = int.tryParse(secpassController.text);
+                if (newSecpass != null) {
+                  controller.updateUserSecpass(user.uid!, newSecpass);
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('حفظ', style: TextStyle(color: Colors.white)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFullEditDialog(BuildContext context, AppUser user) {
+    final nameController = TextEditingController(text: user.name);
+    final secpassController =
+        TextEditingController(text: user.secpass?.toString() ?? '');
+    int selectedRole = user.role ?? 2;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: surfaceColor,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('تعديل بيانات المستخدم',
+              style:
+                  TextStyle(color: textPrimary, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'الاسم',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          const BorderSide(color: primaryColor, width: 2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: secpassController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'كلمة المرور الثانية',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          const BorderSide(color: primaryColor, width: 2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade200),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('الصلاحية',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, color: textPrimary)),
+                      const SizedBox(height: 8),
+                      CupertinoSlidingSegmentedControl<int>(
+                        backgroundColor: backgroundColor,
+                        thumbColor: primaryColor,
+                        groupValue: selectedRole,
+                        children: {
+                          2: _buildSegmentChild('مساعد', selectedRole == 2),
+                          1: _buildSegmentChild('مشرف', selectedRole == 1),
+                        },
+                        onValueChanged: (value) {
+                          if (value != null) {
+                            setState(() => selectedRole = value);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child:
+                  const Text('إلغاء', style: TextStyle(color: textSecondary)),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [primaryColor, secondaryColor],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () async {
+                  if (nameController.text.isNotEmpty) {
+                    await controller.updateUserName(
+                        user.uid!, nameController.text);
+                  }
+                  int? newSecpass = int.tryParse(secpassController.text);
+                  if (newSecpass != null) {
+                    await controller.updateUserSecpass(user.uid!, newSecpass);
+                  }
+                  if (selectedRole != user.role) {
+                    await controller.updateUserRole(user.uid!, selectedRole);
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text('حفظ الكل',
+                    style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSegmentChild(String text, bool isSelected) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: isSelected ? Colors.white : textSecondary,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+          fontSize: 14,
+        ),
       ),
     );
   }
@@ -814,33 +1551,40 @@ class _BuildUserList extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text('تأكيد الحذف'),
-        content: Text('هل أنت متأكد من حذف المستخدم ${user.name}؟'),
+        backgroundColor: surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('تأكيد الحذف',
+            style: TextStyle(color: textPrimary, fontWeight: FontWeight.bold)),
+        content: Text('هل أنت متأكد من حذف المستخدم ${user.name}؟',
+            style: const TextStyle(color: textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('إلغاء'),
+            child: const Text('إلغاء', style: TextStyle(color: textSecondary)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+          Container(
+            decoration: BoxDecoration(
+              color: accentColor,
+              borderRadius: BorderRadius.circular(12),
             ),
-            onPressed: () async {
-              try {
-                Navigator.pop(context); // Close dialog first
-                await controller.deleteUser(user.uid!);
-                // No need to call setState or refresh as we're using Obx
-              } catch (e) {
-                print('Error in delete confirmation: $e');
-              }
-            },
-            child: Text('حذف', style: TextStyle(color: Colors.white)),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () async {
+                try {
+                  Navigator.pop(context);
+                  await controller.deleteUser(user.uid!);
+                } catch (e) {
+                  print('Error in delete confirmation: $e');
+                }
+              },
+              child: const Text('حذف', style: TextStyle(color: Colors.white)),
+            ),
           ),
         ],
       ),
@@ -852,17 +1596,48 @@ class _BuildUserList extends StatelessWidget {
     return Obx(() {
       if (controller.isLoading.value) {
         return Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(mainColor),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [primaryColor, secondaryColor],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  strokeWidth: 3,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'جاري التحميل...',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         );
       }
 
       return Container(
-        color: Colors.white,
+        color: backgroundColor,
         child: AnimationLimiter(
           child: ListView.builder(
-            padding: EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 4),
             itemCount: controller.users.length,
             itemBuilder: (context, index) {
               return _buildUserCard(controller.users[index], context);

@@ -47,7 +47,6 @@ dependencies:
   
   # Mobile-only packages (will be conditionally used)
   app_badge_plus: ^1.2.0
-  audioplayers: ^6.1.0
   open_file: ^3.5.10
   permission_handler: ^11.3.1
   flutter_local_notifications: ^17.0.0
@@ -67,11 +66,11 @@ dependency_overrides:
 
 flutter_launcher_icons:
   android: "launcher_icon"
-  image_path: "assets/images/MKQ.png"
+  image_path: "assets/images/bg-logo.png"
   min_sdk_android: 21
   web:
     generate: true
-    image_path: "assets/images/MKQ.png"
+    image_path: "assets/images/bg-logo.png"
     background_color: "#hexcode"
     theme_color: "#hexcode"
 
@@ -96,7 +95,6 @@ flutter:
     - assets/
     - assets/fonts/
     - assets/images/
-    - assets/sounds/
     - assets/images/owner.png
     - assets/images/logo.png
     - assets/images/rece_bg.jpg

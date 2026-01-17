@@ -5,11 +5,13 @@ class AppUser extends Model {
   static const String nameColumn = "name";
   static const String roleColumn = "role";
   static const String secpassColumn = "secpass";
+  static const String avatarUrlColumn = "avatar_url";
 
   String? uid;
   String? name;
   int? role;
   int? secpass;
+  String? avatarUrl;
 
   AppUser({
     required super.id,
@@ -18,6 +20,7 @@ class AppUser extends Model {
     required this.name,
     required this.role,
     this.secpass,
+    this.avatarUrl,
   });
 
   AppUser.fromJson(super.data)
@@ -25,6 +28,7 @@ class AppUser extends Model {
         name = data[nameColumn],
         role = data[roleColumn] as int,
         secpass = data[secpassColumn] as int?,
+        avatarUrl = data[avatarUrlColumn] as String?,
         super.fromJson();
 
   @override
@@ -35,6 +39,7 @@ class AppUser extends Model {
       nameColumn: name,
       roleColumn: role,
       secpassColumn: secpass,
+      avatarUrlColumn: avatarUrl,
     };
   }
 }

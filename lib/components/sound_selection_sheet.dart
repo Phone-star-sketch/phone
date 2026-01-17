@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class SoundSelectionSheet extends StatefulWidget {
@@ -12,7 +11,6 @@ class SoundSelectionSheet extends StatefulWidget {
 }
 
 class _SoundSelectionSheetState extends State<SoundSelectionSheet> {
-  final AudioPlayer _audioPlayer = AudioPlayer();
   String? _selectedSound;
 
   final List<Map<String, dynamic>> _sounds = [
@@ -35,58 +33,12 @@ class _SoundSelectionSheetState extends State<SoundSelectionSheet> {
       'color': Colors.purple,
     },
     {
-      'name': 'صوت تسديد 4',
-      'path': 'sounds/payment4.mp3',
-      'icon': FontAwesomeIcons.creditCard,
-      'color': Colors.purple,
-    },
-    {
-      'name': 'صوت تسديد 5',
-      'path': 'sounds/payment5.mp3',
-      'icon': FontAwesomeIcons.creditCard,
-      'color': Colors.purple,
-    },
-    {
-      'name': 'صوت تسديد 6',
-      'path': 'sounds/payment6.mp3',
-      'icon': FontAwesomeIcons.creditCard,
-      'color': Colors.purple,
-    },
-    {
-      'name': 'صوت تسديد 7',
-      'path': 'sounds/payment7.mp3',
-      'icon': FontAwesomeIcons.creditCard,
-      'color': Colors.purple,
-    },
-    {
-      'name': 'صوت تسديد 8',
-      'path': 'sounds/payment8.mp3',
-      'icon': FontAwesomeIcons.creditCard,
-      'color': Colors.purple,
-    },
-    {
-      'name': 'صوت تسديد 9',
-      'path': 'sounds/payment9.mp3',
-      'icon': FontAwesomeIcons.creditCard,
-      'color': Colors.purple,
-    },
-    {
       'name': 'صوت تنبيه',
-      'path': 'sounds/new-notification-7-210334.mp3',
+      'path': 'sounds/notification.mp3',
       'icon': FontAwesomeIcons.bell,
       'color': Colors.orange,
     },
   ];
-
-  Future<void> _previewSound(String soundPath) async {
-    await _audioPlayer.play(AssetSource(soundPath));
-  }
-
-  @override
-  void dispose() {
-    _audioPlayer.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +92,7 @@ class _SoundSelectionSheetState extends State<SoundSelectionSheet> {
                         ),
                       ),
                       Text(
-                        'اضغط للاستماع ثم اختر',
+                        'اختر الصوت المناسب',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey,
@@ -173,7 +125,7 @@ class _SoundSelectionSheetState extends State<SoundSelectionSheet> {
                           width: isSelected ? 2 : 1,
                         ),
                         color: isSelected
-                            ? sound['color'].withOpacity(0.1)
+                            ? (sound['color'] as Color).withValues(alpha: 0.1)
                             : Colors.grey[50],
                       ),
                       child: ListTile(
@@ -182,7 +134,8 @@ class _SoundSelectionSheetState extends State<SoundSelectionSheet> {
                         leading: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: sound['color'].withOpacity(0.1),
+                            color: (sound['color'] as Color)
+                                .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
@@ -198,30 +151,13 @@ class _SoundSelectionSheetState extends State<SoundSelectionSheet> {
                             color: isSelected ? sound['color'] : Colors.black87,
                           ),
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              onPressed: () => _previewSound(sound['path']),
-                              icon: Icon(
-                                FontAwesomeIcons.play,
-                                color: sound['color'],
-                                size: 16,
-                              ),
-                              style: IconButton.styleFrom(
-                                backgroundColor:
-                                    sound['color'].withOpacity(0.1),
-                                padding: const EdgeInsets.all(8),
-                              ),
-                            ),
-                            if (isSelected)
-                              Icon(
+                        trailing: isSelected
+                            ? Icon(
                                 FontAwesomeIcons.check,
                                 color: sound['color'],
                                 size: 20,
-                              ),
-                          ],
-                        ),
+                              )
+                            : null,
                         onTap: () {
                           setState(() {
                             _selectedSound = sound['path'];
