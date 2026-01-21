@@ -1,28 +1,13 @@
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-// Remove problematic imports for web
-// import 'package:phone_system_app/components/money_display.dart';
-// import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
-// import 'package:phone_system_app/views/account_view.dart';
-// import 'package:phone_system_app/views/pages/auth_raper.dart';
-// import 'package:phone_system_app/views/pages/for_sale_number.dart';
-// import 'package:phone_system_app/views/pages/login_page.dart';
-// import 'package:phone_system_app/views/print_clients_receipts.dart';
-// import 'package:phone_system_app/views/stats_view.dart';
-// import 'package:phone_system_app/pages/entry_page.dart';
-// import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-// import 'package:phone_system_app/views/pages/auth_wrapper.dart';
 import 'package:phone_system_app/theme/welcome_theme_selector.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
 
 @pragma('vm:entry-point')
 Future<void> main() async {
@@ -94,22 +79,22 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = const ColorScheme.light(
-            background: Colors.black87, brightness: Brightness.dark)
+            surface: Colors.black87, brightness: Brightness.dark)
         .copyWith(
       primary: Colors.white54,
       onPrimary: Colors.greenAccent,
       secondary: Colors.blueAccent,
-      onBackground: Colors.black,
-      background: Colors.red,
-      surfaceTint: Color.fromARGB(255, 249, 249, 249),
+      onSurface: Colors.black,
+      surface: Colors.red,
+      surfaceTint: const Color.fromARGB(255, 249, 249, 249),
       error: const Color(0xFFd62828),
     );
 
     final textTheme = Theme.of(context).textTheme.apply(
           fontFamily: "Cairo",
           bodyColor: Colors.black,
-          displayColor: colorScheme.onBackground,
-          decorationColor: colorScheme.onBackground,
+          displayColor: colorScheme.onSurface,
+          decorationColor: colorScheme.onSurface,
         );
 
     return GetMaterialApp(
@@ -128,12 +113,12 @@ class MainApp extends StatelessWidget {
         datePickerTheme: DatePickerThemeData(
           surfaceTintColor: Colors.black,
           backgroundColor: Colors.white,
-          headerBackgroundColor: colorScheme.background,
+          headerBackgroundColor: colorScheme.surface,
           cancelButtonStyle:
               ElevatedButton.styleFrom(backgroundColor: Colors.black),
           confirmButtonStyle:
               ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          dividerColor: colorScheme.background,
+          dividerColor: colorScheme.surface,
         ),
         splashFactory: kIsWeb ? NoSplash.splashFactory : null,
       ),
@@ -141,59 +126,37 @@ class MainApp extends StatelessWidget {
         children: [
           GetX<WelcomeThemeController>(
             builder: (controller) {
-              // Add null check for web safety
               try {
                 return controller.getCurrentWelcomePage();
               } catch (e) {
-                return Container(
-                  color: Colors.blue,
-                  child: Center(
-                    child: Text(
-                      'مرحباً',
-                      style: TextStyle(color: Colors.white, fontSize: 24),
-                    ),
-                  ),
-                );
+                return const _ErrorFallbackWidget();
               }
             },
           ),
-          Positioned(
+          const Positioned(
             top: 40,
             right: 16,
-            child: Builder(
-              builder: (context) => IconButton(
-                icon: Icon(Icons.palette_outlined, color: Colors.white),
-                onPressed: () => _showThemeSelector(context),
-              ),
-            ),
+            child: _ThemeSelectorButton(),
           ),
         ],
       ),
       defaultTransition: Transition.fadeIn,
-      transitionDuration:
-          const Duration(milliseconds: 150), // Faster transitions
+      transitionDuration: const Duration(milliseconds: 150),
       debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.light, // Reduce theme switches
-      popGesture: true, // Enable swipe to go back
-      enableLog: false, // Disable GetX logs
-      opaqueRoute: true, // Make routes opaque for better performance
+      themeMode: ThemeMode.light,
+      popGesture: true,
+      enableLog: false,
+      opaqueRoute: true,
       builder: (context, child) {
         return ScrollConfiguration(
-          behavior: ScrollBehavior().copyWith(
-            physics:
-                const ClampingScrollPhysics(), // More performant than BouncingScrollPhysics
-            dragDevices: {
-              PointerDeviceKind.touch,
-              PointerDeviceKind.mouse,
-            },
-          ),
+          behavior: const _CustomScrollBehavior(),
           child: child!,
         );
       },
     );
   }
 
-  void _showThemeSelector(BuildContext context) {
+  static void showThemeSelector(BuildContext context) {
     final Size screenSize = MediaQuery.of(context).size;
 
     showDialog(
@@ -330,13 +293,13 @@ class MainApp extends StatelessWidget {
     );
   }
 
-  Widget _buildThemeOption(
+  static Widget _buildThemeOption(
     BuildContext context, {
     required String title,
     required IconData icon,
     required Color color,
     required LinearGradient gradient,
-    required void Function() onTap, // Fix method signature
+    required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
@@ -349,7 +312,7 @@ class MainApp extends StatelessWidget {
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -378,4 +341,49 @@ class MainApp extends StatelessWidget {
       ),
     );
   }
+}
+
+// Optimized Custom Widgets
+class _ErrorFallbackWidget extends StatelessWidget {
+  const _ErrorFallbackWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.blue,
+      child: const Center(
+        child: Text(
+          'مرحباً',
+          style: TextStyle(color: Colors.white, fontSize: 24),
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeSelectorButton extends StatelessWidget {
+  const _ThemeSelectorButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.palette_outlined, color: Colors.white),
+      onPressed: () => MainApp.showThemeSelector(context),
+    );
+  }
+}
+
+class _CustomScrollBehavior extends ScrollBehavior {
+  const _CustomScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const ClampingScrollPhysics();
+  }
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+      };
 }

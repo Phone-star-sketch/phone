@@ -1,8 +1,6 @@
-import 'dart:ui';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/controllers/account_details_controller.dart';
@@ -20,18 +18,17 @@ import 'package:phone_system_app/views/pages/system_list.dart';
 import 'package:phone_system_app/pages/user_management_page.dart';
 import 'package:phone_system_app/views/pages/letter_of_waiver.dart';
 import 'package:phone_system_app/views/pages/filter_systems.dart';
-import 'package:phone_system_app/views/pages/create_subscription_page.dart';
 import 'package:phone_system_app/views/pages/clients_recets.dart';
 import 'animated_profile_avatar.dart';
 
 class Page {
-  Widget content;
+  Widget Function() builder; // Changed from Widget content to builder function
   Widget icon;
   String title;
   List<UserRoles> roles;
 
   Page({
-    required this.content,
+    required this.builder,
     required this.icon,
     required this.title,
     required this.roles,
@@ -55,102 +52,113 @@ class _AccountDetailsState extends State<AccountDetails>
         if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
           Page(
             roles: [UserRoles.manager],
-            content: const AllClientsPage(),
+            builder: () => const AllClientsPage(),
             title: "بيانات العملاء",
             icon: const Icon(Icons.people_rounded),
           ),
+        // المستحقات - متاح للـ Manager والـ Assistant
         if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
             SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
           Page(
             roles: [UserRoles.manager, UserRoles.assistant],
-            content: DuesManagement(),
+            builder: () => const DuesManagement(),
             title: "المستحقات",
             icon: const Icon(Icons.payment_rounded),
           ),
-        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
-            SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
+        // الفواتير الشهرية - للـ Manager فقط
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
           Page(
-            roles: [UserRoles.manager, UserRoles.assistant],
-            content: const ClientsReceipts(),
+            roles: [UserRoles.manager],
+            builder: () => const ClientsReceipts(),
             title: "الفواتير الشهرية",
             icon: const Icon(Icons.receipt_long_rounded),
           ),
-        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
-            SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
+        // المديونات - للـ Manager فقط
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
           Page(
-            roles: [UserRoles.manager, UserRoles.assistant],
-            content: const DuesPage(),
+            roles: [UserRoles.manager],
+            builder: () => const DuesPage(),
             title: "المديونات",
             icon: const Icon(Icons.attach_money_rounded),
           ),
         if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
           Page(
             roles: [UserRoles.manager],
-            content: OfferManagement(),
+            builder: () => OfferManagement(),
             title: "العروض المطلوبة",
             icon: const Icon(Icons.card_giftcard_rounded),
           ),
         if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
           Page(
             roles: [UserRoles.manager],
-            content: SystemList(),
+            builder: () => SystemList(),
             icon: const Icon(Icons.play_lesson_rounded),
             title: "الباقات المتاحة",
           ),
         if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
           Page(
             roles: [UserRoles.manager],
-            content: ProfitManagement(),
+            builder: () => ProfitManagement(),
             icon: const Icon(Icons.account_balance_wallet_rounded),
             title: "الربح و الاحصاء",
           ),
         if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
           Page(
             roles: [UserRoles.manager],
-            content: FilterSystemsPage(),
+            builder: () => FilterSystemsPage(),
             icon: const Icon(Icons.assessment_rounded),
             title: "احصاء الانظمة",
           ),
-        Page(
-          roles: [UserRoles.manager, UserRoles.assistant],
-          content: ForSaleNumbers(),
-          icon: const Icon(Icons.phone_android_rounded),
-          title: "أرقام للبيع",
-        ),
-        Page(
-          roles: [UserRoles.manager, UserRoles.assistant],
-          content: Follow(),
-          icon: const Icon(Icons.toc_rounded),
-          title: "المتابعة",
-        ),
+        // أرقام للبيع - متاح للـ Manager والـ Assistant
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index ||
+            SupabaseAuthentication.myUser?.role == UserRoles.assistant.index)
+          Page(
+            roles: [UserRoles.manager, UserRoles.assistant],
+            builder: () => ForSaleNumbers(),
+            icon: const Icon(Icons.phone_android_rounded),
+            title: "أرقام للبيع",
+          ),
+        // المتابعة - للـ Manager فقط
         if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
           Page(
             roles: [UserRoles.manager],
-            content: UserManagementPage(),
+            builder: () => Follow(),
+            icon: const Icon(Icons.toc_rounded),
+            title: "المتابعة",
+          ),
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+          Page(
+            roles: [UserRoles.manager],
+            builder: () => UserManagementPage(),
             icon: const Icon(Icons.admin_panel_settings_rounded),
             title: "إدارة المستخدمين",
           ),
         if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
           Page(
             roles: [UserRoles.manager],
-            content: LetterOfWaiver(),
+            builder: () => LetterOfWaiver(),
             icon: const Icon(Icons.description_rounded),
             title: "خطاب تنازل",
           ),
         // if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
         //   Page(
         //     roles: [UserRoles.manager],
-        //     content: const CreateSubscriptionPage(),
+        //     builder: () => const CreateSubscriptionPage(),
         //     icon: const Icon(Icons.add_circle_outline_rounded),
         //     title: "اشتراك جديد",
         //   ),
       ];
 
-  List<Page> get filteredPages => _pages
-      .where((page) => page.roles
-          .map((r) => r.index)
-          .contains(SupabaseAuthentication.myUser!.role))
-      .toList();
+  List<Page> get filteredPages {
+    if (SupabaseAuthentication.myUser == null) {
+      return [];
+    }
+    return _pages
+        .where((page) => page.roles
+            .map((r) => r.index)
+            .contains(SupabaseAuthentication.myUser!.role))
+        .toList();
+  }
 
   @override
   void initState() {
@@ -186,6 +194,16 @@ class _AccountDetailsState extends State<AccountDetails>
 
   @override
   Widget build(BuildContext context) {
+    // Check if user is authenticated
+    if (SupabaseAuthentication.myUser == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0a0a0a),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     final size = MediaQuery.of(context).size;
     final isMobile = size.width < 1200;
 
@@ -217,34 +235,55 @@ class _AccountDetailsState extends State<AccountDetails>
           // Content
           isMobile
               ? Obx(() {
-                  final currentPage =
-                      filteredPages[pageController.selectedIndex.value];
+                  if (filteredPages.isEmpty) {
+                    return const Center(
+                      child: Text('لا توجد صفحات متاحة'),
+                    );
+                  }
+                  // Ensure index is within bounds
+                  final index = pageController.selectedIndex.value;
+                  if (index >= filteredPages.length) {
+                    pageController.selectedIndex.value = 0;
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final currentPage = filteredPages[index];
                   if (currentPage.title == "العروض المطلوبة") {
                     final controller = Get.find<AccountClientInfo>();
-                    final expiredClients = controller.clinets.value
+                    final expiredClients = controller.clinets
                         .where((c) => c.numbers!
                             .any((n) => n.getExpiredSystems().isNotEmpty))
                         .toList();
                     return ExpiredSystemsPage(clients: expiredClients);
                   }
-                  return currentPage.content;
+                  return currentPage.builder();
                 })
               : Row(
                   children: [
                     _buildSidebar(),
                     Expanded(
                       child: Obx(() {
-                        final currentPage =
-                            filteredPages[pageController.selectedIndex.value];
+                        if (filteredPages.isEmpty) {
+                          return const Center(
+                            child: Text('لا توجد صفحات متاحة'),
+                          );
+                        }
+                        // Ensure index is within bounds
+                        final index = pageController.selectedIndex.value;
+                        if (index >= filteredPages.length) {
+                          pageController.selectedIndex.value = 0;
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                        final currentPage = filteredPages[index];
                         if (currentPage.title == "العروض المطلوبة") {
                           final controller = Get.find<AccountClientInfo>();
-                          final expiredClients = controller.clinets.value
+                          final expiredClients = controller.clinets
                               .where((c) => c.numbers!
                                   .any((n) => n.getExpiredSystems().isNotEmpty))
                               .toList();
                           return ExpiredSystemsPage(clients: expiredClients);
                         }
-                        return currentPage.content;
+                        return currentPage.builder();
                       }),
                     ),
                   ],
@@ -389,55 +428,7 @@ class _AccountDetailsState extends State<AccountDetails>
         child: Column(
           children: [
             // Header
-            Container(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: () => pageController.uploadNewImage(),
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(30),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                const Color(0xFFff6b6b).withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(30),
-                        child: Obx(() {
-                          final images = pageController.userImages;
-                          final latestImage =
-                              images.isNotEmpty ? images.last : null;
-                          return AnimatedProfileAvatar(
-                            imagePath: latestImage ?? 'assets/images/owner.png',
-                            isNetworkImage: latestImage != null,
-                          );
-                        }),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'كابتن / إسلام النني',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 18,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _DrawerHeader(pageController: pageController),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 24),
               height: 1,
@@ -445,75 +436,26 @@ class _AccountDetailsState extends State<AccountDetails>
             ),
             // Menu Items
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: filteredPages.length,
-                itemBuilder: (context, index) {
-                  return Obx(() {
-                    final isSelected =
-                        pageController.selectedIndex.value == index;
+              child: Obx(() {
+                final selectedIndex = pageController.selectedIndex.value;
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filteredPages.length,
+                  itemBuilder: (context, index) {
                     final page = filteredPages[index];
+                    final isSelected = selectedIndex == index;
 
-                    return GestureDetector(
+                    return _DrawerMenuItem(
+                      page: page,
+                      isSelected: isSelected,
                       onTap: () {
                         pageController.selectedIndex.value = index;
                         Navigator.pop(context);
                       },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          gradient: isSelected
-                              ? const LinearGradient(
-                                  colors: [
-                                    Color(0xFFff6b6b),
-                                    Color(0xFFfeca57)
-                                  ],
-                                )
-                              : null,
-                          color: isSelected
-                              ? null
-                              : Colors.white.withValues(alpha: 0.05),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              (page.icon as Icon).icon,
-                              color: isSelected
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.6),
-                              size: 22,
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                page.title,
-                                style: TextStyle(
-                                  color: isSelected
-                                      ? Colors.white
-                                      : Colors.white.withValues(alpha: 0.7),
-                                  fontWeight: isSelected
-                                      ? FontWeight.w600
-                                      : FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            if (isSelected)
-                              const Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                          ],
-                        ),
-                      ),
                     );
-                  });
-                },
-              ),
+                  },
+                );
+              }),
             ),
           ],
         ),
@@ -533,54 +475,7 @@ class _AccountDetailsState extends State<AccountDetails>
       child: Column(
         children: [
           // Header
-          Container(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                GestureDetector(
-                  onTap: () => pageController.uploadNewImage(),
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(35),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFff6b6b).withValues(alpha: 0.3),
-                          blurRadius: 25,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(35),
-                      child: Obx(() {
-                        final images = pageController.userImages;
-                        final latestImage =
-                            images.isNotEmpty ? images.last : null;
-                        return AnimatedProfileAvatar(
-                          imagePath: latestImage ?? 'assets/images/owner.png',
-                          isNetworkImage: latestImage != null,
-                        );
-                      }),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'كابتن / إسلام النني',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 20,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _SidebarHeader(pageController: pageController),
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 24),
             height: 1,
@@ -588,94 +483,23 @@ class _AccountDetailsState extends State<AccountDetails>
           ),
           // Menu Items
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: filteredPages.length,
-              itemBuilder: (context, index) {
-                return Obx(() {
-                  final isSelected =
-                      pageController.selectedIndex.value == index;
+            child: Obx(() {
+              final selectedIndex = pageController.selectedIndex.value;
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: filteredPages.length,
+                itemBuilder: (context, index) {
                   final page = filteredPages[index];
+                  final isSelected = selectedIndex == index;
 
-                  return GestureDetector(
+                  return _SidebarMenuItem(
+                    page: page,
+                    isSelected: isSelected,
                     onTap: () => pageController.selectedIndex.value = index,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        gradient: isSelected
-                            ? const LinearGradient(
-                                colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
-                              )
-                            : null,
-                        color: isSelected ? null : Colors.transparent,
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: const Color(0xFFff6b6b)
-                                      .withValues(alpha: 0.3),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              color: isSelected
-                                  ? Colors.white.withValues(alpha: 0.2)
-                                  : Colors.white.withValues(alpha: 0.05),
-                            ),
-                            child: Icon(
-                              (page.icon as Icon).icon,
-                              color: isSelected
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.6),
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Text(
-                              page.title,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? Colors.white
-                                    : Colors.white.withValues(alpha: 0.7),
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                          if (isSelected)
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                color: Colors.white.withValues(alpha: 0.2),
-                              ),
-                              child: const Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                color: Colors.white,
-                                size: 12,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
                   );
-                });
-              },
-            ),
+                },
+              );
+            }),
           ),
         ],
       ),
@@ -757,4 +581,272 @@ class _GridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GridPainter oldDelegate) => false;
+}
+
+// Optimized Drawer Header Widget
+class _DrawerHeader extends StatelessWidget {
+  final AccountDetailsController pageController;
+
+  const _DrawerHeader({required this.pageController});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: () => pageController.uploadNewImage(),
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFff6b6b).withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: Obx(() {
+                  final images = pageController.userImages;
+                  final latestImage = images.isNotEmpty ? images.last : null;
+                  return AnimatedProfileAvatar(
+                    imagePath: latestImage ?? 'assets/images/owner.png',
+                    isNetworkImage: latestImage != null,
+                  );
+                }),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'كابتن / إسلام النني',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Optimized Drawer Menu Item Widget
+class _DrawerMenuItem extends StatelessWidget {
+  final Page page;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _DrawerMenuItem({
+    required this.page,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
+                )
+              : null,
+          color: isSelected ? null : Colors.white.withValues(alpha: 0.05),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              (page.icon as Icon).icon,
+              color: isSelected
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.6),
+              size: 22,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                page.title,
+                style: TextStyle(
+                  color: isSelected
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.7),
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ),
+            if (isSelected)
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.white,
+                size: 16,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Optimized Sidebar Header Widget
+class _SidebarHeader extends StatelessWidget {
+  final AccountDetailsController pageController;
+
+  const _SidebarHeader({required this.pageController});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: () => pageController.uploadNewImage(),
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(35),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFff6b6b).withValues(alpha: 0.3),
+                    blurRadius: 25,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(35),
+                child: Obx(() {
+                  final images = pageController.userImages;
+                  final latestImage = images.isNotEmpty ? images.last : null;
+                  return AnimatedProfileAvatar(
+                    imagePath: latestImage ?? 'assets/images/owner.png',
+                    isNetworkImage: latestImage != null,
+                  );
+                }),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'كابتن / إسلام النني',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 20,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Optimized Sidebar Menu Item Widget
+class _SidebarMenuItem extends StatelessWidget {
+  final Page page;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _SidebarMenuItem({
+    required this.page,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
+                )
+              : null,
+          color: isSelected ? null : Colors.transparent,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFff6b6b).withValues(alpha: 0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: isSelected
+                    ? Colors.white.withValues(alpha: 0.2)
+                    : Colors.white.withValues(alpha: 0.05),
+              ),
+              child: Icon(
+                (page.icon as Icon).icon,
+                color: isSelected
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.6),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                page.title,
+                style: TextStyle(
+                  color: isSelected
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.7),
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            if (isSelected)
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.white.withValues(alpha: 0.2),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.white,
+                  size: 12,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

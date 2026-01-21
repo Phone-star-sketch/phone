@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/widget_models/clientCreationModelSheet.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
+import 'package:phone_system_app/services/backend/auth.dart';
 
 extension ClientPhoneHelper on Client {
   String getFormattedPhoneNumber() {
@@ -414,15 +415,15 @@ class _ModernClientCardState extends State<ModernClientCard> {
   Color _getStatusColor() {
     final cash = widget.client.totalCash ?? 0;
     if (cash > 10) return const Color(0xFF10b981);
-    if (cash >= 0) return const Color(0xFFf59e0b);
+    if (cash >= 0) return const Color.fromARGB(255, 58, 195, 9);
     return const Color(0xFFef4444);
   }
 
   String _getStatusText() {
     final cash = widget.client.totalCash ?? 0;
     if (cash > 10) return 'لا يوجد مستحقات';
-    if (cash >= 0) return 'جيد';
-    return 'مستحقات';
+    if (cash >= 0) return 'لا يوجد عليه مستحقات';
+    return 'عليه مستحقات';
   }
 
   @override
@@ -547,19 +548,23 @@ class _ModernClientCardState extends State<ModernClientCard> {
                               }
                             },
                           ),
-                          const SizedBox(width: 6),
-                          _buildActionBtn(
-                            icon: Icons.edit_rounded,
-                            color: const Color(0xFFf59e0b),
-                            onTap: () => clientEditModelSheet(context,
-                                client: widget.client),
-                          ),
-                          const SizedBox(width: 6),
-                          _buildActionBtn(
-                            icon: Icons.delete_rounded,
-                            color: const Color(0xFFef4444),
-                            onTap: () => _showDeleteDialog(),
-                          ),
+                          // Hide edit and delete buttons for assistant role
+                          if (SupabaseAuthentication.myUser!.role !=
+                              UserRoles.assistant.index) ...[
+                            const SizedBox(width: 6),
+                            _buildActionBtn(
+                              icon: Icons.edit_rounded,
+                              color: const Color(0xFFf59e0b),
+                              onTap: () => clientEditModelSheet(context,
+                                  client: widget.client),
+                            ),
+                            const SizedBox(width: 6),
+                            _buildActionBtn(
+                              icon: Icons.delete_rounded,
+                              color: const Color(0xFFef4444),
+                              onTap: () => _showDeleteDialog(),
+                            ),
+                          ],
                         ],
                       ),
                       // Selection Checkbox

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:universal_html/html.dart' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -115,7 +116,7 @@ class _AccountsViewState extends State<AccountsView>
           _buildIconButton(
             icon: FontAwesomeIcons.chartPie,
             onTap: () =>
-                Get.to(ChartsPage(), transition: Transition.leftToRight),
+                Get.to(const ChartsPage(), transition: Transition.leftToRight),
           ),
 
           const Spacer(),
@@ -144,8 +145,8 @@ class _AccountsViewState extends State<AccountsView>
           // Table Button
           _buildIconButton(
             icon: Icons.table_chart_rounded,
-            onTap: () =>
-                Get.to(InfoTablePage(), transition: Transition.rightToLeft),
+            onTap: () => Get.to(const InfoTablePage(),
+                transition: Transition.rightToLeft),
           ),
 
           const SizedBox(width: 12),
@@ -239,18 +240,23 @@ class _AccountsViewState extends State<AccountsView>
           offset: Offset(0, slide),
           child: Opacity(
             opacity: opacity,
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: accounts.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: _AccountCard(
-                    account: accounts[index],
-                    index: index,
-                  ),
-                );
-              },
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: List.generate(accounts.length, (index) {
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        bottom: index < accounts.length - 1 ? 20 : 0,
+                      ),
+                      child: _AccountCard(
+                        account: accounts[index],
+                        index: index,
+                      ),
+                    ),
+                  );
+                }),
+              ),
             ),
           ),
         );
@@ -329,24 +335,17 @@ class _AccountCard extends StatefulWidget {
   State<_AccountCard> createState() => _AccountCardState();
 }
 
-class _AccountCardState extends State<_AccountCard>
-    with SingleTickerProviderStateMixin {
+class _AccountCardState extends State<_AccountCard> {
   bool _isHovered = false;
-  late AnimationController _pulseController;
 
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
+  // Get unique background image for each account
+  String _getBackgroundImage() {
+    // Use account index to alternate between the two images
+    final images = [
+      'assets/images/bgaccounts.jpg', // Using existing image for testing
+      'assets/images/bgaccounts2.png', // Using existing image for testing
+    ];
+    return images[widget.index % images.length];
   }
 
   @override
@@ -357,141 +356,215 @@ class _AccountCardState extends State<_AccountCard>
       child: GestureDetector(
         onTap: _navigateToAccount,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          transform: Matrix4.identity()..scale(_isHovered ? 1.02 : 1.0),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              color: Colors.white.withValues(alpha: 0.05),
-              border: Border.all(
-                color: _isHovered
-                    ? const Color(0xFFff6b6b).withValues(alpha: 0.5)
-                    : Colors.white.withValues(alpha: 0.1),
-                width: 1.5,
-              ),
-              boxShadow: _isHovered
-                  ? [
-                      BoxShadow(
-                        color: const Color(0xFFff6b6b).withValues(alpha: 0.2),
-                        blurRadius: 30,
-                        offset: const Offset(0, 15),
-                      ),
-                    ]
-                  : null,
+          duration: const Duration(milliseconds: 300),
+          transform: Matrix4.identity()
+            ..translate(0.0, _isHovered ? -8.0 : 0.0),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(
+              color: _isHovered
+                  ? const Color(0xFFff6b6b).withValues(alpha: 0.6)
+                  : Colors.white.withValues(alpha: 0.15),
+              width: 2,
             ),
-            child: Row(
+            boxShadow: _isHovered
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFFff6b6b).withValues(alpha: 0.3),
+                      blurRadius: 40,
+                      offset: const Offset(0, 20),
+                    ),
+                    BoxShadow(
+                      color: const Color(0xFFfeca57).withValues(alpha: 0.2),
+                      blurRadius: 40,
+                      offset: const Offset(0, 20),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                // Logo
-                _buildLogo(),
-
-                const SizedBox(width: 20),
-
-                // Account Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.account.name ?? 'حساب غير محدد',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                // Background Image from Assets
+                Image.asset(
+                  _getBackgroundImage(),
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  errorBuilder: (context, error, stackTrace) {
+                    // Debug: print error
+                    debugPrint('Error loading image: $error');
+                    return Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                      child: const Center(
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: Colors.white,
+                          size: 48,
                         ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          color: const Color(0xFF10b981).withValues(alpha: 0.2),
-                        ),
-                        child: const Text(
-                          'نشط',
+                      ),
+                    );
+                  },
+                ),
+
+                // Blur Overlay
+                BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: _isHovered ? 1 : 1,
+                    sigmaY: _isHovered ? 1 : 1,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.3),
+                          Colors.black.withValues(alpha: 0.7),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Gradient Overlay for better text visibility
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: _isHovered
+                          ? [
+                              const Color(0xFFff6b6b).withValues(alpha: 0.2),
+                              const Color(0xFFfeca57).withValues(alpha: 0.2),
+                            ]
+                          : [
+                              Colors.transparent,
+                              Colors.transparent,
+                            ],
+                    ),
+                  ),
+                ),
+
+                // Content
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Company Name
+                        Text(
+                          widget.account.name ?? 'حساب غير محدد',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF10b981),
+                            fontSize: _isHovered ? 42 : 38,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            fontFamily: 'Cairo',
+                            letterSpacing: 0.5,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.6),
+                                blurRadius: 25,
+                                offset: const Offset(0, 4),
+                              ),
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
+
+                        const SizedBox(height: 24),
+
+                        // Status Badge
+                        // AnimatedContainer(
+                        //   duration: const Duration(milliseconds: 300),
+                        //   padding: EdgeInsets.symmetric(
+                        //     horizontal: _isHovered ? 32 : 28,
+                        //     vertical: _isHovered ? 14 : 12,
+                        //   ),
+                        //   // decoration: BoxDecoration(
+                        //   //   borderRadius: BorderRadius.circular(30),
+                        //   //   gradient: const LinearGradient(
+                        //   //     colors: [Color(0xFF10b981), Color(0xFF059669)],
+                        //   //   ),
+                        //   //   boxShadow: [
+                        //   //     BoxShadow(
+                        //   //       color: const Color(0xFF10b981)
+                        //   //           .withValues(alpha: 0.5),
+                        //   //       blurRadius: _isHovered ? 25 : 15,
+                        //   //       offset: const Offset(0, 8),
+                        //   //     ),
+                        //   //   ],
+                        //   // ),
+                        //   // child: Text(
+                        //   //   'نشط',
+                        //   //   style: TextStyle(
+                        //   //     fontSize: _isHovered ? 18 : 16,
+                        //   //     fontWeight: FontWeight.w700,
+                        //   //     color: Colors.white,
+                        //   //     fontFamily: 'Cairo',
+                        //   //     shadows: [
+                        //   //       Shadow(
+                        //   //         color: Colors.black.withValues(alpha: 0.3),
+                        //   //         blurRadius: 8,
+                        //   //       ),
+                        //   //     ],
+                        //   //   ),
+                        //   // ),
+                        // ),
+                      ],
+                    ),
                   ),
                 ),
 
-                // Arrow
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    gradient: _isHovered
-                        ? const LinearGradient(
-                            colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
-                          )
-                        : null,
-                    color:
-                        _isHovered ? null : Colors.white.withValues(alpha: 0.1),
+                // Hover Indicator (subtle corner accent)
+                if (_isHovered)
+                  Positioned(
+                    top: 20,
+                    right: 20,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                const Color(0xFFff6b6b).withValues(alpha: 0.6),
+                            blurRadius: 15,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: Icon(
-                    Icons.arrow_forward_rounded,
-                    color: Colors.white.withValues(alpha: _isHovered ? 1 : 0.6),
-                    size: 20,
-                  ),
-                ),
               ],
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildLogo() {
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (context, child) {
-        final scale = 1.0 + (_pulseController.value * 0.05);
-
-        return Transform.scale(
-          scale: _isHovered ? scale : 1.0,
-          child: Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFff6b6b), Color(0xFFfeca57)],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFff6b6b).withValues(alpha: 0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Image.asset(
-                'assets/images/logo1.png',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.business_rounded,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -512,7 +585,7 @@ class _AccountCardState extends State<_AccountCard>
     p.updateTheProfitByAccount(widget.account);
 
     Get.to(
-      AccountDetails(),
+      const AccountDetails(),
       arguments: widget.account,
       transition: Transition.fadeIn,
       duration: const Duration(milliseconds: 400),

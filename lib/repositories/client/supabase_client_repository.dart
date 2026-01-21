@@ -99,6 +99,15 @@ class SupabaseClientRepository extends ClientRepository
     try {
       client.totalCash += amount;
       await update(client);
+
+      // Create descriptive log message based on transaction type
+      String logMessage;
+      if (amount > 0) {
+        logMessage = "إضافة مبلغ: ${amount.abs().toStringAsFixed(0)} جنيه";
+      } else {
+        logMessage = "تسديد مبلغ: ${amount.abs().toStringAsFixed(0)} جنيه";
+      }
+
       final log = Log(
         id: 0,
         accountId: AccountClientInfo.to.currentAccount.id,
@@ -106,7 +115,7 @@ class SupabaseClientRepository extends ClientRepository
         phoneId: client.numbers![0].id,
         createdBy: SupabaseAuthentication.myUser!.id,
         price: amount,
-        systemType: "قيمة تجديد الباقة : $amount جنيه",
+        systemType: logMessage,
         transactionType: (amount > 0)
             ? TransactionType.moneyAdded
             : TransactionType.moneyDeducted,
@@ -309,8 +318,9 @@ class SupabaseClientRepository extends ClientRepository
         .order('name')
         .asyncMap((list) async {
           final now = DateTime.now();
-          final shouldFetchFull = now.difference(_lastFullFetch) > _fullFetchThrottle;
-          
+          final shouldFetchFull =
+              now.difference(_lastFullFetch) > _fullFetchThrottle;
+
           if (shouldFetchFull) {
             // Only fetch full data if throttle period has passed
             try {

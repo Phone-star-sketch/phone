@@ -139,24 +139,24 @@ class _ModernClientSheet extends StatelessWidget {
             child: Row(
               children: [
                 // Avatar
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Text(
-                      currentClient.name?[0].toUpperCase() ?? '؟',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
+                // Container(
+                //   width: 60,
+                //   height: 60,
+                //   decoration: BoxDecoration(
+                //     color: Colors.white.withOpacity(0.2),
+                //     borderRadius: BorderRadius.circular(16),
+                //   ),
+                //   child: Center(
+                //     child: Text(
+                //       currentClient.name?[0].toUpperCase() ?? '؟',
+                //       style: const TextStyle(
+                //         fontSize: 28,
+                //         fontWeight: FontWeight.w700,
+                //         color: Colors.white,
+                //       ),
+                //     ),
+                //   ),
+                // ),
                 const SizedBox(width: 16),
                 // Info
                 Expanded(
@@ -166,11 +166,12 @@ class _ModernClientSheet extends StatelessWidget {
                       Text(
                         currentClient.name ?? 'غير محدد',
                         style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
+                          height: 1.3,
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
@@ -214,56 +215,61 @@ class _ModernClientSheet extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
+                // Always show: Add and Payment buttons
                 Expanded(
                   child: _QuickActionButton(
-                    icon: Icons.add_rounded,
+                    icon: Icons.arrow_upward_rounded,
                     label: 'إضافة',
-                    color: const Color(0xFF10b981),
+                    color: const Color(0xFFef4444),
                     onTap: () => showMoneyDialog(context, currentClient, true),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _QuickActionButton(
-                    icon: Icons.remove_rounded,
+                    icon: Icons.arrow_downward_rounded,
                     label: 'تسديد',
-                    color: const Color(0xFF3b82f6),
+                    color: const Color(0xFF10b981),
                     onTap: () => showMoneyDialog(context, currentClient, false),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _QuickActionButton(
-                    icon: Icons.add_box_rounded,
-                    label: 'باقة جديدة',
-                    color: const Color(0xFF10b981),
-                    onTap: () => showSystemAddDialog(currentClient),
+                // Show these buttons only for manager
+                if (isManager) ...[
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _QuickActionButton(
+                      icon: Icons.add_box_rounded,
+                      label: 'باقة جديدة',
+                      color: const Color(0xFF10b981),
+                      onTap: () => showSystemAddDialog(currentClient),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _QuickActionButton(
-                    icon: Icons.print_rounded,
-                    label: 'طباعة',
-                    color: const Color(0xFF8b5cf6),
-                    onTap: () {
-                      final clientLogs = controller.getClientLogs() ?? [];
-                      final clientSystems = controller.getClientSystems() ?? [];
-                      showPrintClientReport(context, currentClient,
-                          logs: clientLogs, systems: clientSystems);
-                    },
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _QuickActionButton(
+                      icon: Icons.print_rounded,
+                      label: 'طباعة',
+                      color: const Color(0xFF8b5cf6),
+                      onTap: () {
+                        final clientLogs = controller.getClientLogs() ?? [];
+                        final clientSystems =
+                            controller.getClientSystems() ?? [];
+                        showPrintClientReport(context, currentClient,
+                            logs: clientLogs, systems: clientSystems);
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _QuickActionButton(
-                    icon: Icons.apps_rounded,
-                    label: 'الباقات',
-                    color: const Color(0xFFf59e0b),
-                    onTap: () =>
-                        showModernSystemChoiceSheet(context, currentClient),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _QuickActionButton(
+                      icon: Icons.apps_rounded,
+                      label: 'الباقات',
+                      color: const Color(0xFFf59e0b),
+                      onTap: () =>
+                          showModernSystemChoiceSheet(context, currentClient),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -426,7 +432,7 @@ class _LogsTab extends StatelessWidget {
                     Text(
                       log.systemType.isNotEmpty
                           ? log.systemType
-                          : (isAddition ? 'إضافة مبلغ' : 'تسديد مبلغ'),
+                          : (isAddition ? 'قيمة إضافة' : 'قيمة تسديد'),
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Colors.grey[800],
@@ -595,42 +601,49 @@ class _SettingsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check if user is manager
+    final isManager =
+        SupabaseAuthentication.myUser!.role != UserRoles.assistant.index;
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
-        _SettingButton(
-          icon: Icons.calendar_month_rounded,
-          label: 'تغيير تاريخ انتهاء العرض',
-          color: const Color(0xFF10b981),
-          onTap: () async {
-            final data = await showDatePicker(
-              context: context,
-              initialDate: DateTime.now(),
-              firstDate: DateTime.now().subtract(const Duration(days: 50)),
-              lastDate: DateTime(DateTime.now().year + 10),
-            );
-            if (data != null) {
-              client.expireDate = data;
-              await BackendServices.instance.clientRepository.update(client);
-              AccountClientInfo.to.updateCurrnetClinets();
-              Get.back();
-            }
-          },
-        ),
-        const SizedBox(height: 10),
-        _SettingButton(
-          icon: Icons.discount_rounded,
-          label: 'إضافة خصم',
-          color: const Color(0xFFf59e0b),
-          onTap: () => showDiscountDialog(context, client),
-        ),
-        const SizedBox(height: 10),
-        _SettingButton(
-          icon: Icons.delete_rounded,
-          label: 'حذف العميل',
-          color: const Color(0xFFef4444),
-          onTap: () => _showDeleteDialog(client),
-        ),
+        // Show all buttons for manager, only specific buttons for assistant
+        if (isManager) ...[
+          _SettingButton(
+            icon: Icons.calendar_month_rounded,
+            label: 'تغيير تاريخ انتهاء العرض',
+            color: const Color(0xFF10b981),
+            onTap: () async {
+              final data = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime.now().subtract(const Duration(days: 50)),
+                lastDate: DateTime(DateTime.now().year + 10),
+              );
+              if (data != null) {
+                client.expireDate = data;
+                await BackendServices.instance.clientRepository.update(client);
+                AccountClientInfo.to.updateCurrnetClinets();
+                Get.back();
+              }
+            },
+          ),
+          const SizedBox(height: 10),
+          _SettingButton(
+            icon: Icons.discount_rounded,
+            label: 'إضافة خصم',
+            color: const Color(0xFFf59e0b),
+            onTap: () => showDiscountDialog(context, client),
+          ),
+          const SizedBox(height: 10),
+          _SettingButton(
+            icon: Icons.delete_rounded,
+            label: 'حذف العميل',
+            color: const Color(0xFFef4444),
+            onTap: () => _showDeleteDialog(client),
+          ),
+        ],
       ],
     );
   }
@@ -737,18 +750,20 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
             height: 40,
             decoration: BoxDecoration(
               color:
-                  (adding ? const Color(0xFFef4444) : const Color(0xFF3b82f6))
+                  (adding ? const Color(0xFFef4444) : const Color(0xFF10b981))
                       .withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              adding ? Icons.add_rounded : Icons.remove_rounded,
-              color: adding ? const Color(0xFFef4444) : const Color(0xFF3b82f6),
+              adding
+                  ? Icons.arrow_upward_rounded
+                  : Icons.arrow_downward_rounded,
+              color: adding ? const Color(0xFFef4444) : const Color(0xFF10b981),
             ),
           ),
           const SizedBox(width: 12),
           Text(
-            adding ? 'إضافة مبلغ' : 'تسديد مبلغ',
+            adding ? 'قيمة إضافة' : 'قيمة تسديد',
             style: TextStyle(
                 color: Colors.grey[800],
                 fontWeight: FontWeight.w600,
@@ -811,6 +826,7 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                                     'TXN${DateTime.now().millisecondsSinceEpoch}',
                                 paymentMethod:
                                     adding ? 'إيداع نقدي' : 'تسديد نقدي',
+                                client: client,
                               ));
                         } catch (e) {
                           Get.snackbar(
@@ -826,7 +842,7 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: adding
                       ? const Color(0xFFef4444)
-                      : const Color(0xFF3b82f6),
+                      : const Color(0xFF10b981),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -1146,33 +1162,32 @@ void showSystemAddDialog(Client client) async {
               ),
               child: DropdownMenu<SystemType>(
                 width: 250,
-                menuHeight: 300,
+                menuHeight: 400,
                 enableFilter: true,
                 requestFocusOnTap: true,
                 enableSearch: true,
                 hintText: 'اختر الباقة',
+                textStyle: TextStyle(
+                  color: Colors.grey[800],
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
                 inputDecorationTheme: InputDecorationTheme(
                   border: InputBorder.none,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   hintStyle: TextStyle(color: Colors.grey[400]),
                 ),
-                dropdownMenuEntries: controller
-                    .getAllTypes()
-                    .map(
-                      (systemTypeObject) => DropdownMenuEntry(
-                        value: systemTypeObject,
-                        label: systemTypeObject.name ?? '',
-                        leadingIcon: Icon(
-                          systemTypeObject.category == SystemCategory.values
-                              ? Icons.wifi
-                              : Icons.smartphone,
-                          color: const Color(0xFF3b82f6),
-                          size: 20,
-                        ),
-                      ),
-                    )
-                    .toList(),
+                menuStyle: MenuStyle(
+                  backgroundColor: WidgetStateProperty.all(Colors.white),
+                  elevation: WidgetStateProperty.all(8),
+                  shape: WidgetStateProperty.all(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                dropdownMenuEntries: _buildGroupedSystemEntries(controller),
                 onSelected: (value) {
                   currentType = value;
                 },
@@ -1263,4 +1278,161 @@ class CustomIndicator extends StatelessWidget {
       ],
     );
   }
+}
+
+// Helper function to build grouped system entries with headers
+List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
+    ClientBottomSheetController controller) {
+  final allTypes = controller.getAllTypes();
+  final List<DropdownMenuEntry<SystemType>> entries = [];
+
+  // Group by category
+  final internetTypes = allTypes
+      .where((type) => type.category == SystemCategory.internetPackage)
+      .toList();
+  final mobileTypes = allTypes
+      .where((type) => type.category == SystemCategory.mobileInternet)
+      .toList();
+  final mainTypes = allTypes
+      .where((type) => type.category == SystemCategory.mainPackage)
+      .toList();
+
+  // Add Internet section
+  if (internetTypes.isNotEmpty) {
+    // Add header (disabled entry)
+    entries.add(
+      DropdownMenuEntry<SystemType>(
+        value: internetTypes.first, // Dummy value, won't be selectable
+        label: '━━━ باقات الإنترنت ━━━',
+        enabled: false,
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.all(
+            const Color(0xFF3b82f6).withValues(alpha: 0.05),
+          ),
+          foregroundColor: WidgetStateProperty.all(
+            const Color(0xFF3b82f6),
+          ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          ),
+        ),
+      ),
+    );
+
+    // Add internet packages
+    for (var type in internetTypes) {
+      entries.add(
+        DropdownMenuEntry<SystemType>(
+          value: type,
+          label: type.name ?? '',
+          leadingIcon: Icon(
+            Icons.wifi_rounded,
+            color: const Color(0xFF3b82f6),
+            size: 20,
+          ),
+          style: ButtonStyle(
+            foregroundColor: WidgetStateProperty.all(Colors.grey[800]),
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.hovered)) {
+                return const Color(0xFF3b82f6).withValues(alpha: 0.1);
+              }
+              return Colors.white;
+            }),
+          ),
+        ),
+      );
+    }
+  }
+
+  // Add Mobile section
+  if (mobileTypes.isNotEmpty) {
+    entries.add(
+      DropdownMenuEntry<SystemType>(
+        value: mobileTypes.first,
+        label: '━━━ باقات الموبايل ━━━',
+        enabled: false,
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.all(
+            const Color(0xFF10b981).withValues(alpha: 0.05),
+          ),
+          foregroundColor: WidgetStateProperty.all(
+            const Color(0xFF10b981),
+          ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          ),
+        ),
+      ),
+    );
+
+    for (var type in mobileTypes) {
+      entries.add(
+        DropdownMenuEntry<SystemType>(
+          value: type,
+          label: type.name ?? '',
+          leadingIcon: Icon(
+            Icons.smartphone_rounded,
+            color: const Color(0xFF10b981),
+            size: 20,
+          ),
+          style: ButtonStyle(
+            foregroundColor: WidgetStateProperty.all(Colors.grey[800]),
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.hovered)) {
+                return const Color(0xFF10b981).withValues(alpha: 0.1);
+              }
+              return Colors.white;
+            }),
+          ),
+        ),
+      );
+    }
+  }
+
+  // Add Main Packages section
+  if (mainTypes.isNotEmpty) {
+    entries.add(
+      DropdownMenuEntry<SystemType>(
+        value: mainTypes.first,
+        label: '━━━ الباقات الرئيسية ━━━',
+        enabled: false,
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.all(
+            const Color(0xFFf59e0b).withValues(alpha: 0.05),
+          ),
+          foregroundColor: WidgetStateProperty.all(
+            const Color(0xFFf59e0b),
+          ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          ),
+        ),
+      ),
+    );
+
+    for (var type in mainTypes) {
+      entries.add(
+        DropdownMenuEntry<SystemType>(
+          value: type,
+          label: type.name ?? '',
+          leadingIcon: Icon(
+            Icons.router_rounded,
+            color: const Color(0xFFf59e0b),
+            size: 20,
+          ),
+          style: ButtonStyle(
+            foregroundColor: WidgetStateProperty.all(Colors.grey[800]),
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.hovered)) {
+                return const Color(0xFFf59e0b).withValues(alpha: 0.1);
+              }
+              return Colors.white;
+            }),
+          ),
+        ),
+      );
+    }
+  }
+
+  return entries;
 }
