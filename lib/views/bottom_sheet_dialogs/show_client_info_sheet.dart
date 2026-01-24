@@ -219,8 +219,8 @@ class _ModernClientSheet extends StatelessWidget {
                 Expanded(
                   child: _QuickActionButton(
                     icon: Icons.arrow_upward_rounded,
-                    label: 'إضافة',
-                    color: const Color(0xFFef4444),
+                    label: 'تسديد',
+                    color: const Color(0xFF10b981),
                     onTap: () => showMoneyDialog(context, currentClient, true),
                   ),
                 ),
@@ -228,8 +228,8 @@ class _ModernClientSheet extends StatelessWidget {
                 Expanded(
                   child: _QuickActionButton(
                     icon: Icons.arrow_downward_rounded,
-                    label: 'تسديد',
-                    color: const Color(0xFF10b981),
+                    label: 'إضافة',
+                    color: const Color(0xFFef4444),
                     onTap: () => showMoneyDialog(context, currentClient, false),
                   ),
                 ),
@@ -739,8 +739,10 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
   final controller = TextEditingController();
   final loaders = Get.put(Loaders());
 
-  await Get.dialog(
-    AlertDialog(
+  await showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (dialogContext) => AlertDialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
@@ -818,14 +820,20 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                           await loaders.changeMoneyValue(
                               client, controller.text, adding);
 
-                          if (context.mounted) Navigator.pop(context);
+                          // Store the values before closing dialog
+                          final amountText = controller.text;
+                          final isAdding = adding;
 
+                          // Close only the money dialog
+                          Navigator.of(dialogContext).pop();
+
+                          // Navigate to success page
                           Get.to(() => SuccessfulPaymentPage(
-                                amount: '${controller.text} جنيه',
+                                amount: '$amountText جنيه',
                                 transactionId:
                                     'TXN${DateTime.now().millisecondsSinceEpoch}',
                                 paymentMethod:
-                                    adding ? 'إيداع نقدي' : 'تسديد نقدي',
+                                    isAdding ? 'إيداع نقدي' : 'تسديد نقدي',
                                 client: client,
                               ));
                         } catch (e) {

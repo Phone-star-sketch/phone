@@ -123,11 +123,7 @@ class SupabaseClientRepository extends ClientRepository
       );
 
       await BackendServices.instance.logRepository.create(log);
-      Get.snackbar(
-        "حالة الماليات",
-        "تمت تعديل المستحقات",
-        animationDuration: const Duration(seconds: 3),
-      );
+      // Snackbar removed - success page handles the feedback now
     } catch (e) {
       Get.snackbar("Clinet Error", e.toString());
     }

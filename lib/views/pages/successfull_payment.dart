@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/client.dart';
-import 'package:phone_system_app/views/account_details.dart';
 import 'dart:math' as math;
 
 class SuccessfulPaymentPage extends StatefulWidget {
@@ -94,13 +93,8 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   }
 
   void _navigateBack() {
-    if (widget.client != null) {
-      // Close the payment page and return to client sheet
-      Get.back();
-    } else {
-      // Go back to account details if no client info
-      Get.off(() => const AccountDetails());
-    }
+    // Go back to the bottom sheet
+    Get.back();
   }
 
   @override
