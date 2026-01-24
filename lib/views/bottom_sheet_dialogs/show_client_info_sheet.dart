@@ -827,15 +827,17 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                           // Close only the money dialog
                           Navigator.of(dialogContext).pop();
 
-                          // Navigate to success page
-                          Get.to(() => SuccessfulPaymentPage(
-                                amount: '$amountText جنيه',
-                                transactionId:
-                                    'TXN${DateTime.now().millisecondsSinceEpoch}',
-                                paymentMethod:
-                                    isAdding ? 'إيداع نقدي' : 'تسديد نقدي',
-                                client: client,
-                              ));
+                          // Navigate to success page using Get.to for consistent navigation
+                          Get.to(
+                            () => SuccessfulPaymentPage(
+                              amount: '$amountText جنيه',
+                              transactionId:
+                                  'TXN${DateTime.now().millisecondsSinceEpoch}',
+                              paymentMethod:
+                                  isAdding ? 'إيداع نقدي' : 'تسديد نقدي',
+                              client: client,
+                            ),
+                          );
                         } catch (e) {
                           Get.snackbar(
                             'خطأ',
