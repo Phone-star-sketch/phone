@@ -140,8 +140,11 @@ class UserManagementController extends GetxController {
     try {
       isLoading.value = true;
 
+      // Save current session before creating new user
+      final currentSession = _supabase.auth.currentSession;
+      final currentUser = _supabase.auth.currentUser;
+
       // Step 1: Create auth user with metadata
-      // The trigger will automatically create the public.users entry
       final authResponse = await _supabase.auth.signUp(
         email: email,
         password: password,
@@ -156,10 +159,38 @@ class UserManagementController extends GetxController {
         throw Exception('فشل إنشاء حساب المستخدم');
       }
 
-      // Step 2: Wait a moment for trigger to complete
-      await Future.delayed(const Duration(milliseconds: 300));
+      final newUserId = authResponse.user!.id;
 
-      // Step 3: Refresh the list
+      // Step 2: Restore original session if it was changed
+      if (currentSession != null &&
+          _supabase.auth.currentUser?.id != currentUser?.id) {
+        debugPrint('Restoring original session...');
+        await _supabase.auth.setSession(currentSession.refreshToken!);
+      }
+
+      // Step 3: Wait a moment for trigger to complete
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Step 4: Check if user was created by trigger, if not create manually
+      final existingUser = await _supabase
+          .from('users')
+          .select('id')
+          .eq('uid', newUserId)
+          .maybeSingle();
+
+      if (existingUser == null) {
+        // Trigger didn't create the user, insert manually
+        debugPrint('Trigger did not create user, inserting manually...');
+        await _supabase.from('users').insert({
+          'uid': newUserId,
+          'name': name,
+          'email': email,
+          'role': role,
+          'secpass': secpass,
+        });
+      }
+
+      // Step 5: Refresh the list
       await fetchUsers();
 
       _showToast("تم إنشاء المستخدم بنجاح");
