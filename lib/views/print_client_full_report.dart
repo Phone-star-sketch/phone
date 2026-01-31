@@ -482,7 +482,7 @@ class PrintClientFullReport extends StatelessWidget {
     }
 
     try {
-      final imageData = await rootBundle.load('assets/images/bg-logo.png');
+      final imageData = await rootBundle.load('assets/images/newlogo.png');
       _logoCache = imageData.buffer.asUint8List();
       return _logoCache;
     } catch (_) {

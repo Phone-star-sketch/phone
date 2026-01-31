@@ -14,6 +14,7 @@ abstract class ClientRepository {
   Future<List<Map<String, dynamic>>> getAllClients(String? coulmnName);
 
   Future<void> createClientWithPhoneNumber(Client client, String phoneNumber);
+  Future<Client?> getClientByPhoneNumber(String phoneNumber);
 
   void bindStreamToClientChanges(
       Client clinet, Function(List<Map<String, dynamic>>) callback);

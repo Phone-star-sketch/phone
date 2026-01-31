@@ -50,7 +50,7 @@ class _WelcomePageState extends State<WelcomePage>
         height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/bg-logo.png'),
+            image: AssetImage('assets/images/newlogo.png'),
             fit: BoxFit.cover,
           ),
         ),
@@ -126,8 +126,8 @@ class _WelcomePageState extends State<WelcomePage>
 
   Widget _buildLogo() {
     return Container(
-      width: 140,
-      height: 140,
+      width: 100,
+      height: 100,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white.withValues(alpha: 0.1),
@@ -145,7 +145,7 @@ class _WelcomePageState extends State<WelcomePage>
       ),
       child: ClipOval(
         child: Image.asset(
-          'assets/images/bg-logo.png',
+          'assets/images/newlogo.png',
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) => Container(
             decoration: const BoxDecoration(

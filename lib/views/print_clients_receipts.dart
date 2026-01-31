@@ -34,17 +34,20 @@ class PrintClientsReceipts extends StatelessWidget {
     final now = DateTime.now();
     final collectionDay = AccountClientInfo.to.currentAccount.day;
 
-    // If we're before collection day, use previous month
+    // Get the appropriate date
+    DateTime targetDate;
     if (now.day < collectionDay) {
-      // If it's January, go to previous year's December
       if (now.month == 1) {
-        return _getArabicMonthName(12);
+        targetDate = DateTime(now.year - 1, 12, collectionDay);
+      } else {
+        targetDate = DateTime(now.year, now.month - 1, collectionDay);
       }
-      return _getArabicMonthName(now.month - 1);
+    } else {
+      targetDate = DateTime(now.year, now.month, collectionDay);
     }
 
-    // If we're on or after collection day, use current month
-    return _getArabicMonthName(now.month);
+    // Return full date format: "15/01/2025"
+    return '${targetDate.year}/${targetDate.month.toString().padLeft(2, '0')}/${targetDate.day.toString().padLeft(2, '0')}';
   }
 
   String _getArabicMonthName(int month) {
@@ -156,6 +159,13 @@ class PrintClientsReceipts extends StatelessWidget {
     );
   }
 
+  // Cache for logo and icons
+  static Uint8List? _cachedLogo;
+  static Uint8List? _cachedBackgroundImage;
+  static Uint8List? _cachedVCashIcon;
+  static Uint8List? _cachedInstaPayIcon;
+  static Uint8List? _cachedWhatsappIcon;
+
   Future<Uint8List> _createPdf(PdfPageFormat format) async {
     final pageFormat = format.copyWith(
       marginTop: 40,
@@ -167,11 +177,18 @@ class PrintClientsReceipts extends StatelessWidget {
     final document = pw.Document();
 
     try {
-      final logo = await getImage("assets/images/MKQ.png");
-      final backgroundImage = await getImage("assets/images/MKQ.png");
-      final vCashIcon = await getImage("assets/images/v_cash_icon.png");
-      final instaPayIcon = await getImage("assets/images/instapay_icon.png");
-      final whatsappIcon = await getImage("assets/images/whatsapp_icon.png");
+      // Load and cache images only once
+      _cachedLogo ??= await getImage("assets/images/newlogo.png");
+      _cachedBackgroundImage ??= await getImage("assets/images/newlogo.png");
+      _cachedVCashIcon ??= await getImage("assets/images/v_cash_icon.png");
+      _cachedInstaPayIcon ??= await getImage("assets/images/instapay_icon.png");
+      _cachedWhatsappIcon ??= await getImage("assets/images/whatsapp_icon.png");
+
+      final logo = _cachedLogo!;
+      final backgroundImage = _cachedBackgroundImage!;
+      final vCashIcon = _cachedVCashIcon!;
+      final instaPayIcon = _cachedInstaPayIcon!;
+      final whatsappIcon = _cachedWhatsappIcon!;
 
       final cairoRegular = await PdfGoogleFonts.cairoRegular();
       final cairoBold = await PdfGoogleFonts.cairoBold();
@@ -238,22 +255,18 @@ class PrintClientsReceipts extends StatelessWidget {
                         buildHeader(logo, cairoBold,
                             extraBoldFont: cairoExtraBold),
                         pw.SizedBox(height: 20),
-                        pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.center,
-                          children: [
-                            pw.Text("سجل المعاملات المالية الخاصة بالسيد/",
-                                textDirection: pw.TextDirection.rtl,
-                                style: pw.TextStyle(
-                                    font: cairoRegular, fontSize: 14.0)),
-                            pw.SizedBox(height: 8),
-                            pw.Text(c.name ?? "غير محدد",
-                                textDirection: pw.TextDirection.rtl,
-                                textAlign: pw.TextAlign.center,
-                                style: pw.TextStyle(
-                                    font: cairoBold, fontSize: 16.0),
-                                softWrap: true,
-                                maxLines: 3),
-                          ],
+                        pw.Container(
+                          width: double.infinity,
+                          child: pw.Text(
+                            "سجل المعاملات للسيد/ ${c.name ?? 'غير محدد'}",
+                            textDirection: pw.TextDirection.rtl,
+                            textAlign: pw.TextAlign.center,
+                            style:
+                                pw.TextStyle(font: cairoBold, fontSize: 16.0),
+                            softWrap: true,
+                            maxLines: 2,
+                            overflow: pw.TextOverflow.visible,
+                          ),
                         ),
                         pw.SizedBox(height: 20),
                         ...buildTableWithFlexibleHeight(
@@ -625,6 +638,10 @@ class PrintClientsReceipts extends StatelessWidget {
     final monthName = _getAppropriateMonthName();
     final (clientCount, totalAmount) = calculateStats();
 
+    // Get month and year for title
+    final (month, year) = getPreviousMonthAndYear();
+    final arabicMonth = _getArabicMonthName(month);
+
     return pw.Container(
       padding: const pw.EdgeInsets.all(10),
       child: pw.Column(
@@ -638,11 +655,21 @@ class PrintClientsReceipts extends StatelessWidget {
                 pw.Column(
                   children: [
                     makeText("فاتورة تحصيل", font, 24.0),
-                    pw.SizedBox(height: 8),
-                    makeText("شهر $monthName", font, 18.0, PdfColors.blue900),
+                    pw.SizedBox(height: 4),
+                    makeText("شهر $arabicMonth لسنة $year", font, 18.0,
+                        PdfColors.blue900),
                   ],
                 ),
-                pw.SizedBox(width: 100),
+                // Date on the right (replacing the empty SizedBox)
+                pw.Container(
+                  width: 100,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      makeText(monthName, font, 14.0, PdfColors.blue900),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

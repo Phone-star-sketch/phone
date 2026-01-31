@@ -218,7 +218,7 @@ class _ModernClientSheet extends StatelessWidget {
                 // Always show: Add and Payment buttons
                 Expanded(
                   child: _QuickActionButton(
-                    icon: Icons.arrow_upward_rounded,
+                    icon: Icons.arrow_downward_rounded,
                     label: 'تسديد',
                     color: const Color(0xFF10b981),
                     onTap: () => showMoneyDialog(context, currentClient, true),
@@ -227,7 +227,7 @@ class _ModernClientSheet extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _QuickActionButton(
-                    icon: Icons.arrow_downward_rounded,
+                    icon: Icons.arrow_upward_rounded,
                     label: 'إضافة',
                     color: const Color(0xFFef4444),
                     onTap: () => showMoneyDialog(context, currentClient, false),
@@ -409,18 +409,18 @@ class _LogsTab extends StatelessWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   color: (isAddition
-                          ? const Color(0xFFef4444)
-                          : const Color(0xFF10b981))
+                          ? const Color(0xFF10b981)
+                          : const Color(0xFFef4444))
                       .withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   isAddition
-                      ? Icons.arrow_upward_rounded
-                      : Icons.arrow_downward_rounded,
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded,
                   color: isAddition
-                      ? const Color(0xFFef4444)
-                      : const Color(0xFF10b981),
+                      ? const Color(0xFF10b981)
+                      : const Color(0xFFef4444),
                   size: 20,
                 ),
               ),
@@ -456,8 +456,8 @@ class _LogsTab extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   color: isAddition
-                      ? const Color(0xFFef4444)
-                      : const Color(0xFF10b981),
+                      ? const Color(0xFF10b981)
+                      : const Color(0xFFef4444),
                 ),
               ),
             ],
@@ -758,8 +758,8 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
             ),
             child: Icon(
               adding
-                  ? Icons.arrow_upward_rounded
-                  : Icons.arrow_downward_rounded,
+                  ? Icons.arrow_downward_rounded
+                  : Icons.arrow_upward_rounded,
               color: adding ? const Color(0xFFef4444) : const Color(0xFF10b981),
             ),
           ),
@@ -1307,7 +1307,52 @@ List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
       .where((type) => type.category == SystemCategory.mainPackage)
       .toList();
 
-  // Add Internet section
+  // Add Main Packages section FIRST
+  if (mainTypes.isNotEmpty) {
+    entries.add(
+      DropdownMenuEntry<SystemType>(
+        value: mainTypes.first,
+        label: '━━━ الباقات الرئيسية ━━━',
+        enabled: false,
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.all(
+            const Color(0xFFf59e0b).withValues(alpha: 0.05),
+          ),
+          foregroundColor: WidgetStateProperty.all(
+            const Color(0xFFf59e0b),
+          ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          ),
+        ),
+      ),
+    );
+
+    for (var type in mainTypes) {
+      entries.add(
+        DropdownMenuEntry<SystemType>(
+          value: type,
+          label: type.name ?? '',
+          leadingIcon: Icon(
+            Icons.router_rounded,
+            color: const Color(0xFFf59e0b),
+            size: 20,
+          ),
+          style: ButtonStyle(
+            foregroundColor: WidgetStateProperty.all(Colors.grey[800]),
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.hovered)) {
+                return const Color(0xFFf59e0b).withValues(alpha: 0.1);
+              }
+              return Colors.white;
+            }),
+          ),
+        ),
+      );
+    }
+  }
+
+  // Add Internet section SECOND
   if (internetTypes.isNotEmpty) {
     // Add header (disabled entry)
     entries.add(
@@ -1354,7 +1399,7 @@ List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
     }
   }
 
-  // Add Mobile section
+  // Add Mobile section THIRD
   if (mobileTypes.isNotEmpty) {
     entries.add(
       DropdownMenuEntry<SystemType>(
@@ -1390,51 +1435,6 @@ List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
             backgroundColor: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.hovered)) {
                 return const Color(0xFF10b981).withValues(alpha: 0.1);
-              }
-              return Colors.white;
-            }),
-          ),
-        ),
-      );
-    }
-  }
-
-  // Add Main Packages section
-  if (mainTypes.isNotEmpty) {
-    entries.add(
-      DropdownMenuEntry<SystemType>(
-        value: mainTypes.first,
-        label: '━━━ الباقات الرئيسية ━━━',
-        enabled: false,
-        style: ButtonStyle(
-          backgroundColor: WidgetStateProperty.all(
-            const Color(0xFFf59e0b).withValues(alpha: 0.05),
-          ),
-          foregroundColor: WidgetStateProperty.all(
-            const Color(0xFFf59e0b),
-          ),
-          textStyle: WidgetStateProperty.all(
-            const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-          ),
-        ),
-      ),
-    );
-
-    for (var type in mainTypes) {
-      entries.add(
-        DropdownMenuEntry<SystemType>(
-          value: type,
-          label: type.name ?? '',
-          leadingIcon: Icon(
-            Icons.router_rounded,
-            color: const Color(0xFFf59e0b),
-            size: 20,
-          ),
-          style: ButtonStyle(
-            foregroundColor: WidgetStateProperty.all(Colors.grey[800]),
-            backgroundColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.hovered)) {
-                return const Color(0xFFf59e0b).withValues(alpha: 0.1);
               }
               return Colors.white;
             }),

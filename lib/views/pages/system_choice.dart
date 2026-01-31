@@ -32,7 +32,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
     setState(() => _isCheckingStatus = true);
     try {
       final controller = Get.find<ClientBottomSheetController>();
-      final systems = controller.getClientSystems() ?? [];
+      final systems = controller.getClientSystems();
       for (var system in systems) {
         await _checkSystemStatus(system);
       }
@@ -164,7 +164,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
         // Total Cost Card
         GetBuilder<ClientBottomSheetController>(
           builder: (controller) {
-            final clientSystems = controller.getClientSystems() ?? [];
+            final clientSystems = controller.getClientSystems();
             final totalCost = clientSystems.fold<double>(
               0,
               (sum, system) => sum + (system.type?.price ?? 0),
@@ -263,7 +263,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
 
         Expanded(
           child: GetBuilder<ClientBottomSheetController>(builder: (controller) {
-            final clientSystems = controller.getClientSystems() ?? [];
+            final clientSystems = controller.getClientSystems();
             if (clientSystems.isEmpty) return _buildEmptyState();
             final grouped = _groupSystemsByCategory(clientSystems);
             return RefreshIndicator(
@@ -401,136 +401,308 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
     final systemType = system.type;
     final isActive = _systemActiveStatus[system.id] ?? true;
     final isLoading = _loadingStatus[system.id] ?? false;
-    final statusColor = isActive ? Colors.green : Colors.red;
+
+    // Enhanced gradient colors based on status
+    final gradientColors = isActive
+        ? [
+            const Color(0xFF667eea), // Purple-blue
+            const Color(0xFF764ba2), // Deep purple
+          ]
+        : [
+            const Color(0xFFf093fb), // Light pink
+            const Color(0xFFf5576c), // Coral red
+          ];
 
     return GestureDetector(
       onLongPress: () => _showDeleteConfirmation(system),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-            side: BorderSide(color: statusColor, width: 2)),
-        child: Stack(children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
-                gradient: LinearGradient(colors: [
-                  statusColor.withValues(alpha: 0.1),
-                  statusColor.withValues(alpha: 0.05)
-                ], begin: Alignment.topLeft, end: Alignment.bottomRight)),
-            child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(25)),
-                    child: systemType?.image != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(25),
-                            child: Image.network(systemType!.image!,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        child: Card(
+          elevation: 8,
+          shadowColor: gradientColors[0].withValues(alpha: 0.4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Stack(
+            children: [
+              // Background gradient
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    colors: gradientColors,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+
+              // Decorative circles
+              Positioned(
+                top: -20,
+                right: -20,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -30,
+                left: -30,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.05),
+                  ),
+                ),
+              ),
+
+              // Content
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Icon/Image section
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: systemType?.image != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Image.network(
+                                systemType!.image!,
                                 fit: BoxFit.cover,
                                 errorBuilder: (c, e, s) => Icon(
-                                    _getCategoryIcon(systemType.category ??
-                                        SystemCategory.mainPackage),
-                                    color: statusColor,
-                                    size: 25)))
-                        : Icon(
-                            _getCategoryIcon(systemType?.category ??
-                                SystemCategory.mainPackage),
-                            color: statusColor,
-                            size: 25),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(systemType?.name ?? 'باقة غير محددة',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: statusColor.shade700),
+                                  _getCategoryIcon(systemType.category ??
+                                      SystemCategory.mainPackage),
+                                  color: Colors.white,
+                                  size: 30,
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              _getCategoryIcon(systemType?.category ??
+                                  SystemCategory.mainPackage),
+                              color: Colors.white,
+                              size: 30,
+                            ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Package name
+                    Text(
+                      systemType?.name ?? 'باقة غير محددة',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black26,
+                            offset: Offset(0, 1),
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
-                  if (system.name != null && system.name!.isNotEmpty)
-                    Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(system.name!,
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[600],
-                                fontStyle: FontStyle.italic),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis)),
-                  const SizedBox(height: 6),
-                  Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                          color: statusColor,
-                          borderRadius: BorderRadius.circular(15)),
-                      child: Text(
-                          '${systemType?.price?.toStringAsFixed(0) ?? '0'} جنيه',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12))),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                        color: isActive
-                            ? Colors.green.withValues(alpha: 0.2)
-                            : Colors.red.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10)),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(isActive ? Icons.check_circle : Icons.cancel,
-                          size: 12, color: statusColor),
-                      const SizedBox(width: 4),
-                      Text(isActive ? 'مفعّلة' : 'غير مفعّلة',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+
+                    // Custom name if exists
+                    if (system.name != null && system.name!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          system.name!,
                           style: TextStyle(
-                              fontSize: 10,
-                              color: statusColor,
-                              fontWeight: FontWeight.w600)),
-                    ]),
-                  ),
-                ]),
-          ),
-          Positioned(
-              top: 6,
-              right: 6,
-              child: Container(
-                  padding: const EdgeInsets.all(4),
+                            fontSize: 11,
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontStyle: FontStyle.italic,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+
+                    const SizedBox(height: 8),
+
+                    // Price badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.monetization_on,
+                            color: gradientColors[0],
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            systemType?.price.toStringAsFixed(0) ?? '0',
+                            style: TextStyle(
+                              color: gradientColors[1],
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'ج',
+                            style: TextStyle(
+                              color: gradientColors[1],
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Status badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.4),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isActive ? Icons.check_circle : Icons.cancel,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            isActive ? 'مفعّلة' : 'غير مفعّلة',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Status indicator (top right)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                      color: statusColor,
-                      borderRadius: BorderRadius.circular(10)),
-                  child: Icon(isActive ? Icons.check_circle : Icons.error,
-                      color: Colors.white, size: 14))),
-          Positioned(
-              top: 6,
-              left: 6,
-              child: GestureDetector(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    isActive ? Icons.check_circle : Icons.error,
+                    color: isActive ? Colors.green : Colors.red,
+                    size: 16,
+                  ),
+                ),
+              ),
+
+              // Delete button (top left)
+              Positioned(
+                top: 8,
+                left: 8,
+                child: GestureDetector(
                   onTap: () => _showDeleteConfirmation(system),
                   child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.delete_outline,
-                          color: Colors.white, size: 14)))),
-          if (isLoading)
-            Positioned.fill(
-                child: Container(
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(15)),
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withValues(alpha: 0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
+
+              // Loading overlay
+              if (isLoading)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: const Center(
-                        child:
-                            CircularProgressIndicator(color: Colors.white)))),
-        ]),
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 3,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -539,7 +711,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
       List<System> systems) {
     final Map<SystemCategory, List<System>> grouped = {};
     for (final system in systems) {
-      final category = system.type?.category ?? SystemCategory.mainPackage;
+      final category = system.type!.category ?? SystemCategory.mainPackage;
       grouped.putIfAbsent(category, () => []).add(system);
     }
     return grouped;

@@ -160,7 +160,7 @@ class _WelcomePageState extends State<WelcomePage>
   Widget _buildImageBackground() {
     return Positioned.fill(
       child: Image.asset(
-        'assets/images/bg-logo.png',
+        'assets/images/newlogo.png',
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           // Fallback to gradient if image not found
@@ -328,27 +328,30 @@ class _WelcomePageState extends State<WelcomePage>
                         ),
                       ),
                       child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/bg-logo.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Center(
-                              child: ShaderMask(
-                                shaderCallback: (bounds) =>
-                                    const LinearGradient(
-                                  colors: [
-                                    Color(0xFF667eea),
-                                    Color(0xFF764ba2)
-                                  ],
-                                ).createShader(bounds),
-                                child: const Icon(
-                                  Icons.phone_android_rounded,
-                                  size: 70,
-                                  color: Colors.white,
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Image.asset(
+                            'assets/images/newlogo.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Center(
+                                child: ShaderMask(
+                                  shaderCallback: (bounds) =>
+                                      const LinearGradient(
+                                    colors: [
+                                      Color(0xFF667eea),
+                                      Color(0xFF764ba2)
+                                    ],
+                                  ).createShader(bounds),
+                                  child: const Icon(
+                                    Icons.phone_android_rounded,
+                                    size: 70,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),

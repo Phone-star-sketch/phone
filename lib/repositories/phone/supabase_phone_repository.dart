@@ -85,6 +85,25 @@ class SupabasePhoneRepository extends PhoneRepository
   }
 
   @override
+  Future<PhoneNumber?> getPhoneNumberByNumber(String phoneNumber) async {
+    try {
+      final values = await _client
+          .from(phoneTableName)
+          .select('*, client:client_id(id, name)')
+          .eq(PhoneNumber.phoneColumnName, phoneNumber)
+          .maybeSingle();
+
+      if (values != null) {
+        return PhoneNumber.fromJson(values);
+      }
+      return null;
+    } catch (e) {
+      print('Error checking phone number: $e');
+      return null;
+    }
+  }
+
+  @override
   void bindStreamToForSaleNumbersChanges(
       Function(List<Map<String, dynamic>> payload) callback) {
     try {

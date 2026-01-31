@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
@@ -16,7 +17,7 @@ Future clientEditModelSheet(
   BuildContext context, {
   Client? client,
   String? initialPhoneNumber,
-  double? phonePrice, // Add this parameter
+  double? phonePrice,
   Function()? onSuccess,
 }) async {
   final controller = Get.put(ClientBottomSheetController());
@@ -27,6 +28,11 @@ Future clientEditModelSheet(
   final addressField = TextEditingController();
   final phoneNumberField = TextEditingController(text: initialPhoneNumber);
   DateTime selectedDate = client?.createdAt ?? DateTime.now();
+
+  // Add reactive variables for phone validation
+  final phoneNumberError = Rx<String?>(null);
+  final isCheckingPhone = false.obs;
+  Timer? debounceTimer;
 
   // Pre-populate fields if client exists
   if (client != null) {
@@ -64,19 +70,50 @@ Future clientEditModelSheet(
     }
   }
 
+  void checkPhoneNumber(String phoneNumber) async {
+    debounceTimer?.cancel();
+
+    if (phoneNumber.trim().isEmpty) {
+      phoneNumberError.value = null;
+      return;
+    }
+
+    debounceTimer = Timer(const Duration(milliseconds: 500), () async {
+      isCheckingPhone.value = true;
+
+      try {
+        final existingClient = await BackendServices.instance.clientRepository
+            .getClientByPhoneNumber(phoneNumber.trim());
+
+        if (existingClient != null &&
+            (client == null || existingClient.id != client.id)) {
+          phoneNumberError.value =
+              'الرقم مستخدم بالفعل - العميل: ${existingClient.name ?? "غير معروف"}';
+        } else {
+          phoneNumberError.value = null;
+        }
+      } catch (e) {
+        print('Error checking phone number: $e');
+        phoneNumberError.value = null;
+      } finally {
+        isCheckingPhone.value = false;
+      }
+    });
+  }
+
   Future saveClientData() async {
     try {
       if (client == null) {
         final newClient = Client(
           id: -1,
           createdAt: selectedDate,
-          totalCash: phonePrice ?? 0, // Initialize with phone price as dues
+          totalCash: phonePrice ?? 0,
           name: nameField.text,
           nationalId: nationalIdField.text,
           address: addressField.text,
           accountId: accountController.currentAccount.id,
-          numbers: [], // Initialize empty list
-          logs: [], // Initialize empty list
+          numbers: [],
+          logs: [],
         );
 
         final clientId =
@@ -92,21 +129,17 @@ Future clientEditModelSheet(
 
         await BackendServices.instance.phoneRepository.create(phone);
 
-        // Create a log entry for the phone price if it exists
         if (phonePrice != null && phonePrice! > 0) {
           final log = Log(
             id: -1,
             createdAt: DateTime.now(),
             clientId: clientId,
             price: phonePrice!,
-            transactionType: TransactionType
-                .addition, // Use an existing type temporarily until debt is added
-            systemType: '', // Add required parameter
-            createdBy: accountController.currentAccount.name ??
-                '', // Add required parameter
-            phoneId: phone.id, // Add required parameter
-            accountId:
-                accountController.currentAccount.id, // Add required parameter
+            transactionType: TransactionType.addition,
+            systemType: '',
+            createdBy: accountController.currentAccount.name ?? '',
+            phoneId: phone.id,
+            accountId: accountController.currentAccount.id,
           );
           await BackendServices.instance.logRepository.create(log);
         }
@@ -116,8 +149,7 @@ Future clientEditModelSheet(
         final updatedClient = Client(
           id: client.id,
           createdAt: selectedDate,
-          totalCash: (client.totalCash ?? 0) +
-              (phonePrice ?? 0), // Add phone price to existing total
+          totalCash: (client.totalCash ?? 0) + (phonePrice ?? 0),
           name: nameField.text,
           nationalId: nationalIdField.text,
           address: addressField.text,
@@ -249,42 +281,86 @@ Future clientEditModelSheet(
                     ),
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
-                    controller: phoneNumberField,
-                    cursorWidth: 2,
-                    showCursor: true,
-                    selectionControls: MaterialTextSelectionControls(),
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'رقم الهاتف مطلوب';
-                      }
-                      // Remove any whitespace and check if the number is empty
-                      if (value.trim().isEmpty) {
-                        return 'رقم الهاتف غير صالح';
-                      }
-                      // Check if the number contains valid digits
-                      if (!RegExp(r'^\d+$').hasMatch(value.trim())) {
-                        return 'يجب أن يحتوي رقم الهاتف على أرقام فقط';
-                      }
-                      return null;
-                    },
-                    keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.phone, color: Colors.blue),
-                      labelText: 'رقم الهاتف',
-                      hintText: 'أدخل رقم الهاتف',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                  ),
+                  Obx(() => TextFormField(
+                        controller: phoneNumberField,
+                        cursorWidth: 2,
+                        showCursor: true,
+                        selectionControls: MaterialTextSelectionControls(),
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        onChanged: (value) {
+                          checkPhoneNumber(value);
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'رقم الهاتف مطلوب';
+                          }
+                          if (value.trim().isEmpty) {
+                            return 'رقم الهاتف غير صالح';
+                          }
+                          if (!RegExp(r'^\d+$').hasMatch(value.trim())) {
+                            return 'يجب أن يحتوي رقم الهاتف على أرقام فقط';
+                          }
+                          if (phoneNumberError.value != null) {
+                            return phoneNumberError.value;
+                          }
+                          return null;
+                        },
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          prefixIcon:
+                              const Icon(Icons.phone, color: Colors.blue),
+                          suffixIcon: isCheckingPhone.value
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12.0),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                )
+                              : phoneNumberError.value != null
+                                  ? const Icon(Icons.error, color: Colors.red)
+                                  : null,
+                          labelText: 'رقم الهاتف',
+                          hintText: 'أدخل رقم الهاتف',
+                          errorText: phoneNumberError.value,
+                          errorMaxLines: 2,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: phoneNumberError.value != null
+                                  ? Colors.red
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: phoneNumberError.value != null
+                                  ? Colors.red
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: phoneNumberError.value != null
+                                  ? Colors.red
+                                  : Colors.blue,
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                      )),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: nationalIdField,

@@ -467,29 +467,60 @@ class _AccountCardState extends State<_AccountCard> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Company Name
-                        Text(
-                          widget.account.name ?? 'حساب غير محدد',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: _isHovered ? 42 : 38,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            fontFamily: 'Cairo',
-                            letterSpacing: 0.5,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.6),
-                                blurRadius: 25,
-                                offset: const Offset(0, 4),
+                        // Company Name - Split into two lines
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // First line: "شركة"
+                            Text(
+                              'شركة',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: _isHovered ? 42 : 38,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                fontFamily: 'Cairo',
+                                letterSpacing: 0.5,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withValues(alpha: 0.6),
+                                    blurRadius: 25,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                  Shadow(
+                                    color: Colors.black.withValues(alpha: 0.3),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 15,
-                                offset: const Offset(0, 2),
+                            ),
+                            const SizedBox(height: 8),
+                            // Second line: Company name
+                            Text(
+                              widget.account.name ?? 'حساب غير محدد',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: _isHovered ? 42 : 38,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                fontFamily: 'Cairo',
+                                letterSpacing: 0.5,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withValues(alpha: 0.6),
+                                    blurRadius: 25,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                  Shadow(
+                                    color: Colors.black.withValues(alpha: 0.3),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
 
                         const SizedBox(height: 24),

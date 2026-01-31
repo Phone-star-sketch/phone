@@ -103,9 +103,11 @@ class SupabaseClientRepository extends ClientRepository
       // Create descriptive log message based on transaction type
       String logMessage;
       if (amount > 0) {
-        logMessage = "إضافة مبلغ: ${amount.abs().toStringAsFixed(0)} جنيه";
+        logMessage = "تم التسديد: ${amount.abs().toStringAsFixed(0)} جنيه";
       } else {
-        logMessage = "تسديد مبلغ: ${amount.abs().toStringAsFixed(0)} جنيه";
+                logMessage =
+            "تم إضافة المديونية: ${amount.abs().toStringAsFixed(0)} جنيه";
+
       }
 
       final log = Log(
@@ -395,6 +397,25 @@ class SupabaseClientRepository extends ClientRepository
       await _clinet.from(clientTableName).update(data).eq('id', clientId);
     } catch (e) {
       throw Exception('Failed to update client: $e');
+    }
+  }
+
+  @override
+  Future<Client?> getClientByPhoneNumber(String phoneNumber) async {
+    try {
+      final response = await _clinet
+          .from(clientTableName)
+          .select('*, phone!inner(*)')
+          .eq('phone.phone_number', phoneNumber)
+          .maybeSingle();
+
+      if (response != null) {
+        return Client.fromJson(response);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching client by phone number: $e');
+      return null;
     }
   }
 }

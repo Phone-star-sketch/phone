@@ -433,13 +433,15 @@ class _ModernClientCardState extends State<ModernClientCard> {
 
     return GetBuilder<AccountClientInfo>(
       builder: (ctrl) {
-        final isSelected = ctrl.clientPrintAdded.contains(widget.client);
+        final isSelected =
+            ctrl.clientPrintAdded.any((c) => c.id == widget.client.id);
 
         return GestureDetector(
           onTap: () {
             if (ctrl.enableMulipleClientPrint.value) {
               if (isSelected) {
-                ctrl.clientPrintAdded.remove(widget.client);
+                ctrl.clientPrintAdded
+                    .removeWhere((c) => c.id == widget.client.id);
               } else {
                 ctrl.clientPrintAdded.add(widget.client);
                 HapticFeedback.selectionClick();

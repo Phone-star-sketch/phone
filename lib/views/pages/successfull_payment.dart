@@ -78,6 +78,16 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
     );
 
     _startAnimations();
+
+    // Auto close after 1.5 seconds
+    print('=== SuccessfulPaymentPage: Setting up auto-close timer ===');
+    Future.delayed(const Duration(milliseconds: 1900), () {
+      print('=== SuccessfulPaymentPage: Timer triggered, mounted=$mounted ===');
+      if (mounted) {
+        print('=== SuccessfulPaymentPage: Calling _navigateBack() ===');
+        _navigateBack();
+      }
+    });
   }
 
   void _startAnimations() async {
@@ -93,8 +103,17 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   }
 
   void _navigateBack() {
-    // Use Get.back() since we navigated here with Get.to()
-    Get.back();
+    print('=== SuccessfulPaymentPage: _navigateBack() called ===');
+    print('=== Can pop: ${Navigator.of(context).canPop()} ===');
+
+    // Try Navigator first
+    if (Navigator.of(context).canPop()) {
+      print('=== Using Navigator.pop() ===');
+      Navigator.of(context).pop();
+    } else {
+      print('=== Using Get.back() ===');
+      Get.back();
+    }
   }
 
   @override
@@ -111,6 +130,10 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   Widget build(BuildContext context) {
     return PopScope(
       canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        print(
+            '=== PopScope: onPopInvokedWithResult called, didPop=$didPop ===');
+      },
       child: Scaffold(
         body: Container(
           decoration: const BoxDecoration(
@@ -143,7 +166,10 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                             opacity: _fadeAnimation,
                             child: GestureDetector(
                               behavior: HitTestBehavior.opaque,
-                              onTap: _navigateBack,
+                              onTap: () {
+                                print('=== X button tapped ===');
+                                _navigateBack();
+                              },
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
@@ -357,7 +383,10 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                                 opacity: _fadeAnimation,
                                 child: GestureDetector(
                                   behavior: HitTestBehavior.opaque,
-                                  onTap: _navigateBack,
+                                  onTap: () {
+                                    print('=== Return button tapped ===');
+                                    _navigateBack();
+                                  },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 40,
@@ -421,7 +450,6 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
     final random = math.Random(index);
     final size = random.nextDouble() * 8 + 4;
     final duration = random.nextInt(3000) + 2000;
-    final delay = random.nextInt(1000);
 
     return Positioned(
       left: random.nextDouble() * 400,
