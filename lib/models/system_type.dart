@@ -23,12 +23,14 @@ class SystemType extends Model {
   static const String descriptionColumnName = "description";
   static const String priceColumnName = "price";
   static const String categoryColumnName = "category";
+  static const String isRecurringColumnName = "is_recurring";
 
   String? name;
   String? description;
   double price;
   SystemCategory? category;
   String? image;
+  bool isRecurring; // خدمة متكررة شهرياً
 
   SystemType({
     required super.id,
@@ -38,7 +40,7 @@ class SystemType extends Model {
     this.name,
     this.category = SystemCategory.mobileInternet,
     this.image,
-
+    this.isRecurring = true, // القيمة الافتراضية
   });
 
   SystemType.fromJson(super.data)
@@ -47,6 +49,8 @@ class SystemType extends Model {
         description = data[descriptionColumnName].toString(),
         category = SystemCategory.values[data[categoryColumnName]],
         image = data['image']?.toString(),
+        isRecurring =
+            data[isRecurringColumnName] ?? true, // القيمة الافتراضية true
         super.fromJson();
 
   @override
@@ -58,6 +62,7 @@ class SystemType extends Model {
       priceColumnName: price,
       categoryColumnName: category!.index,
       'image': image,
+      isRecurringColumnName: isRecurring,
     };
   }
 }

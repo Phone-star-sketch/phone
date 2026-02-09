@@ -165,10 +165,13 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
         GetBuilder<ClientBottomSheetController>(
           builder: (controller) {
             final clientSystems = controller.getClientSystems();
-            final totalCost = clientSystems.fold<double>(
-              0,
-              (sum, system) => sum + (system.type?.price ?? 0),
-            );
+            // حساب الخدمات المتكررة فقط
+            final totalCost = clientSystems
+                .where((system) => system.type?.isRecurring ?? true)
+                .fold<double>(
+                  0,
+                  (sum, system) => sum + (system.type?.price ?? 0),
+                );
 
             return Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

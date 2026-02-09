@@ -108,8 +108,17 @@ class SystemListTab extends StatelessWidget {
           backgroundColor: const Color(0xFF00BFFF),
           child: const Icon(Icons.add, color: Colors.white),
           onPressed: () {
-            allSystems.add(SystemType(id: -1, category: systemCategory));
+            // تحديد القيمة الافتراضية لـ isRecurring بناءً على الفئة
+            bool defaultIsRecurring =
+                systemCategory == SystemCategory.mobileInternet ? false : true;
+
+            allSystems.add(SystemType(
+              id: -1,
+              category: systemCategory,
+              isRecurring: defaultIsRecurring,
+            ));
             controller.editedCardIndex.value = allSystems.length;
+            controller.isRecurring.value = defaultIsRecurring;
           },
         ),
         backgroundColor: Colors.grey[100],
@@ -236,7 +245,9 @@ class SystemListTab extends StatelessWidget {
                               padding: const EdgeInsets.all(16),
                               child: editedCard == index
                                   ? SystemCardEditor(
-                                      currentSystem: currentSystem)
+                                      currentSystem: currentSystem,
+                                      systemCategory: systemCategory,
+                                    )
                                   : Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -321,7 +332,18 @@ class SystemListTab extends StatelessWidget {
                                   onPressed: () async {
                                     if (controller.formKey.currentState!
                                         .validate()) {
-                                      // ...existing save logic...
+                                      // تحديد قيمة isRecurring بناءً على الفئة
+                                      bool isRecurringValue;
+                                      if (systemCategory ==
+                                          SystemCategory.mobileInternet) {
+                                        // للخدمات الأخرى: استخدم القيمة من الـ checkbox
+                                        isRecurringValue =
+                                            controller.isRecurring.value;
+                                      } else {
+                                        // للفليكسات والإنترنت: دائماً true
+                                        isRecurringValue = true;
+                                      }
+
                                       if (currentSystem.id == -1) {
                                         await BackendServices
                                             .instance.systemTypeRepository
@@ -334,13 +356,16 @@ class SystemListTab extends StatelessWidget {
                                                     .systemDescription.text,
                                                 price: double.parse(controller
                                                     .systemPrice.text),
-                                                category: systemCategory));
+                                                category: systemCategory,
+                                                isRecurring: isRecurringValue));
                                         allSystems[index].name =
                                             controller.systemName.text;
                                         allSystems[index].description =
                                             controller.systemDescription.text;
                                         allSystems[index].price = double.parse(
                                             controller.systemPrice.text);
+                                        allSystems[index].isRecurring =
+                                            isRecurringValue;
                                         controller.editedCardIndex.value = -1;
                                       } else {
                                         await BackendServices
@@ -355,13 +380,16 @@ class SystemListTab extends StatelessWidget {
                                                     .systemDescription.text,
                                                 price: double.parse(controller
                                                     .systemPrice.text),
-                                                category: systemCategory));
+                                                category: systemCategory,
+                                                isRecurring: isRecurringValue));
                                         allSystems[index].name =
                                             controller.systemName.text;
                                         allSystems[index].description =
                                             controller.systemDescription.text;
                                         allSystems[index].price = double.parse(
                                             controller.systemPrice.text);
+                                        allSystems[index].isRecurring =
+                                            isRecurringValue;
                                         controller.editedCardIndex.value = -1;
                                       }
                                     }
@@ -552,8 +580,10 @@ class SystemListTab extends StatelessWidget {
 }
 
 class SystemCardEditor extends StatelessWidget {
-  SystemCardEditor({super.key, required this.currentSystem});
+  SystemCardEditor(
+      {super.key, required this.currentSystem, required this.systemCategory});
   final SystemType currentSystem;
+  final SystemCategory systemCategory;
   SystemListViewModel controller = Get.put(SystemListViewModel());
 
   @override
@@ -561,9 +591,12 @@ class SystemCardEditor extends StatelessWidget {
     controller.systemName.text = currentSystem.name?.trim() ?? '';
     controller.systemDescription.text = currentSystem.description?.trim() ?? '';
     controller.systemPrice.text = currentSystem.price?.toString().trim() ?? '0';
+    controller.isRecurring.value = currentSystem.isRecurring;
 
     return Container(
-      height: 85, // Fixed height
+      height: systemCategory == SystemCategory.mobileInternet
+          ? 110
+          : 85, // زيادة الارتفاع للخدمات الأخرى
       child: Form(
         key: controller.formKey,
         child: Column(
@@ -624,6 +657,25 @@ class SystemCardEditor extends StatelessWidget {
                 style: const TextStyle(fontSize: 14),
               ),
             ),
+            // Checkbox للخدمات الأخرى فقط
+            if (systemCategory == SystemCategory.mobileInternet)
+              Obx(() => SizedBox(
+                    height: 25,
+                    child: CheckboxListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      title: const Text(
+                        'خدمة متكررة شهرياً',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      value: controller.isRecurring.value,
+                      onChanged: (value) {
+                        controller.isRecurring.value = value ?? false;
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  )),
           ],
         ),
       ),

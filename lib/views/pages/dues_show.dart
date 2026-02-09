@@ -1,7 +1,9 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:open_file/open_file.dart';
+import 'dart:io';
 // Remove printing package import
 // import 'package:printing/printing.dart';
 import 'dues_pdf.dart';
@@ -384,6 +386,310 @@ class _DuesShowPageState extends State<DuesShowPage>
     });
   }
 
+  // Method to show share dialog with options
+  Future<void> _showShareDialog(File file, String title) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.check_circle,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'تم الحفظ بنجاح!',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF667EEA),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'تم حفظ $title بنجاح',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.folder,
+                    color: Color(0xFF667EEA),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      file.path,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'ماذا تريد أن تفعل؟',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          // Open File Button
+          TextButton.icon(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              try {
+                await OpenFile.open(file.path);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('خطأ في فتح الملف: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.open_in_new, size: 20),
+            label: const Text('فتح'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.blue[700],
+            ),
+          ),
+          // Share to WhatsApp Button
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _shareToWhatsApp(file, title);
+            },
+            icon: const Icon(Icons.share, size: 20),
+            label: const Text('مشاركة'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF25D366), // WhatsApp green
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Method to show share options dialog
+  Future<void> _showShareOptionsDialog(File file, String title) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF25D366),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.share,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'مشاركة الملف',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // WhatsApp Button
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF25D366),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.chat,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              title: const Text(
+                'مشاركة عبر الواتساب',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              subtitle: const Text('إرسال الملف مباشرة'),
+              onTap: () async {
+                Navigator.of(context).pop();
+                await _shareToWhatsAppDirect(file, title);
+              },
+            ),
+            const Divider(),
+            // Other Apps Button
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue[600],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.apps,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              title: const Text(
+                'مشاركة عبر تطبيقات أخرى',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              subtitle: const Text('اختيار من التطبيقات المتاحة'),
+              onTap: () async {
+                Navigator.of(context).pop();
+                await _shareToOtherApps(file, title);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Method to share directly to WhatsApp
+  Future<void> _shareToWhatsAppDirect(File file, String title) async {
+    try {
+      final xFile = XFile(file.path);
+
+      // Try to share directly to WhatsApp
+      final result = await Share.shareXFiles(
+        [xFile],
+        text: 'كشف $title\n\nتم إنشاء هذا الملف من تطبيق إدارة المستحقات',
+        subject: title,
+      );
+
+      if (result.status == ShareResultStatus.success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم المشاركة بنجاح!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error sharing to WhatsApp: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في المشاركة: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  // Method to share to other apps
+  Future<void> _shareToOtherApps(File file, String title) async {
+    try {
+      final xFile = XFile(file.path);
+
+      await Share.shareXFiles(
+        [xFile],
+        text: 'كشف $title',
+        subject: title,
+      );
+    } catch (e) {
+      print('Error sharing: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في المشاركة: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  // Original method - now calls the options dialog
+  Future<void> _shareToWhatsApp(File file, String title) async {
+    await _showShareOptionsDialog(file, title);
+  }
+
   // Selection methods
   void _toggleSelectionMode() {
     setState(() {
@@ -437,7 +743,7 @@ class _DuesShowPageState extends State<DuesShowPage>
           children: [
             CircularProgressIndicator(),
             SizedBox(width: 20),
-            Text('جاري إنشاء وحفظ PDF...'),
+            Text('جاري إنشاء PDF...'),
           ],
         ),
       ),
@@ -459,26 +765,24 @@ class _DuesShowPageState extends State<DuesShowPage>
 
       final monthName = DateFormat('MMMM yyyy', 'ar').format(DateTime.now());
 
+      // Initialize fonts once before generating PDF
+      await ArabicDuesPdfGenerator.initializeFonts();
+
       // Use the generateAndSave method to save directly to Downloads
       final file = await selectedDues.generateAndSave(
         monthName: '$monthName (مختارة)',
         customFileName: 'المستحقات_المختارة_$monthName.pdf',
-        autoOpen: true, // This will automatically open the PDF
+        autoOpen: false, // Don't auto-open, we'll show share dialog
       );
 
-      print('PDF saved and opened successfully: ${file.path}');
+      print('PDF saved successfully: ${file.path}');
 
       // Close loading dialog
       if (mounted) Navigator.of(context).pop();
 
+      // Show success dialog with share option
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم حفظ PDF في: ${file.path}'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        _showShareDialog(file, 'المستحقات المختارة');
       }
     } catch (error) {
       print('PDF Generation Error: $error');
@@ -540,7 +844,7 @@ class _DuesShowPageState extends State<DuesShowPage>
           children: [
             CircularProgressIndicator(),
             SizedBox(width: 20),
-            Text('جاري إنشاء وحفظ PDF...'),
+            Text('جاري إنشاء PDF...'),
           ],
         ),
       ),
@@ -551,26 +855,24 @@ class _DuesShowPageState extends State<DuesShowPage>
 
       final monthName = DateFormat('MMMM yyyy', 'ar').format(DateTime.now());
 
+      // Initialize fonts once before generating PDF
+      await ArabicDuesPdfGenerator.initializeFonts();
+
       // Use the generateAndSave method to save directly to Downloads
       final file = await _filteredDues.generateAndSave(
         monthName: monthName,
         customFileName: 'كشف_المستحقات_$monthName.pdf',
-        autoOpen: true, // This will automatically open the PDF
+        autoOpen: false, // Don't auto-open, we'll show share dialog
       );
 
-      print('PDF saved and opened successfully: ${file.path}');
+      print('PDF saved successfully: ${file.path}');
 
       // Close loading dialog
       if (mounted) Navigator.of(context).pop();
 
+      // Show success dialog with share option
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم حفظ PDF في: ${file.path}'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        _showShareDialog(file, 'كشف المستحقات');
       }
     } catch (error) {
       print('PDF Generation Error: $error');
@@ -1364,22 +1666,23 @@ class _DuesShowPageState extends State<DuesShowPage>
                               final dateValue = isEditing
                                   ? _editDates['${dueId}_created_at']
                                   : due['created_at'];
-                              
+
                               if (dateValue == null) return 'غير محدد';
-                              
+
                               DateTime? date;
                               try {
                                 if (dateValue is String) {
                                   date = DateTime.parse(dateValue);
                                 } else if (dateValue is int) {
-                                  date = DateTime.fromMillisecondsSinceEpoch(dateValue);
+                                  date = DateTime.fromMillisecondsSinceEpoch(
+                                      dateValue);
                                 } else if (dateValue is DateTime) {
                                   date = dateValue;
                                 }
                               } catch (e) {
                                 date = null;
                               }
-                              
+
                               return date != null
                                   ? DateFormat('dd MMM yyyy', 'ar').format(date)
                                   : 'غير محدد';

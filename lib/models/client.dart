@@ -49,10 +49,11 @@ class Client extends Model {
     final systems = numbers![0].systems;
     if (systems?.isEmpty ?? true) return 0.0;
 
+    // حساب الخدمات المتكررة فقط (is_recurring = true)
     return systems!
+        .where((e) => e.type?.isRecurring ?? true) // فلترة الخدمات المتكررة فقط
         .map((e) => e.type?.price ?? 0.0)
-        .reduce((value, element) => value + element)
-        .toDouble();
+        .fold(0.0, (sum, price) => sum + price);
   }
 
   String systemsFullName() {

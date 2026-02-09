@@ -48,6 +48,13 @@ class FollowController extends GetxController {
     super.onInit();
     // Initialize notification service
     await TransactionNotificationService.instance.initialize();
+
+    // التأكد من وجود AccountClientInfo controller
+    if (!Get.isRegistered<AccountClientInfo>()) {
+      print('⚠️ AccountClientInfo not registered in FollowController');
+      return;
+    }
+
     await _initializeData();
   }
 
@@ -136,7 +143,6 @@ class FollowController extends GetxController {
                     LAST_NOTIFICATION_KEY, newLog.id as int);
 
                 // Explicitly send to background service to ensure it works when app is closed
-                
               }
 
               // Update logs list
@@ -356,10 +362,11 @@ class Follow extends StatelessWidget {
   }
 
   Widget _buildManagerView(List<LogWidthUser> list, BuildContext context) {
-    // Filter logs for manager (كابتن/اسلام النني)
+    // Filter logs for manager and admin (created_by = 0 or 1)
     final managerLogs = list.where((logWithUser) {
-      final userName = logWithUser.user?.name?.toLowerCase() ?? '';
-      return userName.contains('كابتن') || userName.contains('اسلام النني');
+      final createdBy = logWithUser.log.createdBy;
+      return createdBy == UserRoles.admin.index ||
+          createdBy == UserRoles.manager.index;
     }).toList();
 
     return ListView.separated(

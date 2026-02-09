@@ -33,4 +33,14 @@ class SystemListViewModel extends GetxController {
   final systemName = TextEditingController();
   final systemDescription = TextEditingController();
   final systemPrice = TextEditingController();
+  final RxBool isRecurring =
+      false.obs; // خدمة متكررة شهرياً - الافتراضي false للخدمات الأخرى
+
+  // تحديث القيمة عند التعديل
+  void setCurrentSystem(SystemType system) {
+    systemName.text = system.name ?? '';
+    systemDescription.text = system.description ?? '';
+    systemPrice.text = system.price.toString();
+    isRecurring.value = system.isRecurring;
+  }
 }

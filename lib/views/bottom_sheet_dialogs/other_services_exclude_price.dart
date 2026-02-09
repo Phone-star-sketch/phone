@@ -37,6 +37,9 @@ class ExcludedSystemsManager extends GetxController {
   double calculateExcludedAmount() {
     double total = 0;
     for (var system in _excludedSystems) {
+      // حساب الخدمات المتكررة فقط
+      if (!(system.type?.isRecurring ?? true)) continue;
+
       if (system.type!.category == SystemCategory.mobileInternet) {
         bool isPaid = system.name?.contains('[مدفوع]') ?? false;
         if (!isPaid) {
@@ -79,6 +82,9 @@ class OtherServicesExcludePriceController extends GetxController {
   double calculateTotalWithExclusions(List<System> allSystems) {
     double total = 0;
     for (var system in allSystems) {
+      // تخطي الخدمات غير المتكررة (is_recurring = false)
+      if (!(system.type?.isRecurring ?? true)) continue;
+
       if (system.type!.category == SystemCategory.mobileInternet) {
         // Skip excluded systems
         if (_excludedSystems.contains(system)) continue;
@@ -89,7 +95,7 @@ class OtherServicesExcludePriceController extends GetxController {
           total += system.type!.price ?? 0;
         }
       } else {
-        // Always add flex systems
+        // Always add flex systems (if recurring)
         total += system.type!.price ?? 0;
       }
     }
@@ -99,6 +105,9 @@ class OtherServicesExcludePriceController extends GetxController {
   double calculateExcludedAmount() {
     double total = 0;
     for (var system in _excludedSystems) {
+      // حساب الخدمات المتكررة فقط
+      if (!(system.type?.isRecurring ?? true)) continue;
+
       if (system.type!.category == SystemCategory.mobileInternet) {
         bool isPaid = system.name?.contains('[مدفوع]') ?? false;
         if (!isPaid) {

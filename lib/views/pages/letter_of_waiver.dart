@@ -779,16 +779,23 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
           });
         },
         fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-          // Sync with our main controller
-          controller.text = _phoneNumberController.text;
-          controller.addListener(() {
-            _phoneNumberController.text = controller.text;
-            _waivedPhoneController.text = controller.text;
-          });
+          // Initialize with current value only once
+          if (controller.text.isEmpty && _phoneNumberController.text.isNotEmpty) {
+            controller.text = _phoneNumberController.text;
+          }
 
           return TextFormField(
             controller: controller,
             focusNode: focusNode,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            onChanged: (value) {
+              // Update other controllers when user types
+              _phoneNumberController.text = value;
+              _waivedPhoneController.text = value;
+            },
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
