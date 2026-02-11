@@ -52,6 +52,17 @@
             android:foregroundServiceType="dataSync"
             android:exported="true"
             tools:replace="android:exported"/>
+        
+        <!-- FileProvider for sharing files -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths"/>
+        </provider>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility?hl=en and
@@ -63,5 +74,8 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="*/*" />
         </intent>
+        <!-- WhatsApp queries -->
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
     </queries>
 </manifest>

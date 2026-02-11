@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:open_file/open_file.dart';
+import 'package:whatsapp_share/whatsapp_share.dart';
 import 'dart:io';
 // Remove printing package import
 // import 'package:printing/printing.dart';
@@ -627,22 +628,34 @@ class _DuesShowPageState extends State<DuesShowPage>
   // Method to share directly to WhatsApp
   Future<void> _shareToWhatsAppDirect(File file, String title) async {
     try {
-      final xFile = XFile(file.path);
+      // Check if WhatsApp is installed
+      final isInstalled = await WhatsappShare.isInstalled();
 
-      // Try to share directly to WhatsApp
-      final result = await Share.shareXFiles(
-        [xFile],
-        text: 'كشف $title\n\nتم إنشاء هذا الملف من تطبيق إدارة المستحقات',
-        subject: title,
-      );
+      if (isInstalled == true) {
+        // Share file directly to WhatsApp
+        await WhatsappShare.shareFile(
+          phone: '', // Empty phone to show contact list
+          filePath: [file.path],
+          text: 'كشف $title\n\nتم إنشاء هذا الملف من تطبيق إدارة المستحقات',
+        );
 
-      if (result.status == ShareResultStatus.success) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('تم المشاركة بنجاح!'),
+              content: Text('تم فتح الواتساب بنجاح!'),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // WhatsApp not installed
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('الواتساب غير مثبت على الجهاز'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
             ),
           );
         }
