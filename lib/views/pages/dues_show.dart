@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:open_file/open_file.dart';
-import 'package:whatsapp_share/whatsapp_share.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 // Remove printing package import
 // import 'package:printing/printing.dart';
@@ -628,21 +628,24 @@ class _DuesShowPageState extends State<DuesShowPage>
   // Method to share directly to WhatsApp
   Future<void> _shareToWhatsAppDirect(File file, String title) async {
     try {
-      // Check if WhatsApp is installed
-      final isInstalled = await WhatsappShare.isInstalled();
+      // Create WhatsApp URL with file
+      final whatsappUrl = Uri.parse('whatsapp://send');
 
-      if (isInstalled == true) {
-        // Share file directly to WhatsApp
-        await WhatsappShare.shareFile(
-          phone: '', // Empty phone to show contact list
-          filePath: [file.path],
+      // Check if WhatsApp is installed
+      if (await canLaunchUrl(whatsappUrl)) {
+        // Use share_plus which will show WhatsApp in the share sheet
+        final xFile = XFile(file.path);
+
+        await Share.shareXFiles(
+          [xFile],
           text: 'كشف $title\n\nتم إنشاء هذا الملف من تطبيق إدارة المستحقات',
+          subject: title,
         );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('تم فتح الواتساب بنجاح!'),
+              content: Text('اختر الواتساب من القائمة'),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
             ),
