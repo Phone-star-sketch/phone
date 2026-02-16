@@ -687,13 +687,35 @@ class _ModernClientCardState extends State<ModernClientCard> {
           ),
           ElevatedButton(
             onPressed: () async {
+              // Close confirmation dialog
               Get.back();
+
+              // Show loading indicator
+              Get.dialog(
+                const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF3b82f6),
+                  ),
+                ),
+                barrierDismissible: false,
+              );
+
               try {
+                // Delete from database
                 await BackendServices.instance.clientRepository
                     .delete(widget.client);
+
+                // Update controller
                 final controller = Get.find<AccountClientInfo>();
-                controller.clinets.value.remove(widget.client);
+                controller.clinets.value
+                    .removeWhere((c) => c.id == widget.client.id);
                 controller.clinets.refresh();
+                controller.update(); // Force GetBuilder to rebuild
+
+                // Close loading
+                Get.back();
+
+                // Show success message
                 Get.showSnackbar(const GetSnackBar(
                   message: 'تم حذف العميل بنجاح',
                   duration: Duration(seconds: 2),
@@ -701,13 +723,22 @@ class _ModernClientCardState extends State<ModernClientCard> {
                   borderRadius: 10,
                   margin: EdgeInsets.all(12),
                 ));
+
+                // Force rebuild of the widget
+                if (mounted) {
+                  setState(() {});
+                }
               } catch (e) {
-                Get.showSnackbar(const GetSnackBar(
-                  message: 'حدث خطأ أثناء الحذف',
-                  duration: Duration(seconds: 2),
-                  backgroundColor: Color(0xFFef4444),
+                // Close loading
+                Get.back();
+
+                // Show error message
+                Get.showSnackbar(GetSnackBar(
+                  message: 'حدث خطأ أثناء الحذف: ${e.toString()}',
+                  duration: const Duration(seconds: 3),
+                  backgroundColor: const Color(0xFFef4444),
                   borderRadius: 10,
-                  margin: EdgeInsets.all(12),
+                  margin: const EdgeInsets.all(12),
                 ));
               }
             },

@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
-import 'package:phone_system_app/controllers/account_profit_controller.dart';
 import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/system.dart';
 import 'package:phone_system_app/models/system_type.dart';
 import 'package:phone_system_app/views/bottom_sheet_dialogs/other_services_exclude_price.dart'
     as exclude_price;
-import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_sheet.dart';
 import 'package:printing/printing.dart';
-
 import 'package:pdf/widgets.dart' as pw;
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class PrintClientsReceipts extends StatelessWidget {
   final List<Client> clients;
@@ -111,6 +109,56 @@ class PrintClientsReceipts extends StatelessWidget {
             );
           },
         ),
+        actions: [
+          // Custom share button for better Android compatibility
+          IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: 'مشاركة',
+            onPressed: () async {
+              try {
+                // Show loading
+                Get.dialog(
+                  const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                  barrierDismissible: false,
+                );
+
+                // Generate PDF
+                final pdfData = await _createPdf(PdfPageFormat.a4);
+
+                // Save to temp directory
+                final directory = await getTemporaryDirectory();
+                final timestamp = DateTime.now().millisecondsSinceEpoch;
+                final file = File(
+                    '${directory.path}/فاتورة_شهر_${calculatedMonthName.replaceAll('/', '_')}_$timestamp.pdf');
+                await file.writeAsBytes(pdfData);
+
+                // Close loading
+                Get.back();
+
+                // Share using share_plus
+                await Share.shareXFiles(
+                  [XFile(file.path)],
+                  subject: 'فاتورة شهر $calculatedMonthName',
+                  text: 'فاتورة التحصيل الشهرية',
+                );
+              } catch (e) {
+                // Close loading if still open
+                if (Get.isDialogOpen ?? false) {
+                  Get.back();
+                }
+
+                Get.showSnackbar(GetSnackBar(
+                  title: "خطأ",
+                  message: "فشلت المشاركة: ${e.toString()}",
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 3),
+                ));
+              }
+            },
+          ),
+        ],
       ),
       body: PdfPreview(
         pdfFileName: "فاتورة شهر $calculatedMonthName.pdf",

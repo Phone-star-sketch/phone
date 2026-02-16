@@ -665,10 +665,53 @@ class _SettingsTab extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              await BackendServices.instance.clientRepository.delete(client);
-              AccountClientInfo.to.updateCurrnetClinets();
+              // Close confirmation dialog
               Get.back();
-              Get.back();
+
+              // Show loading indicator
+              Get.dialog(
+                const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF3b82f6),
+                  ),
+                ),
+                barrierDismissible: false,
+              );
+
+              try {
+                // Delete from database
+                await BackendServices.instance.clientRepository.delete(client);
+
+                // Update controller
+                AccountClientInfo.to.updateCurrnetClinets();
+
+                // Close loading
+                Get.back();
+
+                // Close bottom sheet
+                Get.back();
+
+                // Show success message
+                Get.showSnackbar(const GetSnackBar(
+                  message: 'تم حذف العميل بنجاح',
+                  duration: Duration(seconds: 2),
+                  backgroundColor: Color(0xFF10b981),
+                  borderRadius: 10,
+                  margin: EdgeInsets.all(12),
+                ));
+              } catch (e) {
+                // Close loading
+                Get.back();
+
+                // Show error message
+                Get.showSnackbar(GetSnackBar(
+                  message: 'حدث خطأ أثناء الحذف: ${e.toString()}',
+                  duration: const Duration(seconds: 3),
+                  backgroundColor: const Color(0xFFef4444),
+                  borderRadius: 10,
+                  margin: const EdgeInsets.all(12),
+                ));
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFef4444),
