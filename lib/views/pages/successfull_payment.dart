@@ -79,12 +79,9 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
 
     _startAnimations();
 
-    // Auto close after 1.5 seconds
-    print('=== SuccessfulPaymentPage: Setting up auto-close timer ===');
-    Future.delayed(const Duration(milliseconds: 1900), () {
-      print('=== SuccessfulPaymentPage: Timer triggered, mounted=$mounted ===');
+    // Auto close after 1 second
+    Future.delayed(const Duration(milliseconds: 1200), () {
       if (mounted) {
-        print('=== SuccessfulPaymentPage: Calling _navigateBack() ===');
         _navigateBack();
       }
     });
@@ -103,17 +100,10 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   }
 
   void _navigateBack() {
-    print('=== SuccessfulPaymentPage: _navigateBack() called ===');
-    print('=== Can pop: ${Navigator.of(context).canPop()} ===');
-
-    // Try Navigator first
-    if (Navigator.of(context).canPop()) {
-      print('=== Using Navigator.pop() ===');
-      Navigator.of(context).pop();
-    } else {
-      print('=== Using Get.back() ===');
-      Get.back();
-    }
+    // Close the success page and the bottom sheet together
+    // Pop twice: once for success page, once for bottom sheet
+    Get.back(); // Close success page
+    Get.back(); // Close bottom sheet
   }
 
   @override
@@ -131,8 +121,14 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
-        print(
-            '=== PopScope: onPopInvokedWithResult called, didPop=$didPop ===');
+        if (didPop) {
+          // If user pressed back button, also close the sheet
+          Future.microtask(() {
+            if (Get.isBottomSheetOpen ?? false) {
+              Get.back();
+            }
+          });
+        }
       },
       child: Scaffold(
         body: Container(
@@ -166,10 +162,7 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                             opacity: _fadeAnimation,
                             child: GestureDetector(
                               behavior: HitTestBehavior.opaque,
-                              onTap: () {
-                                print('=== X button tapped ===');
-                                _navigateBack();
-                              },
+                              onTap: _navigateBack,
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
@@ -383,10 +376,7 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                                 opacity: _fadeAnimation,
                                 child: GestureDetector(
                                   behavior: HitTestBehavior.opaque,
-                                  onTap: () {
-                                    print('=== Return button tapped ===');
-                                    _navigateBack();
-                                  },
+                                  onTap: _navigateBack,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 40,
