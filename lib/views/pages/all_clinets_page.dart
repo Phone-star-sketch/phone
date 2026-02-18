@@ -62,10 +62,7 @@ class _AllClientsPageState extends State<AllClientsPage>
 
           return Column(
             children: [
-              // Compact Header with Search
               _buildCompactHeader(filteredData.length),
-
-              // Content
               Expanded(
                 child: isLoading
                     ? _buildLoader()
@@ -93,10 +90,8 @@ class _AllClientsPageState extends State<AllClientsPage>
       ),
       child: Column(
         children: [
-          // Title Row with Actions
           Row(
             children: [
-              // Title & Count
               Text(
                 'إدارة العملاء',
                 style: TextStyle(
@@ -122,7 +117,6 @@ class _AllClientsPageState extends State<AllClientsPage>
                 ),
               ),
               const Spacer(),
-              // Action Buttons
               _buildMiniButton(
                 icon: Icons.person_add_rounded,
                 color: const Color(0xFF10b981),
@@ -154,7 +148,6 @@ class _AllClientsPageState extends State<AllClientsPage>
             ],
           ),
           const SizedBox(height: 10),
-          // Search Bar
           Container(
             height: 42,
             decoration: BoxDecoration(
@@ -394,7 +387,7 @@ class _AllClientsPageState extends State<AllClientsPage>
   }
 }
 
-// Public Modern Client Card - can be used from other files
+// Public Modern Client Card
 class ModernClientCard extends StatefulWidget {
   final Client client;
   final int index;
@@ -550,7 +543,6 @@ class _ModernClientCardState extends State<ModernClientCard> {
                               }
                             },
                           ),
-                          // Hide edit and delete buttons for assistant role
                           if (SupabaseAuthentication.myUser!.role !=
                               UserRoles.assistant.index) ...[
                             const SizedBox(width: 6),
@@ -665,8 +657,9 @@ class _ModernClientCardState extends State<ModernClientCard> {
   }
 
   void _showDeleteDialog() {
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: Text(
@@ -682,75 +675,13 @@ class _ModernClientCardState extends State<ModernClientCard> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text('إلغاء', style: TextStyle(color: Colors.grey[500])),
           ),
           ElevatedButton(
             onPressed: () async {
-              try {
-                // Close confirmation dialog first
-                Get.back();
-
-                // Show loading with barrier
-                Get.dialog(
-                  WillPopScope(
-                    onWillPop: () async => false,
-                    child: const Center(
-                      child: Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircularProgressIndicator(
-                                color: Color(0xFF3b82f6),
-                              ),
-                              SizedBox(height: 16),
-                              Text('جاري الحذف...'),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  barrierDismissible: false,
-                );
-
-                // Delete from database
-                await BackendServices.instance.clientRepository
-                    .delete(widget.client);
-
-                // Update controller - use correct syntax for RxList
-                final controller = Get.find<AccountClientInfo>();
-                controller.clinets.removeWhere((c) => c.id == widget.client.id);
-                controller.clinets.refresh();
-
-                // Close loading dialog
-                Get.back();
-
-                // Show success message
-                Get.showSnackbar(const GetSnackBar(
-                  message: 'تم حذف العميل بنجاح',
-                  duration: Duration(seconds: 2),
-                  backgroundColor: Color(0xFF10b981),
-                  borderRadius: 10,
-                  margin: EdgeInsets.all(12),
-                ));
-              } catch (e) {
-                // Close loading if still open
-                if (Get.isDialogOpen ?? false) {
-                  Get.back();
-                }
-
-                // Show error message
-                Get.showSnackbar(GetSnackBar(
-                  message: 'حدث خطأ أثناء الحذف: ${e.toString()}',
-                  duration: const Duration(seconds: 3),
-                  backgroundColor: const Color(0xFFef4444),
-                  borderRadius: 10,
-                  margin: const EdgeInsets.all(12),
-                ));
-              }
+              Navigator.of(dialogContext).pop();
+              await _performClientDelete();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFef4444),
@@ -762,5 +693,69 @@ class _ModernClientCardState extends State<ModernClientCard> {
         ],
       ),
     );
+  }
+
+  Future<void> _performClientDelete() async {
+    BuildContext? loadingDialogContext;
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          loadingDialogContext = ctx;
+          return const PopScope(
+            canPop: false,
+            child: Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: Color(0xFF3b82f6)),
+                      SizedBox(height: 16),
+                      Text('جاري الحذف...'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+
+      await BackendServices.instance.clientRepository.delete(widget.client);
+
+      final controller = Get.find<AccountClientInfo>();
+      controller.clinets.removeWhere((c) => c.id == widget.client.id);
+      controller.clinets.refresh();
+
+      if (loadingDialogContext != null &&
+          Navigator.of(loadingDialogContext!).canPop()) {
+        Navigator.of(loadingDialogContext!).pop();
+      }
+
+      Get.showSnackbar(const GetSnackBar(
+        message: 'تم حذف العميل بنجاح',
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFF10b981),
+        borderRadius: 10,
+        margin: EdgeInsets.all(12),
+      ));
+    } catch (e) {
+      if (loadingDialogContext != null &&
+          Navigator.of(loadingDialogContext!).canPop()) {
+        Navigator.of(loadingDialogContext!).pop();
+      }
+
+      Get.showSnackbar(GetSnackBar(
+        message: 'حدث خطأ أثناء الحذف: ${e.toString()}',
+        duration: const Duration(seconds: 3),
+        backgroundColor: const Color(0xFFef4444),
+        borderRadius: 10,
+        margin: const EdgeInsets.all(12),
+      ));
+    }
   }
 }

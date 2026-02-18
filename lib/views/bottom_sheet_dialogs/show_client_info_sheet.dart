@@ -138,25 +138,6 @@ class _ModernClientSheet extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Avatar
-                // Container(
-                //   width: 60,
-                //   height: 60,
-                //   decoration: BoxDecoration(
-                //     color: Colors.white.withOpacity(0.2),
-                //     borderRadius: BorderRadius.circular(16),
-                //   ),
-                //   child: Center(
-                //     child: Text(
-                //       currentClient.name?[0].toUpperCase() ?? '؟',
-                //       style: const TextStyle(
-                //         fontSize: 28,
-                //         fontWeight: FontWeight.w700,
-                //         color: Colors.white,
-                //       ),
-                //     ),
-                //   ),
-                // ),
                 const SizedBox(width: 16),
                 // Info
                 Expanded(
@@ -215,7 +196,6 @@ class _ModernClientSheet extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                // Always show: Add and Payment buttons
                 Expanded(
                   child: _QuickActionButton(
                     icon: Icons.arrow_downward_rounded,
@@ -233,7 +213,6 @@ class _ModernClientSheet extends StatelessWidget {
                     onTap: () => showMoneyDialog(context, currentClient, false),
                   ),
                 ),
-                // Show these buttons only for manager
                 if (isManager) ...[
                   const SizedBox(width: 10),
                   Expanded(
@@ -601,14 +580,12 @@ class _SettingsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Check if user is manager
     final isManager =
         SupabaseAuthentication.myUser!.role != UserRoles.assistant.index;
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
-        // Show all buttons for manager, only specific buttons for assistant
         if (isManager) ...[
           _SettingButton(
             icon: Icons.calendar_month_rounded,
@@ -666,10 +643,8 @@ class _SettingsTab extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               try {
-                // Close confirmation dialog first
                 Get.back();
 
-                // Show loading with barrier
                 Get.dialog(
                   WillPopScope(
                     onWillPop: () async => false,
@@ -694,21 +669,15 @@ class _SettingsTab extends StatelessWidget {
                   barrierDismissible: false,
                 );
 
-                // Delete from database
                 await BackendServices.instance.clientRepository.delete(client);
 
-                // Update controller - use correct syntax for RxList
                 final controller = AccountClientInfo.to;
                 controller.clinets.removeWhere((c) => c.id == client.id);
                 controller.clinets.refresh();
 
-                // Close loading dialog
+                Get.back();
                 Get.back();
 
-                // Close bottom sheet
-                Get.back();
-
-                // Show success message
                 Get.showSnackbar(const GetSnackBar(
                   message: 'تم حذف العميل بنجاح',
                   duration: Duration(seconds: 2),
@@ -717,12 +686,10 @@ class _SettingsTab extends StatelessWidget {
                   margin: EdgeInsets.all(12),
                 ));
               } catch (e) {
-                // Close loading if still open
                 if (Get.isDialogOpen ?? false) {
                   Get.back();
                 }
 
-                // Show error message
                 Get.showSnackbar(GetSnackBar(
                   message: 'حدث خطأ أثناء الحذف: ${e.toString()}',
                   duration: const Duration(seconds: 3),
@@ -874,10 +841,7 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                     ? null
                     : () async {
                         try {
-                          // Prevent multiple submissions
-                          if (loaders.moneyIsLoading.value) {
-                            return;
-                          }
+                          if (loaders.moneyIsLoading.value) return;
 
                           if (controller.text.isEmpty) {
                             throw 'الرجاء إدخال مبلغ صحيح';
@@ -887,28 +851,22 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                             throw 'الرجاء إدخال مبلغ صحيح';
                           }
 
-                          // Set loading state
                           loaders.moneyIsLoading.value = true;
 
                           try {
                             await loaders.changeMoneyValue(
                                 client, controller.text, adding);
 
-                            // Store the values before closing dialog
                             final amountText = controller.text;
                             final isAdding = adding;
 
-                            // Reset loading state
                             loaders.moneyIsLoading.value = false;
 
-                            // Close only the money dialog
                             Navigator.of(dialogContext).pop();
 
-                            // Small delay to ensure dialog is closed
                             await Future.delayed(
                                 const Duration(milliseconds: 100));
 
-                            // Navigate to success page and wait for result
                             final result = await Get.to(
                               () => SuccessfulPaymentPage(
                                 amount: '$amountText جنيه',
@@ -920,14 +878,11 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                               ),
                             );
 
-                            // If success page wants to close bottom sheet, do it
                             if (result != null &&
                                 result['closeBottomSheet'] == true) {
-                              // Close the bottom sheet to return to AccountDetails
                               Get.back();
                             }
                           } catch (e) {
-                            // Reset loading state on error
                             loaders.moneyIsLoading.value = false;
                             rethrow;
                           }
@@ -1216,12 +1171,11 @@ Future<void> showEditSystemDialog(System system) async {
   );
 }
 
-// Helper functions
 bool shouldShowSystem(System system) {
   return true;
 }
 
-// Add System Dialog - إضافة باقة جديدة للعميل
+// Add System Dialog
 void showSystemAddDialog(Client client) async {
   SystemType? currentType;
   final controller = Get.find<ClientBottomSheetController>();
@@ -1304,25 +1258,47 @@ void showSystemAddDialog(Client client) async {
                     ? null
                     : () async {
                         if (currentType != null) {
-                          await loaders.manageSystemType(client, currentType!);
-                          Get.back();
-                          Get.snackbar(
-                            'نجاح',
-                            'تم إضافة الباقة بنجاح',
-                            snackPosition: SnackPosition.BOTTOM,
-                            backgroundColor:
-                                const Color(0xFF10b981).withValues(alpha: 0.1),
-                            colorText: const Color(0xFF10b981),
-                          );
+                          if (loaders.systemIsLoading.value) return;
+
+                          try {
+                            loaders.systemIsLoading.value = true;
+
+                            await loaders.manageSystemType(
+                                client, currentType!);
+
+                            loaders.systemIsLoading.value = false;
+
+                            Get.back();
+
+                            await Future.delayed(
+                                const Duration(milliseconds: 100));
+
+                            Get.showSnackbar(const GetSnackBar(
+                              message: 'تم إضافة الباقة بنجاح',
+                              duration: Duration(seconds: 2),
+                              backgroundColor: Color(0xFF10b981),
+                              borderRadius: 10,
+                              margin: EdgeInsets.all(12),
+                            ));
+                          } catch (e) {
+                            loaders.systemIsLoading.value = false;
+
+                            Get.showSnackbar(GetSnackBar(
+                              message: 'حدث خطأ: ${e.toString()}',
+                              duration: const Duration(seconds: 3),
+                              backgroundColor: const Color(0xFFef4444),
+                              borderRadius: 10,
+                              margin: const EdgeInsets.all(12),
+                            ));
+                          }
                         } else {
-                          Get.snackbar(
-                            'تنبيه',
-                            'الرجاء اختيار باقة أولاً',
-                            snackPosition: SnackPosition.BOTTOM,
-                            backgroundColor:
-                                const Color(0xFFf59e0b).withValues(alpha: 0.1),
-                            colorText: const Color(0xFFf59e0b),
-                          );
+                          Get.showSnackbar(const GetSnackBar(
+                            message: 'الرجاء اختيار باقة أولاً',
+                            duration: Duration(seconds: 2),
+                            backgroundColor: Color(0xFFf59e0b),
+                            borderRadius: 10,
+                            margin: EdgeInsets.all(12),
+                          ));
                         }
                       },
                 style: ElevatedButton.styleFrom(
@@ -1383,13 +1359,11 @@ class CustomIndicator extends StatelessWidget {
   }
 }
 
-// Helper function to build grouped system entries with headers
 List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
     ClientBottomSheetController controller) {
   final allTypes = controller.getAllTypes();
   final List<DropdownMenuEntry<SystemType>> entries = [];
 
-  // Group by category
   final internetTypes = allTypes
       .where((type) => type.category == SystemCategory.internetPackage)
       .toList();
@@ -1400,7 +1374,6 @@ List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
       .where((type) => type.category == SystemCategory.mainPackage)
       .toList();
 
-  // Add Main Packages section FIRST
   if (mainTypes.isNotEmpty) {
     entries.add(
       DropdownMenuEntry<SystemType>(
@@ -1411,26 +1384,20 @@ List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
           backgroundColor: WidgetStateProperty.all(
             const Color(0xFFf59e0b).withValues(alpha: 0.05),
           ),
-          foregroundColor: WidgetStateProperty.all(
-            const Color(0xFFf59e0b),
-          ),
+          foregroundColor: WidgetStateProperty.all(const Color(0xFFf59e0b)),
           textStyle: WidgetStateProperty.all(
             const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
           ),
         ),
       ),
     );
-
     for (var type in mainTypes) {
       entries.add(
         DropdownMenuEntry<SystemType>(
           value: type,
           label: type.name ?? '',
-          leadingIcon: Icon(
-            Icons.router_rounded,
-            color: const Color(0xFFf59e0b),
-            size: 20,
-          ),
+          leadingIcon: const Icon(Icons.router_rounded,
+              color: Color(0xFFf59e0b), size: 20),
           style: ButtonStyle(
             foregroundColor: WidgetStateProperty.all(Colors.grey[800]),
             backgroundColor: WidgetStateProperty.resolveWith((states) {
@@ -1445,39 +1412,30 @@ List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
     }
   }
 
-  // Add Internet section SECOND
   if (internetTypes.isNotEmpty) {
-    // Add header (disabled entry)
     entries.add(
       DropdownMenuEntry<SystemType>(
-        value: internetTypes.first, // Dummy value, won't be selectable
+        value: internetTypes.first,
         label: '━━━ باقات الإنترنت ━━━',
         enabled: false,
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.all(
             const Color(0xFF3b82f6).withValues(alpha: 0.05),
           ),
-          foregroundColor: WidgetStateProperty.all(
-            const Color(0xFF3b82f6),
-          ),
+          foregroundColor: WidgetStateProperty.all(const Color(0xFF3b82f6)),
           textStyle: WidgetStateProperty.all(
             const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
           ),
         ),
       ),
     );
-
-    // Add internet packages
     for (var type in internetTypes) {
       entries.add(
         DropdownMenuEntry<SystemType>(
           value: type,
           label: type.name ?? '',
-          leadingIcon: Icon(
-            Icons.wifi_rounded,
-            color: const Color(0xFF3b82f6),
-            size: 20,
-          ),
+          leadingIcon: const Icon(Icons.wifi_rounded,
+              color: Color(0xFF3b82f6), size: 20),
           style: ButtonStyle(
             foregroundColor: WidgetStateProperty.all(Colors.grey[800]),
             backgroundColor: WidgetStateProperty.resolveWith((states) {
@@ -1492,7 +1450,6 @@ List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
     }
   }
 
-  // Add Mobile section THIRD
   if (mobileTypes.isNotEmpty) {
     entries.add(
       DropdownMenuEntry<SystemType>(
@@ -1503,26 +1460,20 @@ List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
           backgroundColor: WidgetStateProperty.all(
             const Color(0xFF10b981).withValues(alpha: 0.05),
           ),
-          foregroundColor: WidgetStateProperty.all(
-            const Color(0xFF10b981),
-          ),
+          foregroundColor: WidgetStateProperty.all(const Color(0xFF10b981)),
           textStyle: WidgetStateProperty.all(
             const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
           ),
         ),
       ),
     );
-
     for (var type in mobileTypes) {
       entries.add(
         DropdownMenuEntry<SystemType>(
           value: type,
           label: type.name ?? '',
-          leadingIcon: Icon(
-            Icons.smartphone_rounded,
-            color: const Color(0xFF10b981),
-            size: 20,
-          ),
+          leadingIcon: const Icon(Icons.smartphone_rounded,
+              color: Color(0xFF10b981), size: 20),
           style: ButtonStyle(
             foregroundColor: WidgetStateProperty.all(Colors.grey[800]),
             backgroundColor: WidgetStateProperty.resolveWith((states) {

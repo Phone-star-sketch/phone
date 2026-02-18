@@ -21,6 +21,7 @@ class ClientBottomSheetController extends GetxController {
 
   final isLoading = false.obs;
   final dateSelected = DateTime.now().obs;
+  final RxMap<Object, bool> systemLoadingStatus = <Object, bool>{}.obs;
 
   Future<void> setClient(Client client) async {
     try {
@@ -38,9 +39,8 @@ class ClientBottomSheetController extends GetxController {
       // Set up streams
       BackendServices.instance.clientRepository
           .bindStreamToClientLogsChanges(client, (data) {
-        final mapped = data
-            .map((logJsonObject) => Log.fromJson(logJsonObject))
-            .toList();
+        final mapped =
+            data.map((logJsonObject) => Log.fromJson(logJsonObject)).toList();
         mapped.sort((a, b) => b.createdAt!.compareTo(a.createdAt!));
         _logs.clear();
         _logs.addAll(mapped);
@@ -76,8 +76,7 @@ class ClientBottomSheetController extends GetxController {
             final data = payload[0];
             _client.value.totalCash = data[Client.totalCashColumns];
             update(); // Trigger UI update
-          } catch (e) {
-          }
+          } catch (e) {}
         },
       );
     } catch (e) {

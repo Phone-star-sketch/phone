@@ -24,72 +24,55 @@ class SystemList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final allSystems = controller.getAllTypes();
-
-      return DefaultTabController(
-          length: 3,
-          child: Column(
-            children: [
-              Container(
-                color: const Color(0xFF0d47a1),
-                child: const TabBar(
-                  tabs: [
-                    Tab(
-                      icon: Icon(Icons.phone),
-                      child: Text('أنظمة الفليكسات'),
-                    ),
-                    Tab(
-                      icon: Icon(Icons.wifi),
-                      child: Text(' انترنت ارضي و موبيل'),
-                    ),
-                    Tab(
-                      icon: Icon(Icons.phone_android),
-                      child: Text('خدمات أخري'),
-                    ),
-                  ],
-                ),
+    return DefaultTabController(
+        length: 3,
+        child: Column(
+          children: [
+            Container(
+              color: const Color(0xFF0d47a1),
+              child: const TabBar(
+                tabs: [
+                  Tab(
+                    icon: Icon(Icons.phone),
+                    child: Text('أنظمة الفليكسات'),
+                  ),
+                  Tab(
+                    icon: Icon(Icons.wifi),
+                    child: Text(' انترنت ارضي و موبيل'),
+                  ),
+                  Tab(
+                    icon: Icon(Icons.phone_android),
+                    child: Text('خدمات أخري'),
+                  ),
+                ],
               ),
-              Expanded(
-                child: TabBarView(children: [
-                  SystemListTab(
-                    systemCategory: SystemCategory.mainPackage,
-                    allSystems: allSystems
-                        .where((element) =>
-                            element.category == SystemCategory.mainPackage)
-                        .toList(),
-                  ),
-                  SystemListTab(
-                    systemCategory: SystemCategory.internetPackage,
-                    allSystems: allSystems
-                        .where((element) =>
-                            element.category == SystemCategory.internetPackage)
-                        .toList(),
-                  ),
-                  SystemListTab(
-                    systemCategory: SystemCategory.mobileInternet,
-                    allSystems: allSystems
-                        .where((element) =>
-                            element.category == SystemCategory.mobileInternet)
-                        .toList(),
-                  ),
-                ]),
-              )
-            ],
-          ));
-    });
+            ),
+            Expanded(
+              child: TabBarView(children: [
+                SystemListTab(
+                  systemCategory: SystemCategory.mainPackage,
+                ),
+                SystemListTab(
+                  systemCategory: SystemCategory.internetPackage,
+                ),
+                SystemListTab(
+                  systemCategory: SystemCategory.mobileInternet,
+                ),
+              ]),
+            )
+          ],
+        ));
   }
 }
 
 class SystemListTab extends StatelessWidget {
   SystemListViewModel controller = Get.put(SystemListViewModel());
   SystemCategory systemCategory;
-  SystemListTab(
-      {super.key,
-      required this.systemCategory,
-      required this.allSystems,
-      this.onUpload});
-  List<SystemType> allSystems;
+  SystemListTab({
+    super.key,
+    required this.systemCategory,
+    this.onUpload,
+  });
   final void Function(String imageUrl)? onUpload;
 
   @override
@@ -100,22 +83,30 @@ class SystemListTab extends StatelessWidget {
     int numberOfElements = max(width ~/ maxWidth, 1);
 
     return Obx(() {
+      final currentSystems = controller
+          .getAllTypes()
+          .where((element) => element.category == systemCategory)
+          .toList();
+
       int editedCard = controller.editedCardIndex.value;
       return Scaffold(
         floatingActionButton: FloatingActionButton(
           backgroundColor: const Color(0xFF00BFFF),
           child: const Icon(Icons.add, color: Colors.white),
           onPressed: () {
-            // تحديد القيمة الافتراضية لـ isRecurring بناءً على الفئة
             bool defaultIsRecurring =
                 systemCategory == SystemCategory.mobileInternet ? false : true;
 
-            allSystems.add(SystemType(
+            final newSystem = SystemType(
               id: -1,
               category: systemCategory,
               isRecurring: defaultIsRecurring,
-            ));
-            controller.editedCardIndex.value = allSystems.length;
+            );
+
+            controller.getAllTypes().add(newSystem);
+            controller.refreshTypes();
+
+            controller.editedCardIndex.value = currentSystems.length;
             controller.isRecurring.value = defaultIsRecurring;
           },
         ),
@@ -126,12 +117,12 @@ class SystemListTab extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: numberOfElements,
-              childAspectRatio: 0.85, // Changed from 1.2 to make cards taller
-              mainAxisSpacing: 16, // Increased from 10
-              crossAxisSpacing: 16, // Increased from 10
+              childAspectRatio: 0.85,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
             ),
             itemBuilder: (context, index) {
-              SystemType currentSystem = allSystems[index];
+              SystemType currentSystem = currentSystems[index];
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 transform: Matrix4.identity()
@@ -179,7 +170,6 @@ class SystemListTab extends StatelessWidget {
                                 child: Stack(
                                   fit: StackFit.expand,
                                   children: [
-                                    // System Image
                                     ClipRRect(
                                       borderRadius: const BorderRadius.vertical(
                                         top: Radius.circular(20),
@@ -220,7 +210,6 @@ class SystemListTab extends StatelessWidget {
                                               fit: BoxFit.contain,
                                             ),
                                     ),
-                                    // Gradient Overlay
                                     Container(
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
@@ -315,7 +304,6 @@ class SystemListTab extends StatelessWidget {
                                   controller.editedCardIndex.value = index,
                             ),
                           ),
-                        // Replace the individual action buttons with this Row container
                         Positioned(
                           top: 8,
                           left: 8,
@@ -330,16 +318,11 @@ class SystemListTab extends StatelessWidget {
                                   onPressed: () async {
                                     if (controller.formKey.currentState!
                                         .validate()) {
-                                      // ✅ منع multiple submissions
-                                      if (controller.isSaving.value) {
-                                        return;
-                                      }
+                                      if (controller.isSaving.value) return;
 
                                       try {
-                                        // ✅ Set loading state
                                         controller.isSaving.value = true;
 
-                                        // تحديد قيمة isRecurring بناءً على الفئة
                                         bool isRecurringValue;
                                         if (systemCategory ==
                                             SystemCategory.mobileInternet) {
@@ -364,26 +347,28 @@ class SystemListTab extends StatelessWidget {
                                         );
 
                                         if (currentSystem.id == -1) {
-                                          // Create new
                                           await BackendServices
                                               .instance.systemTypeRepository
                                               .create(systemType);
-
-                                          // ✅ Refresh from database silently (no loading indicator)
                                           await controller
                                               .updateTypesSilently(true);
                                         } else {
-                                          // Update existing
                                           await BackendServices
                                               .instance.systemTypeRepository
                                               .update(systemType);
-                                          allSystems[index] = systemType;
+
+                                          final allTypes =
+                                              controller.getAllTypes();
+                                          final typeIndex = allTypes.indexWhere(
+                                              (t) => t.id == systemType.id);
+                                          if (typeIndex != -1) {
+                                            allTypes[typeIndex] = systemType;
+                                            controller.refreshTypes();
+                                          }
                                         }
 
-                                        // ✅ Refresh UI
                                         controller.editedCardIndex.value = -1;
 
-                                        // ✅ Show success message
                                         Get.showSnackbar(const GetSnackBar(
                                           message: 'تم حفظ البيانات بنجاح',
                                           duration: Duration(seconds: 2),
@@ -392,7 +377,6 @@ class SystemListTab extends StatelessWidget {
                                           margin: EdgeInsets.all(12),
                                         ));
                                       } catch (e) {
-                                        // ✅ Show error message
                                         Get.showSnackbar(GetSnackBar(
                                           message:
                                               'حدث خطأ أثناء الحفظ: ${e.toString()}',
@@ -403,7 +387,6 @@ class SystemListTab extends StatelessWidget {
                                           margin: const EdgeInsets.all(12),
                                         ));
                                       } finally {
-                                        // ✅ Reset loading state
                                         controller.isSaving.value = false;
                                       }
                                     }
@@ -423,21 +406,18 @@ class SystemListTab extends StatelessWidget {
                                 icon: Icons.image,
                                 color: Colors.blue,
                                 onPressed: () async {
-                                  // ...existing image upload logic...
                                   try {
                                     ImagePicker imagePicker = ImagePicker();
                                     final image = await imagePicker.pickImage(
                                         source: ImageSource.gallery,
-                                        maxWidth: 1200, // Add max dimensions
+                                        maxWidth: 1200,
                                         maxHeight: 1200,
-                                        imageQuality: 85 // Compress image
-                                        );
+                                        imageQuality: 85);
                                     if (image == null) return;
 
                                     final imageBytes =
                                         await image.readAsBytes();
                                     if (imageBytes.length > 10 * 1024 * 1024) {
-                                      // 10MB limit
                                       Get.snackbar(
                                         'Error',
                                         'Image size too large. Please select a smaller image.',
@@ -452,11 +432,21 @@ class SystemListTab extends StatelessWidget {
                                     final fileName =
                                         '${timestamp}_${image.name}';
 
-                                    // Show loading indicator
-                                    Get.dialog(
-                                      const Center(
-                                          child: CircularProgressIndicator()),
+                                    // ✅ استخدام showDialog بدل Get.dialog
+                                    BuildContext? uploadDialogContext;
+                                    showDialog(
+                                      context: context,
                                       barrierDismissible: false,
+                                      builder: (ctx) {
+                                        uploadDialogContext = ctx;
+                                        return const PopScope(
+                                          canPop: false,
+                                          child: Center(
+                                            child:
+                                                CircularProgressIndicator(),
+                                          ),
+                                        );
+                                      },
                                     );
 
                                     try {
@@ -480,7 +470,14 @@ class SystemListTab extends StatelessWidget {
                                           .update(currentSystem);
 
                                       controller.update();
-                                      Get.back(); // Close loading dialog
+
+                                      // ✅ إغلاق loading dialog بـ context خاصه
+                                      if (uploadDialogContext != null &&
+                                          Navigator.of(uploadDialogContext!)
+                                              .canPop()) {
+                                        Navigator.of(uploadDialogContext!)
+                                            .pop();
+                                      }
 
                                       Get.snackbar(
                                         'Success',
@@ -489,7 +486,12 @@ class SystemListTab extends StatelessWidget {
                                         colorText: Colors.white,
                                       );
                                     } catch (uploadError) {
-                                      Get.back(); // Close loading dialog
+                                      if (uploadDialogContext != null &&
+                                          Navigator.of(uploadDialogContext!)
+                                              .canPop()) {
+                                        Navigator.of(uploadDialogContext!)
+                                            .pop();
+                                      }
                                       throw uploadError;
                                     }
                                   } catch (e) {
@@ -513,7 +515,7 @@ class SystemListTab extends StatelessWidget {
                 ),
               );
             },
-            itemCount: allSystems.length,
+            itemCount: currentSystems.length,
           ),
         ),
       );
@@ -529,8 +531,8 @@ class SystemListTab extends StatelessWidget {
     return Visibility(
       visible: visible,
       child: Container(
-        height: 36, // Increased from 32
-        width: 36, // Increased from 32
+        height: 36,
+        width: 36,
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
@@ -545,7 +547,7 @@ class SystemListTab extends StatelessWidget {
         ),
         child: IconButton(
           padding: EdgeInsets.zero,
-          icon: Icon(icon, size: 20), // Increased from 16
+          icon: Icon(icon, size: 20),
           color: Colors.white,
           onPressed: onPressed,
         ),
@@ -553,21 +555,19 @@ class SystemListTab extends StatelessWidget {
     );
   }
 
-  // ✅ Clean delete dialog method
+  // ✅ استخدام showDialog بدل Get.dialog
   void _showDeleteDialog(
       BuildContext context, SystemType currentSystem, int index) {
-    Get.dialog(
-      AlertDialog(
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
         title: const Text(
           'حذف باقة',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
         content: Text(
           'هل أنت متأكد من حذف "${currentSystem.name}"؟\n\nسيتم حذف جميع الاشتراكات المرتبطة بها.',
@@ -575,22 +575,16 @@ class SystemListTab extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text(
               'إلغاء',
-              style: TextStyle(
-                color: Color(0xFF6b7280),
-                fontSize: 16,
-              ),
+              style: TextStyle(color: Color(0xFF6b7280), fontSize: 16),
             ),
           ),
           ElevatedButton(
             onPressed: () async {
-              // Close confirmation dialog
-              Get.back();
-
-              // Perform delete operation
-              await _performDelete(currentSystem);
+              Navigator.of(dialogContext).pop(); // ✅ إغلاق dialog التأكيد
+              await _performDelete(context, currentSystem); // ✅ تمرير context
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFef4444),
@@ -600,10 +594,7 @@ class SystemListTab extends StatelessWidget {
             ),
             child: const Text(
               'حذف',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 16),
             ),
           ),
         ],
@@ -611,47 +602,51 @@ class SystemListTab extends StatelessWidget {
     );
   }
 
-  // ✅ Clean delete operation method
-  Future<void> _performDelete(SystemType currentSystem) async {
+  // ✅ تمرير context وإدارة loading dialog بـ context صريح
+  Future<void> _performDelete(
+      BuildContext context, SystemType currentSystem) async {
+    BuildContext? loadingDialogContext;
+
     try {
-      // Show loading dialog
-      Get.dialog(
-        WillPopScope(
-          onWillPop: () async => false,
-          child: const Center(
-            child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(
-                      color: Color(0xFF3b82f6),
-                    ),
-                    SizedBox(height: 16),
-                    Text('جاري الحذف...'),
-                  ],
+      // ✅ Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          loadingDialogContext = ctx;
+          return const PopScope(
+            canPop: false,
+            child: Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: Color(0xFF3b82f6)),
+                      SizedBox(height: 16),
+                      Text('جاري الحذف...'),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-        barrierDismissible: false,
+          );
+        },
       );
 
       // Delete from database
       await BackendServices.instance.systemTypeRepository.delete(currentSystem);
 
-      // Remove from local list immediately for instant UI update
-      allSystems.removeWhere((system) => system.id == currentSystem.id);
-
-      // Update controller state
       controller.editedCardIndex.value = -1;
+      await controller.updateTypesSilently(true);
 
-      // Close loading dialog
-      Get.back();
+      // ✅ إغلاق loading dialog بـ context خاصه
+      if (loadingDialogContext != null &&
+          Navigator.of(loadingDialogContext!).canPop()) {
+        Navigator.of(loadingDialogContext!).pop();
+      }
 
-      // Show success message
       Get.showSnackbar(const GetSnackBar(
         message: 'تم حذف الباقة بنجاح',
         duration: Duration(seconds: 2),
@@ -659,16 +654,13 @@ class SystemListTab extends StatelessWidget {
         borderRadius: 10,
         margin: EdgeInsets.all(12),
       ));
-
-      // Refresh from database in background (no await - fire and forget)
-      controller.updateTypesSilently(true);
     } catch (e) {
-      // Close loading dialog if still open
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
+      // ✅ إغلاق loading dialog في حالة الخطأ
+      if (loadingDialogContext != null &&
+          Navigator.of(loadingDialogContext!).canPop()) {
+        Navigator.of(loadingDialogContext!).pop();
       }
 
-      // Show error message
       Get.showSnackbar(GetSnackBar(
         message: 'حدث خطأ أثناء الحذف: ${e.toString()}',
         duration: const Duration(seconds: 3),
@@ -709,15 +701,12 @@ class SystemCardEditor extends StatelessWidget {
     controller.isRecurring.value = currentSystem.isRecurring;
 
     return Container(
-      height: systemCategory == SystemCategory.mobileInternet
-          ? 110
-          : 85, // زيادة الارتفاع للخدمات الأخرى
+      height: systemCategory == SystemCategory.mobileInternet ? 110 : 85,
       child: Form(
         key: controller.formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // First row with name and price
             SizedBox(
               height: 40,
               child: Row(
@@ -753,16 +742,12 @@ class SystemCardEditor extends StatelessWidget {
                   const SizedBox(width: 2),
                   const Text(
                     'ج',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 5),
-            // Description field
             Expanded(
               child: AutoSizeTextField(
                 cursorColor: Colors.red,
@@ -772,7 +757,6 @@ class SystemCardEditor extends StatelessWidget {
                 style: const TextStyle(fontSize: 14),
               ),
             ),
-            // Checkbox للخدمات الأخرى فقط
             if (systemCategory == SystemCategory.mobileInternet)
               Obx(() => SizedBox(
                     height: 25,

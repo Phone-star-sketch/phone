@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/client.dart';
+import 'package:phone_system_app/views/pages/all_clinets_page.dart';
 import 'dart:math' as math;
 
 class SuccessfulPaymentPage extends StatefulWidget {
@@ -100,9 +101,8 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   }
 
   void _navigateBack() {
-    // Simply close the success page and let the caller handle the rest
-    // Pass a result to indicate we want to close the bottom sheet
-    Get.back(result: {'closeBottomSheet': true});
+    // ✅ Clear all stack and go directly to AllClientsPage
+    Get.offAll(() => const AllClientsPage());
   }
 
   @override
