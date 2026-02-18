@@ -665,27 +665,44 @@ class _SettingsTab extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              // Close confirmation dialog
-              Get.back();
-
-              // Show loading indicator
-              Get.dialog(
-                const Center(
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF3b82f6),
-                  ),
-                ),
-                barrierDismissible: false,
-              );
-
               try {
+                // Close confirmation dialog first
+                Get.back();
+
+                // Show loading with barrier
+                Get.dialog(
+                  WillPopScope(
+                    onWillPop: () async => false,
+                    child: const Center(
+                      child: Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(
+                                color: Color(0xFF3b82f6),
+                              ),
+                              SizedBox(height: 16),
+                              Text('جاري الحذف...'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  barrierDismissible: false,
+                );
+
                 // Delete from database
                 await BackendServices.instance.clientRepository.delete(client);
 
-                // Update controller
-                AccountClientInfo.to.updateCurrnetClinets();
+                // Update controller - use correct syntax for RxList
+                final controller = AccountClientInfo.to;
+                controller.clinets.removeWhere((c) => c.id == client.id);
+                controller.clinets.refresh();
 
-                // Close loading
+                // Close loading dialog
                 Get.back();
 
                 // Close bottom sheet
@@ -700,8 +717,10 @@ class _SettingsTab extends StatelessWidget {
                   margin: EdgeInsets.all(12),
                 ));
               } catch (e) {
-                // Close loading
-                Get.back();
+                // Close loading if still open
+                if (Get.isDialogOpen ?? false) {
+                  Get.back();
+                }
 
                 // Show error message
                 Get.showSnackbar(GetSnackBar(
@@ -855,32 +874,63 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                     ? null
                     : () async {
                         try {
-                          if (controller.text.isEmpty)
+                          // Prevent multiple submissions
+                          if (loaders.moneyIsLoading.value) {
+                            return;
+                          }
+
+                          if (controller.text.isEmpty) {
                             throw 'الرجاء إدخال مبلغ صحيح';
+                          }
                           final amount = int.tryParse(controller.text);
-                          if (amount == null) throw 'الرجاء إدخال مبلغ صحيح';
+                          if (amount == null) {
+                            throw 'الرجاء إدخال مبلغ صحيح';
+                          }
 
-                          await loaders.changeMoneyValue(
-                              client, controller.text, adding);
+                          // Set loading state
+                          loaders.moneyIsLoading.value = true;
 
-                          // Store the values before closing dialog
-                          final amountText = controller.text;
-                          final isAdding = adding;
+                          try {
+                            await loaders.changeMoneyValue(
+                                client, controller.text, adding);
 
-                          // Close only the money dialog
-                          Navigator.of(dialogContext).pop();
+                            // Store the values before closing dialog
+                            final amountText = controller.text;
+                            final isAdding = adding;
 
-                          // Navigate to success page using Get.to for consistent navigation
-                          Get.to(
-                            () => SuccessfulPaymentPage(
-                              amount: '$amountText جنيه',
-                              transactionId:
-                                  'TXN${DateTime.now().millisecondsSinceEpoch}',
-                              paymentMethod:
-                                  isAdding ? 'إيداع نقدي' : 'تسديد نقدي',
-                              client: client,
-                            ),
-                          );
+                            // Reset loading state
+                            loaders.moneyIsLoading.value = false;
+
+                            // Close only the money dialog
+                            Navigator.of(dialogContext).pop();
+
+                            // Small delay to ensure dialog is closed
+                            await Future.delayed(
+                                const Duration(milliseconds: 100));
+
+                            // Navigate to success page and wait for result
+                            final result = await Get.to(
+                              () => SuccessfulPaymentPage(
+                                amount: '$amountText جنيه',
+                                transactionId:
+                                    'TXN${DateTime.now().millisecondsSinceEpoch}',
+                                paymentMethod:
+                                    isAdding ? 'إيداع نقدي' : 'تسديد نقدي',
+                                client: client,
+                              ),
+                            );
+
+                            // If success page wants to close bottom sheet, do it
+                            if (result != null &&
+                                result['closeBottomSheet'] == true) {
+                              // Close the bottom sheet to return to AccountDetails
+                              Get.back();
+                            }
+                          } catch (e) {
+                            // Reset loading state on error
+                            loaders.moneyIsLoading.value = false;
+                            rethrow;
+                          }
                         } catch (e) {
                           Get.snackbar(
                             'خطأ',

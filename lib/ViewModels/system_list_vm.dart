@@ -7,8 +7,10 @@ import 'package:phone_system_app/services/backend/backend_services.dart';
 class SystemListViewModel extends GetxController {
   RxInt editedCardIndex = (-1).obs;
 
-  List<SystemType> _types = <SystemType>[].obs;
+  // ✅ استخدام RxList بدل List عادي
+  RxList<SystemType> _types = <SystemType>[].obs;
   RxBool isLoading = false.obs;
+  RxBool isSaving = false.obs; // ✅ إضافة loading للتعديل
 
   @override
   void onReady() async {
@@ -26,6 +28,19 @@ class SystemListViewModel extends GetxController {
     _types.clear();
     _types.addAll(types);
     isLoading.value = false;
+  }
+
+  // ✅ دالة للتحديث بدون loading indicator (للاستخدام بعد الحذف/الإضافة)
+  Future<void> updateTypesSilently(bool isAscending) async {
+    final types = await BackendServices.instance.systemTypeRepository
+        .getAllTypes(isAscending);
+    _types.clear();
+    _types.addAll(types);
+  }
+
+  // ✅ دالة للتحديث المباشر
+  void refreshTypes() {
+    _types.refresh();
   }
 
   //about the from

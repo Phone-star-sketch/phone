@@ -687,32 +687,45 @@ class _ModernClientCardState extends State<ModernClientCard> {
           ),
           ElevatedButton(
             onPressed: () async {
-              // Close confirmation dialog
-              Get.back();
-
-              // Show loading indicator
-              Get.dialog(
-                const Center(
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF3b82f6),
-                  ),
-                ),
-                barrierDismissible: false,
-              );
-
               try {
+                // Close confirmation dialog first
+                Get.back();
+
+                // Show loading with barrier
+                Get.dialog(
+                  WillPopScope(
+                    onWillPop: () async => false,
+                    child: const Center(
+                      child: Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(
+                                color: Color(0xFF3b82f6),
+                              ),
+                              SizedBox(height: 16),
+                              Text('جاري الحذف...'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  barrierDismissible: false,
+                );
+
                 // Delete from database
                 await BackendServices.instance.clientRepository
                     .delete(widget.client);
 
-                // Update controller
+                // Update controller - use correct syntax for RxList
                 final controller = Get.find<AccountClientInfo>();
-                controller.clinets.value
-                    .removeWhere((c) => c.id == widget.client.id);
+                controller.clinets.removeWhere((c) => c.id == widget.client.id);
                 controller.clinets.refresh();
-                controller.update(); // Force GetBuilder to rebuild
 
-                // Close loading
+                // Close loading dialog
                 Get.back();
 
                 // Show success message
@@ -723,14 +736,11 @@ class _ModernClientCardState extends State<ModernClientCard> {
                   borderRadius: 10,
                   margin: EdgeInsets.all(12),
                 ));
-
-                // Force rebuild of the widget
-                if (mounted) {
-                  setState(() {});
-                }
               } catch (e) {
-                // Close loading
-                Get.back();
+                // Close loading if still open
+                if (Get.isDialogOpen ?? false) {
+                  Get.back();
+                }
 
                 // Show error message
                 Get.showSnackbar(GetSnackBar(

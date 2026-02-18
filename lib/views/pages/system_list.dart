@@ -10,9 +10,7 @@ import 'package:get/get_core/get_core.dart';
 import 'package:get/get_instance/get_instance.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:phone_system_app/ViewModels/system_list_vm.dart';
-import 'package:phone_system_app/models/system.dart';
 import 'package:phone_system_app/models/system_type.dart';
-import 'package:phone_system_app/repositories/system_type/supabase_system_type_repository.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -332,65 +330,81 @@ class SystemListTab extends StatelessWidget {
                                   onPressed: () async {
                                     if (controller.formKey.currentState!
                                         .validate()) {
-                                      // تحديد قيمة isRecurring بناءً على الفئة
-                                      bool isRecurringValue;
-                                      if (systemCategory ==
-                                          SystemCategory.mobileInternet) {
-                                        // للخدمات الأخرى: استخدم القيمة من الـ checkbox
-                                        isRecurringValue =
-                                            controller.isRecurring.value;
-                                      } else {
-                                        // للفليكسات والإنترنت: دائماً true
-                                        isRecurringValue = true;
+                                      // ✅ منع multiple submissions
+                                      if (controller.isSaving.value) {
+                                        return;
                                       }
 
-                                      if (currentSystem.id == -1) {
-                                        await BackendServices
-                                            .instance.systemTypeRepository
-                                            .create(SystemType(
-                                                id: currentSystem.id,
-                                                createdAt: DateTime.now(),
-                                                name:
-                                                    controller.systemName.text,
-                                                description: controller
-                                                    .systemDescription.text,
-                                                price: double.parse(controller
-                                                    .systemPrice.text),
-                                                category: systemCategory,
-                                                isRecurring: isRecurringValue));
-                                        allSystems[index].name =
-                                            controller.systemName.text;
-                                        allSystems[index].description =
-                                            controller.systemDescription.text;
-                                        allSystems[index].price = double.parse(
-                                            controller.systemPrice.text);
-                                        allSystems[index].isRecurring =
-                                            isRecurringValue;
+                                      try {
+                                        // ✅ Set loading state
+                                        controller.isSaving.value = true;
+
+                                        // تحديد قيمة isRecurring بناءً على الفئة
+                                        bool isRecurringValue;
+                                        if (systemCategory ==
+                                            SystemCategory.mobileInternet) {
+                                          isRecurringValue =
+                                              controller.isRecurring.value;
+                                        } else {
+                                          isRecurringValue = true;
+                                        }
+
+                                        final systemType = SystemType(
+                                          id: currentSystem.id,
+                                          createdAt: currentSystem.id == -1
+                                              ? DateTime.now()
+                                              : currentSystem.createdAt,
+                                          name: controller.systemName.text,
+                                          description:
+                                              controller.systemDescription.text,
+                                          price: double.parse(
+                                              controller.systemPrice.text),
+                                          category: systemCategory,
+                                          isRecurring: isRecurringValue,
+                                        );
+
+                                        if (currentSystem.id == -1) {
+                                          // Create new
+                                          await BackendServices
+                                              .instance.systemTypeRepository
+                                              .create(systemType);
+
+                                          // ✅ Refresh from database silently (no loading indicator)
+                                          await controller
+                                              .updateTypesSilently(true);
+                                        } else {
+                                          // Update existing
+                                          await BackendServices
+                                              .instance.systemTypeRepository
+                                              .update(systemType);
+                                          allSystems[index] = systemType;
+                                        }
+
+                                        // ✅ Refresh UI
                                         controller.editedCardIndex.value = -1;
-                                      } else {
-                                        await BackendServices
-                                            .instance.systemTypeRepository
-                                            .update(SystemType(
-                                                id: currentSystem.id,
-                                                createdAt:
-                                                    currentSystem.createdAt,
-                                                name:
-                                                    controller.systemName.text,
-                                                description: controller
-                                                    .systemDescription.text,
-                                                price: double.parse(controller
-                                                    .systemPrice.text),
-                                                category: systemCategory,
-                                                isRecurring: isRecurringValue));
-                                        allSystems[index].name =
-                                            controller.systemName.text;
-                                        allSystems[index].description =
-                                            controller.systemDescription.text;
-                                        allSystems[index].price = double.parse(
-                                            controller.systemPrice.text);
-                                        allSystems[index].isRecurring =
-                                            isRecurringValue;
-                                        controller.editedCardIndex.value = -1;
+
+                                        // ✅ Show success message
+                                        Get.showSnackbar(const GetSnackBar(
+                                          message: 'تم حفظ البيانات بنجاح',
+                                          duration: Duration(seconds: 2),
+                                          backgroundColor: Color(0xFF10b981),
+                                          borderRadius: 10,
+                                          margin: EdgeInsets.all(12),
+                                        ));
+                                      } catch (e) {
+                                        // ✅ Show error message
+                                        Get.showSnackbar(GetSnackBar(
+                                          message:
+                                              'حدث خطأ أثناء الحفظ: ${e.toString()}',
+                                          duration: const Duration(seconds: 3),
+                                          backgroundColor:
+                                              const Color(0xFFef4444),
+                                          borderRadius: 10,
+                                          margin: const EdgeInsets.all(12),
+                                        ));
+                                      } finally {
+                                        // ✅ Reset loading state
+                                        controller.isSaving.value = false;
                                       }
                                     }
                                   },
@@ -400,33 +414,8 @@ class SystemListTab extends StatelessWidget {
                                 visible: true,
                                 icon: Icons.delete,
                                 color: Colors.red,
-                                onPressed: () async {
-                                  // ...existing delete logic...
-                                  await Get.defaultDialog(
-                                      backgroundColor: Colors.white,
-                                      confirm: ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                            shape: const StadiumBorder(),
-                                            backgroundColor: Colors.red[900],
-                                            padding: const EdgeInsets.all(10)),
-                                        onPressed: () async {
-                                          await BackendServices
-                                              .instance.systemTypeRepository
-                                              .delete(currentSystem);
-                                          Get.back();
-                                          allSystems.removeWhere((system) =>
-                                              system.id == currentSystem.id);
-                                          controller.editedCardIndex.value = -1;
-                                        },
-                                        child: const Text("تأكيد",
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold)),
-                                      ),
-                                      title: "حذف باقة",
-                                      content: Center(
-                                          child: Text(
-                                              "هل أنت متأكد من أنك تريد حذف هذه باقة : ${currentSystem.name} مع حذف الاشتراكات المرتبطة بها ان وجد ؟")));
-                                },
+                                onPressed: () => _showDeleteDialog(
+                                    context, currentSystem, index),
                               ),
                               const SizedBox(width: 4),
                               _buildActionButton(
@@ -564,6 +553,132 @@ class SystemListTab extends StatelessWidget {
     );
   }
 
+  // ✅ Clean delete dialog method
+  void _showDeleteDialog(
+      BuildContext context, SystemType currentSystem, int index) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        title: const Text(
+          'حذف باقة',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        content: Text(
+          'هل أنت متأكد من حذف "${currentSystem.name}"؟\n\nسيتم حذف جميع الاشتراكات المرتبطة بها.',
+          style: const TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text(
+              'إلغاء',
+              style: TextStyle(
+                color: Color(0xFF6b7280),
+                fontSize: 16,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              // Close confirmation dialog
+              Get.back();
+
+              // Perform delete operation
+              await _performDelete(currentSystem);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFef4444),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'حذف',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ Clean delete operation method
+  Future<void> _performDelete(SystemType currentSystem) async {
+    try {
+      // Show loading dialog
+      Get.dialog(
+        WillPopScope(
+          onWillPop: () async => false,
+          child: const Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      color: Color(0xFF3b82f6),
+                    ),
+                    SizedBox(height: 16),
+                    Text('جاري الحذف...'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+      );
+
+      // Delete from database
+      await BackendServices.instance.systemTypeRepository.delete(currentSystem);
+
+      // Remove from local list immediately for instant UI update
+      allSystems.removeWhere((system) => system.id == currentSystem.id);
+
+      // Update controller state
+      controller.editedCardIndex.value = -1;
+
+      // Close loading dialog
+      Get.back();
+
+      // Show success message
+      Get.showSnackbar(const GetSnackBar(
+        message: 'تم حذف الباقة بنجاح',
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFF10b981),
+        borderRadius: 10,
+        margin: EdgeInsets.all(12),
+      ));
+
+      // Refresh from database in background (no await - fire and forget)
+      controller.updateTypesSilently(true);
+    } catch (e) {
+      // Close loading dialog if still open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      // Show error message
+      Get.showSnackbar(GetSnackBar(
+        message: 'حدث خطأ أثناء الحذف: ${e.toString()}',
+        duration: const Duration(seconds: 3),
+        backgroundColor: const Color(0xFFef4444),
+        borderRadius: 10,
+        margin: const EdgeInsets.all(12),
+      ));
+    }
+  }
+
   Future<void> showBottomSheetForEditingSystemType(
       BuildContext context, SystemType type) async {
     return showModalBottomSheet(
@@ -590,7 +705,7 @@ class SystemCardEditor extends StatelessWidget {
   Widget build(BuildContext context) {
     controller.systemName.text = currentSystem.name?.trim() ?? '';
     controller.systemDescription.text = currentSystem.description?.trim() ?? '';
-    controller.systemPrice.text = currentSystem.price?.toString().trim() ?? '0';
+    controller.systemPrice.text = currentSystem.price?.toString() ?? '0';
     controller.isRecurring.value = currentSystem.isRecurring;
 
     return Container(

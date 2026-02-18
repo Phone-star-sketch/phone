@@ -101,7 +101,7 @@ Future clientEditModelSheet(
     });
   }
 
-  Future saveClientData() async {
+  Future<bool> saveClientData() async {
     try {
       if (client == null) {
         final newClient = Client(
@@ -186,26 +186,15 @@ Future clientEditModelSheet(
         await onSuccess();
       }
 
+      // Update clients list
       AccountClientInfo.to.updateCurrnetClinets();
-      Get.back();
-      Fluttertoast.showToast(
-          msg: "تمت معالجة البيانات بنجاح",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.green,
-          textColor: Colors.white,
-          fontSize: 16.0);
+
+      // Return success
+      return true;
     } catch (e) {
       print('Error saving client data: $e');
-      Fluttertoast.showToast(
-          msg: "حدث خطأ أثناء معالجة البيانات",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-          fontSize: 16.0);
+      // Return failure
+      return false;
     }
   }
 
@@ -435,50 +424,104 @@ Future clientEditModelSheet(
                     ),
                   ),
                   const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
-                      ),
-                      onPressed: loaders.clientCreationIsLoading.value
-                          ? null
-                          : () async {
-                              if (formKey.currentState!.validate()) {
-                                loaders.clientCreationIsLoading.value = true;
-                                await saveClientData();
-                                loaders.clientCreationIsLoading.value = false;
-                              }
-                            },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'تأكيد',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          if (loaders.clientCreationIsLoading.value) ...[
-                            const SizedBox(width: 12),
-                            const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
+                  Obx(() => SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
+                            elevation: 2,
+                          ),
+                          onPressed: loaders.clientCreationIsLoading.value
+                              ? null
+                              : () async {
+                                  if (formKey.currentState!.validate()) {
+                                    // Prevent multiple submissions
+                                    if (loaders.clientCreationIsLoading.value) {
+                                      return;
+                                    }
+
+                                    // Set loading state
+                                    loaders.clientCreationIsLoading.value =
+                                        true;
+
+                                    try {
+                                      // Save data
+                                      final success = await saveClientData();
+
+                                      // Reset loading state
+                                      loaders.clientCreationIsLoading.value =
+                                          false;
+
+                                      if (success) {
+                                        // Close bottom sheet
+                                        Get.back();
+
+                                        // Show success message
+                                        Fluttertoast.showToast(
+                                            msg: "تمت معالجة البيانات بنجاح",
+                                            toastLength: Toast.LENGTH_SHORT,
+                                            gravity: ToastGravity.BOTTOM,
+                                            timeInSecForIosWeb: 1,
+                                            backgroundColor: Colors.green,
+                                            textColor: Colors.white,
+                                            fontSize: 16.0);
+                                      } else {
+                                        // Show error message
+                                        Fluttertoast.showToast(
+                                            msg:
+                                                "حدث خطأ أثناء معالجة البيانات",
+                                            toastLength: Toast.LENGTH_SHORT,
+                                            gravity: ToastGravity.BOTTOM,
+                                            timeInSecForIosWeb: 1,
+                                            backgroundColor: Colors.red,
+                                            textColor: Colors.white,
+                                            fontSize: 16.0);
+                                      }
+                                    } catch (e) {
+                                      // Reset loading state on error
+                                      loaders.clientCreationIsLoading.value =
+                                          false;
+
+                                      // Show error message
+                                      Fluttertoast.showToast(
+                                          msg: "حدث خطأ أثناء معالجة البيانات",
+                                          toastLength: Toast.LENGTH_SHORT,
+                                          gravity: ToastGravity.BOTTOM,
+                                          timeInSecForIosWeb: 1,
+                                          backgroundColor: Colors.red,
+                                          textColor: Colors.white,
+                                          fontSize: 16.0);
+                                    }
+                                  }
+                                },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'تأكيد',
+                                style: TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              if (loaders.clientCreationIsLoading.value) ...[
+                                const SizedBox(width: 12),
+                                const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      )),
                   const SizedBox(height: 16),
                 ],
               ),
