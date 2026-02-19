@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/client.dart';
-import 'package:phone_system_app/views/pages/all_clinets_page.dart';
 import 'dart:math' as math;
 
 class SuccessfulPaymentPage extends StatefulWidget {
@@ -33,6 +32,8 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   late Animation<double> _checkmarkAnimation;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+
+  bool _isNavigating = false;
 
   @override
   void initState() {
@@ -101,8 +102,14 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   }
 
   void _navigateBack() {
-    // ✅ Clear all stack and go directly to AllClientsPage
-    Get.offAll(() => const AllClientsPage());
+    if (!mounted || _isNavigating) return;
+    _isNavigating = true;
+
+    // Close success page, then close the bottom sheet after a short delay
+    Get.back(); // Close success page
+    Future.delayed(const Duration(milliseconds: 100), () {
+      Get.back(); // Close bottom sheet
+    });
   }
 
   @override

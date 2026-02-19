@@ -867,7 +867,9 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                             await Future.delayed(
                                 const Duration(milliseconds: 100));
 
-                            final result = await Get.to(
+                            // Navigate to success page (no await - fire and forget)
+                            // The success page will handle its own auto-close
+                            Get.to(
                               () => SuccessfulPaymentPage(
                                 amount: '$amountText جنيه',
                                 transactionId:
@@ -877,11 +879,6 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                                 client: client,
                               ),
                             );
-
-                            if (result != null &&
-                                result['closeBottomSheet'] == true) {
-                              Get.back();
-                            }
                           } catch (e) {
                             loaders.moneyIsLoading.value = false;
                             rethrow;
