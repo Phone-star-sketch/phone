@@ -39,9 +39,7 @@ jobs:
 
       # 6. Shorebird Release (يبني APK + يسجله على Shorebird)
       - name: Build with Shorebird
-        run: |
-          shorebird login --ci-token ${{ secrets.SHOREBIRD_TOKEN }}
-          shorebird release android --force
+        run: shorebird release android --force
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
 
