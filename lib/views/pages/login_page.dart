@@ -190,7 +190,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     return Column(
       children: [
         const Text(
-          'تسجيل الدخول',
+          'تسجيل دخول',
           style: TextStyle(
             fontSize: 36,
             fontWeight: FontWeight.w900,

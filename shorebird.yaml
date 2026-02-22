@@ -1,0 +1,8 @@
+# Shorebird configuration file
+# This file is used to configure your Shorebird app
+# Learn more at https://docs.shorebird.dev
+
+# Your app's unique identifier
+# This will be generated when you run: shorebird init
+# Temporary ID - will be replaced by first release
+app_id: phone-system-app 

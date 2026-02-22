@@ -8,6 +8,7 @@ import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/theme/welcome_theme_selector.dart';
+import 'package:phone_system_app/services/app_update_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> main() async {
@@ -71,6 +72,33 @@ Future<void> main() async {
   }
 
   runApp(const MainApp());
+
+  // ✅ التحقق من التحديثات بعد تشغيل التطبيق (للـ Mobile فقط)
+  if (!kIsWeb) {
+    _checkForUpdates();
+  }
+}
+
+/// التحقق من التحديثات المتاحة
+Future<void> _checkForUpdates() async {
+  // انتظر 3 ثواني بعد فتح التطبيق
+  await Future.delayed(const Duration(seconds: 3));
+
+  try {
+    final updateInfo = await AppUpdateService.checkForUpdate();
+
+    if (updateInfo != null) {
+      // في تحديث متاح - اعرض الـ dialog
+      final context = Get.context;
+      if (context != null) {
+        AppUpdateService.showUpdateDialog(context, updateInfo);
+      }
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('Update check failed: $e');
+    }
+  }
 }
 
 class MainApp extends StatelessWidget {
