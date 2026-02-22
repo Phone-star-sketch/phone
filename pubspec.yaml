@@ -95,6 +95,7 @@ flutter:
           weight: 500
 
   assets:
+    - shorebird.yaml
     - assets/
     - assets/fonts/
     - assets/images/
