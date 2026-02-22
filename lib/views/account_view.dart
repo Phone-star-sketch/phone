@@ -13,6 +13,7 @@ import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/views/account_details.dart';
 import 'package:phone_system_app/views/pages/charts_page.dart';
 import 'package:phone_system_app/views/pages/table_page.dart';
+import 'package:phone_system_app/services/shorebird_update_service.dart';
 
 class AccountsView extends StatefulWidget {
   const AccountsView({super.key});
@@ -118,6 +119,11 @@ class _AccountsViewState extends State<AccountsView>
             onTap: () =>
                 Get.to(const ChartsPage(), transition: Transition.leftToRight),
           ),
+
+          const SizedBox(width: 12),
+
+          // Update Button
+          _buildUpdateButton(),
 
           const Spacer(),
 
@@ -261,6 +267,179 @@ class _AccountsViewState extends State<AccountsView>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildUpdateButton() {
+    return FutureBuilder<bool>(
+      future: ShorebirdUpdateService.checkForUpdate(),
+      builder: (context, snapshot) {
+        final hasUpdate = snapshot.data ?? false;
+
+        return Stack(
+          children: [
+            _buildIconButton(
+              icon: Icons.system_update_rounded,
+              color: hasUpdate ? const Color(0xFF4ade80) : null,
+              onTap: () => _checkForUpdates(),
+            ),
+            if (hasUpdate)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4ade80),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF4ade80).withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _checkForUpdates() async {
+    final hasUpdate = await ShorebirdUpdateService.checkForUpdate();
+
+    if (!mounted) return;
+
+    if (hasUpdate) {
+      _showUpdateDialog();
+    } else {
+      _showNoUpdateDialog();
+    }
+  }
+
+  void _showUpdateDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1a1a1a),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4ade80).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.system_update_rounded,
+                color: Color(0xFF4ade80),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'تحديث متاح',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'يوجد تحديث جديد للتطبيق!\nسيتم تطبيق التحديث عند إعادة فتح التطبيق.',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF4ade80), Color(0xFF22c55e)],
+                ),
+              ),
+              child: const Text(
+                'حسناً',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNoUpdateDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1a1a1a),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: Colors.blue,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'التطبيق محدث',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'أنت تستخدم أحدث إصدار من التطبيق.',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.blue.withValues(alpha: 0.2),
+              ),
+              child: const Text(
+                'حسناً',
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
