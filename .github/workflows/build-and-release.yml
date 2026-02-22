@@ -44,6 +44,8 @@ jobs:
         with:
           platform: android
           args: --artifact apk
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
 
       # 7. Rename APK
       - name: Rename APK
