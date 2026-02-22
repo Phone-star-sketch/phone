@@ -33,7 +33,6 @@ jobs:
       - name: Install Shorebird
         run: |
           curl -fsSL https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
-          echo "$HOME/.shorebird/bin" >> $GITHUB_PATH
 
       # 5. Get dependencies
       - name: Get Flutter dependencies
@@ -42,9 +41,8 @@ jobs:
       # 6. Shorebird Release (يبني APK + يسجله على Shorebird)
       - name: Build with Shorebird
         run: |
-          export PATH="$HOME/.shorebird/bin:$PATH"
-          shorebird login --ci-token ${{ secrets.SHOREBIRD_TOKEN }}
-          shorebird release android --force
+          $HOME/.shorebird/bin/shorebird login --ci-token ${{ secrets.SHOREBIRD_TOKEN }}
+          $HOME/.shorebird/bin/shorebird release android --force
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
 
