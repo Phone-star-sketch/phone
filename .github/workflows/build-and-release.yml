@@ -92,7 +92,16 @@ jobs:
                build/app/outputs/flutter-apk/phone-system-app-v${VERSION}.apk
           fi
 
-      # 9. Create GitHub Release (only for full releases)
+      # 9. Upload APK as Artifact (for easy download)
+      - name: Upload APK Artifact
+        if: steps.build_type.outputs.type == 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-system-app-apk
+          path: build/app/outputs/flutter-apk/phone-system-app-v*.apk
+          if-no-files-found: warn
+
+      # 10. Create GitHub Release (only for full releases)
       - name: Create Release
         if: steps.build_type.outputs.type == 'release'
         uses: softprops/action-gh-release@v1
@@ -104,9 +113,10 @@ jobs:
             ## 🎉 إصدار جديد من التطبيق
             
             ### التحسينات:
-            - إضافة ميزة التحديث التلقائي عبر Shorebird
-            - تحسينات في الأداء
-            - إصلاح بعض المشاكل
+            - ✅ إضافة زر التحديث في الصفحة الرئيسية
+            - ✅ تنبيه تلقائي عند وجود تحديثات
+            - ✅ دعم Shorebird للتحديثات التدريجية (1-5 MB)
+            - ✅ تحسينات في الأداء
             
             ### كيفية التثبيت:
             1. قم بتنزيل ملف APK
@@ -122,7 +132,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 10. Success notification
+      # 11. Success notification
       - name: Build Success
         run: |
           if [[ "${{ steps.build_type.outputs.type }}" == "patch" ]]; then
