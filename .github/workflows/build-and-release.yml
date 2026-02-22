@@ -1,16 +1,13 @@
-name: Build and Release with Shorebird
+name: Build with Shorebird
 
 on:
   push:
     tags:
-      - 'v*'       # إصدار كامل: v1.0.0, v1.0.1
-      - 'patch-*'  # تحديث صغير: patch-001, patch-002
-    branches:
-      - 'ramy/newdesign' # البرانش الرئيسي بتاعك
+      - 'v*'  # أي tag يبدأ بـ v مثل: v1.0.0, v1.0.1, v2.0.0
 
 jobs:
   build:
-    name: Build with Shorebird
+    name: Build APK with Shorebird
     runs-on: ubuntu-latest
 
     steps:
@@ -29,38 +26,21 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'  # Minimum supported by Shorebird
+          flutter-version: '3.24.0'
           channel: 'stable'
 
-      # 4. Determine build type (release or patch)
-      - name: Determine Build Type
-        id: build_type
-        run: |
-          if [[ $GITHUB_REF == refs/tags/patch-* ]]; then
-            echo "type=patch" >> $GITHUB_OUTPUT
-            echo "🔧 Patch Update Detected"
-          elif [[ $GITHUB_REF == refs/tags/v* ]]; then
-            echo "type=release" >> $GITHUB_OUTPUT
-            echo "🚀 Full Release Detected"
-          else
-            echo "type=branch" >> $GITHUB_OUTPUT
-            echo "🌿 Branch Build"
-          fi
-
-      # 5. Install Shorebird (for both release and patch)
+      # 4. Install Shorebird
       - name: Install Shorebird
-        if: steps.build_type.outputs.type != 'branch'
         run: |
           curl -fsSL https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
           echo "$HOME/.shorebird/bin" >> $GITHUB_PATH
 
-      # 6. Get dependencies
+      # 5. Get dependencies
       - name: Get Flutter dependencies
         run: flutter pub get
 
-      # 7A. Shorebird Release (Full APK)
-      - name: Shorebird Release
-        if: steps.build_type.outputs.type == 'release'
+      # 6. Shorebird Release (يبني APK + يسجله على Shorebird)
+      - name: Build with Shorebird
         run: |
           export PATH="$HOME/.shorebird/bin:$PATH"
           shorebird login --ci-token ${{ secrets.SHOREBIRD_TOKEN }}
@@ -68,19 +48,8 @@ jobs:
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
 
-      # 7B. Shorebird Patch (Incremental Update)
-      - name: Shorebird Patch
-        if: steps.build_type.outputs.type == 'patch'
-        run: |
-          export PATH="$HOME/.shorebird/bin:$PATH"
-          shorebird login --ci-token ${{ secrets.SHOREBIRD_TOKEN }}
-          shorebird patch android --force
-        env:
-          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-
-      # 8. Rename APK (only for full releases)
+      # 7. Rename APK
       - name: Rename APK
-        if: steps.build_type.outputs.type == 'release'
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           if [ -f build/app/outputs/bundle/release/app-release.aab ]; then
@@ -92,55 +61,43 @@ jobs:
                build/app/outputs/flutter-apk/phone-system-app-v${VERSION}.apk
           fi
 
-      # 9. Upload APK as Artifact (for easy download)
+      # 8. Upload APK as Artifact
       - name: Upload APK Artifact
-        if: steps.build_type.outputs.type == 'release'
         uses: actions/upload-artifact@v4
         with:
           name: phone-system-app-apk
           path: build/app/outputs/flutter-apk/phone-system-app-v*.apk
           if-no-files-found: warn
 
-      # 10. Create GitHub Release (only for full releases)
+      # 9. Create GitHub Release
       - name: Create Release
-        if: steps.build_type.outputs.type == 'release'
         uses: softprops/action-gh-release@v1
         with:
           files: |
             build/app/outputs/flutter-apk/phone-system-app-v*.apk
             build/app/outputs/bundle/release/phone-system-app-v*.aab
           body: |
-            ## 🎉 إصدار جديد من التطبيق
+            ## 🎉 إصدار جديد - ${{ github.ref_name }}
             
-            ### التحسينات:
-            - ✅ إضافة زر التحديث في الصفحة الرئيسية
-            - ✅ تنبيه تلقائي عند وجود تحديثات
-            - ✅ دعم Shorebird للتحديثات التدريجية (1-5 MB)
-            - ✅ تحسينات في الأداء
+            ### التحديثات:
+            - ✅ تحديثات في الكود والـ UI
+            - ✅ إصلاحات وتحسينات
             
-            ### كيفية التثبيت:
-            1. قم بتنزيل ملف APK
-            2. افتح الملف على هاتفك
-            3. اضغط على "تثبيت"
+            ### التثبيت:
+            1. نزّل ملف APK
+            2. افتحه على هاتفك
+            3. اضغط "تثبيت"
             
             ---
-            **ملاحظة:** 
-            - التطبيق سيستقبل التحديثات الصغيرة تلقائياً (1-5 MB)
-            - التحديثات الكبيرة تحتاج تنزيل APK جديد
+            **ملاحظة:** بعد التثبيت، التحديثات القادمة هتكون تلقائية عن طريق Shorebird
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 11. Success notification
+      # 10. Success
       - name: Build Success
         run: |
-          if [[ "${{ steps.build_type.outputs.type }}" == "patch" ]]; then
-            echo "✅ تم إنشاء Patch بنجاح!"
-            echo "📦 حجم التحديث: ~1-5 MB"
-            echo "🚀 المستخدمين سيستقبلون التحديث تلقائياً"
-          elif [[ "${{ steps.build_type.outputs.type }}" == "release" ]]; then
-            echo "✅ تم بناء التطبيق بنجاح!"
-            echo "📦 الإصدار: ${GITHUB_REF#refs/tags/}"
-            echo "🚀 APK متاح على GitHub Releases"
-          fi
+          echo "✅ تم بناء APK بنجاح!"
+          echo "📦 الإصدار: ${GITHUB_REF#refs/tags/}"
+          echo "🚀 APK متاح في Artifacts و Releases"
