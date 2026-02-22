@@ -37,7 +37,20 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
 
-      # 6. Shorebird Release (يبني APK + يسجله على Shorebird)
+      # 6. Initialize Shorebird (creates app if doesn't exist)
+      - name: Initialize Shorebird
+        run: |
+          # Check if app_id exists in shorebird.yaml
+          if ! grep -q "^app_id:" shorebird.yaml || grep -q "^app_id: *$" shorebird.yaml; then
+            echo "No app_id found, running shorebird init..."
+            echo "phone_system_app" | shorebird init --force
+          else
+            echo "app_id already exists, skipping init"
+          fi
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+
+      # 7. Shorebird Release (يبني APK + يسجله على Shorebird)
       - name: Build with Shorebird
         run: shorebird release android --artifact apk --no-confirm
         env:
