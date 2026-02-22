@@ -2,7 +2,5 @@
 # This file is used to configure your Shorebird app
 # Learn more at https://docs.shorebird.dev
 
-# Your app's unique identifier
-# This will be generated when you run: shorebird init
-# Temporary ID - will be replaced by first release
-app_id: phone-system-app 
+# Your app's unique identifier will be generated on first release
+# Leave empty for first release, Shorebird will create the app automatically 
