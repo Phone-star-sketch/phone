@@ -602,7 +602,10 @@ class _SettingsTab extends StatelessWidget {
                 client.expireDate = data;
                 await BackendServices.instance.clientRepository.update(client);
                 AccountClientInfo.to.updateCurrnetClinets();
-                Get.back();
+                if (Get.isRegistered<ClientBottomSheetController>()) {
+                  Get.find<ClientBottomSheetController>().updateClient();
+                }
+                Navigator.of(context).pop();
               }
             },
           ),
@@ -618,14 +621,14 @@ class _SettingsTab extends StatelessWidget {
             icon: Icons.delete_rounded,
             label: 'حذف العميل',
             color: const Color(0xFFef4444),
-            onTap: () => _showDeleteDialog(client),
+            onTap: () => _showDeleteDialog(context, client),
           ),
         ],
       ],
     );
   }
 
-  void _showDeleteDialog(Client client) {
+  void _showDeleteDialog(BuildContext sheetContext, Client client) {
     Get.dialog(
       AlertDialog(
         backgroundColor: Colors.white,
@@ -643,11 +646,11 @@ class _SettingsTab extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               try {
-                Get.back();
+                Get.back(); // Close confirm dialog
 
                 Get.dialog(
-                  WillPopScope(
-                    onWillPop: () async => false,
+                  PopScope(
+                    canPop: false,
                     child: const Center(
                       child: Card(
                         child: Padding(
@@ -675,8 +678,18 @@ class _SettingsTab extends StatelessWidget {
                 controller.clinets.removeWhere((c) => c.id == client.id);
                 controller.clinets.refresh();
 
-                Get.back();
-                Get.back();
+                // Close loading dialog
+                if (Get.isDialogOpen ?? false) {
+                  Get.back();
+                }
+
+                // Wait for dialog to close
+                await Future.delayed(const Duration(milliseconds: 200));
+
+                // Close bottom sheet using Navigator directly
+                if (sheetContext.mounted) {
+                  Navigator.of(sheetContext).pop();
+                }
 
                 Get.showSnackbar(const GetSnackBar(
                   message: 'تم حذف العميل بنجاح',
@@ -862,13 +875,25 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
 
                             loaders.moneyIsLoading.value = false;
 
-                            Navigator.of(dialogContext).pop();
+                            // IMPORTANT: Close dialog + bottom sheet using
+                            // Navigator.popUntil to reliably remove both
+                            // overlay entries in one shot, then navigate.
+                            // This avoids stale context issues after many operations.
 
+                            // Get the root navigator to pop everything cleanly
+                            final rootNav =
+                                Navigator.of(context, rootNavigator: true);
+
+                            // Pop dialog (top-most route)
+                            if (rootNav.canPop()) rootNav.pop();
+                            // Pop bottom sheet
+                            if (rootNav.canPop()) rootNav.pop();
+
+                            // Small delay for animations to settle
                             await Future.delayed(
-                                const Duration(milliseconds: 100));
+                                const Duration(milliseconds: 250));
 
-                            // Navigate to success page (no await - fire and forget)
-                            // The success page will handle its own auto-close
+                            // Navigate to success page
                             Get.to(
                               () => SuccessfulPaymentPage(
                                 amount: '$amountText جنيه',
@@ -878,6 +903,7 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                                     isAdding ? 'إيداع نقدي' : 'تسديد نقدي',
                                 client: client,
                               ),
+                              preventDuplicates: false,
                             );
                           } catch (e) {
                             loaders.moneyIsLoading.value = false;
@@ -1265,7 +1291,9 @@ void showSystemAddDialog(Client client) async {
 
                             loaders.systemIsLoading.value = false;
 
-                            Get.back();
+                            if (Get.isDialogOpen ?? false) {
+                              Get.back();
+                            }
 
                             await Future.delayed(
                                 const Duration(milliseconds: 100));

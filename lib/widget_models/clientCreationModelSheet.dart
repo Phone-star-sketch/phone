@@ -214,10 +214,10 @@ Future clientEditModelSheet(
       maxHeight: screenSize.height * 0.85,
       maxWidth: 600,
     ),
-    builder: (context) {
+    builder: (sheetContext) {
       return Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
           left: 16,
           right: 16,
           top: 8,
@@ -399,7 +399,7 @@ Future clientEditModelSheet(
                   ),
                   const SizedBox(height: 16),
                   InkWell(
-                    onTap: () => _selectDate(context),
+                    onTap: () => _selectDate(sheetContext),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 16),
@@ -458,8 +458,8 @@ Future clientEditModelSheet(
                                           false;
 
                                       if (success) {
-                                        // Close bottom sheet
-                                        Get.back();
+                                        // Close bottom sheet using Navigator directly
+                                        Navigator.of(sheetContext).pop();
 
                                         // Show success message
                                         Fluttertoast.showToast(

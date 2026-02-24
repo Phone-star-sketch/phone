@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/client.dart';
 import 'dart:math' as math;
+import 'dart:async';
 
 class SuccessfulPaymentPage extends StatefulWidget {
   final String? amount;
@@ -33,7 +35,7 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
 
-  bool _isNavigating = false;
+  bool _hasClosed = false;
 
   @override
   void initState() {
@@ -80,36 +82,72 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
     );
 
     _startAnimations();
+    _scheduleAutoClose();
+  }
 
-    // Auto close after 1 second
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted) {
-        _navigateBack();
-      }
+  void _startAnimations() {
+    // Start all animations immediately without async gaps
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (!mounted) return;
+      _scaleController.forward();
+      _confettiController.forward();
+    });
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      _checkmarkController.forward();
+    });
+
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      _fadeController.forward();
     });
   }
 
-  void _startAnimations() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _scaleController.forward();
-    _confettiController.forward();
+  /// Schedule auto-close with multiple fallback mechanisms
+  void _scheduleAutoClose() {
+    // Primary: close after 1200ms
+    Future.delayed(const Duration(milliseconds: 900), _closePage);
+    // Fallback: if still open at 2500ms, force close regardless
+    Future.delayed(const Duration(milliseconds: 2500), _closePageHard);
+  }
 
-    await Future.delayed(const Duration(milliseconds: 300));
-    _checkmarkController.forward();
+  /// Close this page
+  void _closePage() {
+    if (_hasClosed || !mounted) return;
+    _hasClosed = true;
 
-    await Future.delayed(const Duration(milliseconds: 200));
-    _fadeController.forward();
+    // Schedule the pop in the next frame to avoid issues during build
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _doClose();
+    });
+  }
+
+  /// Hard close - resets flag and tries again
+  void _closePageHard() {
+    if (!mounted) return;
+    // Reset flag in case first attempt set it but failed to actually close
+    _hasClosed = true;
+    _doClose();
+  }
+
+  void _doClose() {
+    // Simply use Get.back() since the page was opened with Get.to()
+    // No route checking needed - just pop.
+    try {
+      Get.back();
+    } catch (_) {
+      // Fallback: Navigator.pop
+      try {
+        if (mounted) Navigator.of(context).pop();
+      } catch (_) {}
+    }
   }
 
   void _navigateBack() {
-    if (!mounted || _isNavigating) return;
-    _isNavigating = true;
-
-    // Close success page, then close the bottom sheet after a short delay
-    Get.back(); // Close success page
-    Future.delayed(const Duration(milliseconds: 100), () {
-      Get.back(); // Close bottom sheet
-    });
+    if (_hasClosed) return;
+    _closePage();
   }
 
   @override
@@ -139,14 +177,10 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
         ),
         child: Stack(
           children: [
-            // Animated background particles
             ...List.generate(20, (index) => _buildFloatingParticle(index)),
-
-            // Main content
             SafeArea(
               child: Column(
                 children: [
-                  // Close button at top
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
@@ -178,8 +212,6 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                       ],
                     ),
                   ),
-
-                  // Main content
                   Expanded(
                     child: Center(
                       child: SingleChildScrollView(
@@ -187,11 +219,9 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Success Icon with Confetti
                             Stack(
                               alignment: Alignment.center,
                               children: [
-                                // Confetti effect
                                 AnimatedBuilder(
                                   animation: _confettiController,
                                   builder: (context, child) {
@@ -202,8 +232,6 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                                     );
                                   },
                                 ),
-
-                                // Success circle
                                 ScaleTransition(
                                   scale: _scaleAnimation,
                                   child: Container(
@@ -245,10 +273,7 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                                 ),
                               ],
                             ),
-
                             const SizedBox(height: 40),
-
-                            // Success Title with shimmer
                             FadeTransition(
                               opacity: _fadeAnimation,
                               child: AnimatedBuilder(
@@ -284,10 +309,7 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                                 },
                               ),
                             ),
-
                             const SizedBox(height: 16),
-
-                            // Success Subtitle
                             FadeTransition(
                               opacity: _fadeAnimation,
                               child: Text(
@@ -300,10 +322,7 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                                 textAlign: TextAlign.center,
                               ),
                             ),
-
                             const SizedBox(height: 50),
-
-                            // Payment Details Card with glassmorphism
                             FadeTransition(
                               opacity: _fadeAnimation,
                               child: Container(
@@ -361,10 +380,7 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
                                 ),
                               ),
                             ),
-
                             const SizedBox(height: 40),
-
-                            // Return button
                             FadeTransition(
                               opacity: _fadeAnimation,
                               child: GestureDetector(
@@ -476,11 +492,7 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
             color: Colors.white.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 20,
-          ),
+          child: Icon(icon, color: Colors.white, size: 20),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -528,7 +540,6 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   String _toArabicNumbers(String englishNumber) {
     const english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-
     String result = englishNumber;
     for (int i = 0; i < english.length; i++) {
       result = result.replaceAll(english[i], arabic[i]);
@@ -561,15 +572,12 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
     final year = _toArabicNumbers(now.year.toString());
     final hour = _toArabicNumbers(now.hour.toString());
     final minute = _toArabicNumbers(now.minute.toString().padLeft(2, '0'));
-
     return '$day $month $year في $hour:$minute';
   }
 }
 
-// Custom painter for confetti effect
 class ConfettiPainter extends CustomPainter {
   final double progress;
-
   ConfettiPainter(this.progress);
 
   @override
