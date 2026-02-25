@@ -105,9 +105,10 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   }
 
   void _scheduleAutoClose() {
-    // Use Timer instead of Future.delayed so we can cancel on dispose
-    _autoCloseTimer = Timer(const Duration(milliseconds: 1200), _closePage);
-    _fallbackTimer = Timer(const Duration(milliseconds: 2000), _closePage);
+    // Primary timer: close after animations complete and user has a moment to see
+    _autoCloseTimer = Timer(const Duration(milliseconds: 2500), _closePage);
+    // Fallback timer: ensure page closes even if something delays
+    _fallbackTimer = Timer(const Duration(milliseconds: 4000), _closePage);
   }
 
   void _closePage() {
@@ -115,17 +116,17 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
     _hasClosed = true;
     _cancelTimers();
 
-    // MUST use Get.back() since the page was opened with Get.to().
-    // Using Navigator.pop() would desync GetX's internal route stack,
-    // causing accumulation bugs on repeated payment operations.
-    if (mounted) {
+    if (!mounted) return;
+
+    // Use Get.back() since the page was opened with Get.to().
+    // This keeps GetX's internal route stack in sync.
+    try {
+      Get.back();
+    } catch (_) {
+      // Fallback: if GetX fails, try Flutter's navigator directly
       try {
-        Get.back();
-      } catch (_) {
-        try {
-          Navigator.of(context).pop();
-        } catch (_) {}
-      }
+        if (mounted) Navigator.of(context).pop();
+      } catch (_) {}
     }
   }
 

@@ -779,6 +779,11 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
   final controller = TextEditingController();
   final loaders = Loaders.to;
 
+  // Capture the Navigator that owns the bottom sheet so we can close it
+  // properly. showModalBottomSheet uses Flutter's native Navigator, NOT GetX,
+  // so Get.back() cannot close it and will desync the route stack.
+  final NavigatorState? sheetNavigator = Navigator.maybeOf(context);
+
   await Get.dialog(
     AlertDialog(
       backgroundColor: Colors.white,
@@ -871,11 +876,17 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
 
                             loaders.moneyIsLoading.value = false;
 
-                            // Close ALL overlays cleanly:
                             // 1. Close the dialog (opened with Get.dialog)
                             Get.back();
-                            // 2. Close the bottom sheet
-                            Get.back();
+
+                            // 2. Close the bottom sheet using Flutter's Navigator
+                            //    because showModalBottomSheet is NOT tracked by GetX.
+                            //    Using Get.back() here would desync the route stack
+                            //    and cause failures on repeated operations.
+                            if (sheetNavigator != null &&
+                                sheetNavigator.canPop()) {
+                              sheetNavigator.pop();
+                            }
 
                             // Wait for close animations to finish
                             await Future.delayed(
