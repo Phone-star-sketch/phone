@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/client.dart';
 import 'dart:math' as math;
@@ -36,6 +35,8 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   late Animation<double> _scaleAnimation;
 
   bool _hasClosed = false;
+  Timer? _autoCloseTimer;
+  Timer? _fallbackTimer;
 
   @override
   void initState() {
@@ -86,7 +87,6 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   }
 
   void _startAnimations() {
-    // Start all animations immediately without async gaps
     Future.delayed(const Duration(milliseconds: 200), () {
       if (!mounted) return;
       _scaleController.forward();
@@ -104,54 +104,47 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
     });
   }
 
-  /// Schedule auto-close with multiple fallback mechanisms
   void _scheduleAutoClose() {
-    // Primary: close after 1200ms
-    Future.delayed(const Duration(milliseconds: 900), _closePage);
-    // Fallback: if still open at 2500ms, force close regardless
-    Future.delayed(const Duration(milliseconds: 2500), _closePageHard);
+    // Use Timer instead of Future.delayed so we can cancel on dispose
+    _autoCloseTimer = Timer(const Duration(milliseconds: 1200), _closePage);
+    _fallbackTimer = Timer(const Duration(milliseconds: 3500), _closePage);
   }
 
-  /// Close this page
   void _closePage() {
-    if (_hasClosed || !mounted) return;
+    if (_hasClosed) return;
     _hasClosed = true;
+    _cancelTimers();
 
-    // Schedule the pop in the next frame to avoid issues during build
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _doClose();
-    });
-  }
-
-  /// Hard close - resets flag and tries again
-  void _closePageHard() {
-    if (!mounted) return;
-    // Reset flag in case first attempt set it but failed to actually close
-    _hasClosed = true;
-    _doClose();
-  }
-
-  void _doClose() {
-    // Simply use Get.back() since the page was opened with Get.to()
-    // No route checking needed - just pop.
-    try {
-      Get.back();
-    } catch (_) {
-      // Fallback: Navigator.pop
+    // Use Navigator.of(context).pop() directly - this is the most reliable
+    // way to close a page. GetX's Get.back() can fail silently when the
+    // internal route stack is out of sync (e.g. after mixing Navigator.pop
+    // with GetX navigation). Navigator.pop always works on the real stack.
+    if (mounted) {
       try {
-        if (mounted) Navigator.of(context).pop();
-      } catch (_) {}
+        Navigator.of(context).pop();
+      } catch (_) {
+        // Last resort fallback
+        try {
+          Get.back();
+        } catch (_) {}
+      }
     }
   }
 
+  void _cancelTimers() {
+    _autoCloseTimer?.cancel();
+    _autoCloseTimer = null;
+    _fallbackTimer?.cancel();
+    _fallbackTimer = null;
+  }
+
   void _navigateBack() {
-    if (_hasClosed) return;
     _closePage();
   }
 
   @override
   void dispose() {
+    _cancelTimers();
     _checkmarkController.dispose();
     _fadeController.dispose();
     _scaleController.dispose();

@@ -605,7 +605,7 @@ class _SettingsTab extends StatelessWidget {
                 if (Get.isRegistered<ClientBottomSheetController>()) {
                   Get.find<ClientBottomSheetController>().updateClient();
                 }
-                Navigator.of(context).pop();
+                Get.back();
               }
             },
           ),
@@ -686,10 +686,8 @@ class _SettingsTab extends StatelessWidget {
                 // Wait for dialog to close
                 await Future.delayed(const Duration(milliseconds: 200));
 
-                // Close bottom sheet using Navigator directly
-                if (sheetContext.mounted) {
-                  Navigator.of(sheetContext).pop();
-                }
+                // Close bottom sheet
+                Get.back();
 
                 Get.showSnackbar(const GetSnackBar(
                   message: 'تم حذف العميل بنجاح',
@@ -875,23 +873,17 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
 
                             loaders.moneyIsLoading.value = false;
 
-                            // IMPORTANT: Close dialog + bottom sheet using
-                            // Navigator.popUntil to reliably remove both
-                            // overlay entries in one shot, then navigate.
-                            // This avoids stale context issues after many operations.
+                            // Close dialog + bottom sheet.
+                            // Even though they were opened with showDialog/
+                            // showModalBottomSheet, GetMaterialApp wraps the
+                            // navigator so Get.back() works and keeps GetX's
+                            // internal route tracking in sync.
+                            Get.back(); // close dialog
+                            Get.back(); // close bottom sheet
 
-                            // Get the root navigator to pop everything cleanly
-                            final rootNav =
-                                Navigator.of(context, rootNavigator: true);
-
-                            // Pop dialog (top-most route)
-                            if (rootNav.canPop()) rootNav.pop();
-                            // Pop bottom sheet
-                            if (rootNav.canPop()) rootNav.pop();
-
-                            // Small delay for animations to settle
+                            // Wait for pop animations to complete
                             await Future.delayed(
-                                const Duration(milliseconds: 250));
+                                const Duration(milliseconds: 300));
 
                             // Navigate to success page
                             Get.to(
