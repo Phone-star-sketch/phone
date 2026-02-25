@@ -80,7 +80,7 @@ class _SuccessDialogState extends State<_SuccessDialog>
     _ctrl.forward();
 
     // Auto-close: wait for animation + a brief reading moment
-    Future.delayed(const Duration(milliseconds: 2200), _close);
+    Future.delayed(const Duration(milliseconds: 1200), _close);
   }
 
   void _close() {
@@ -101,17 +101,28 @@ class _SuccessDialogState extends State<_SuccessDialog>
   String _formatDate() {
     final now = DateTime.now();
     final months = [
-      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
     ];
     String toAr(int n) {
-      const e = ['0','1','2','3','4','5','6','7','8','9'];
-      const a = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+      const e = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+      const a = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
       return n.toString().split('').map((c) {
         final i = e.indexOf(c);
         return i >= 0 ? a[i] : c;
       }).join();
     }
+
     return '${toAr(now.day)} ${months[now.month - 1]} ${toAr(now.year)}'
         '  ${toAr(now.hour)}:${toAr(now.minute)}';
   }
@@ -274,8 +285,8 @@ class _SuccessDialogState extends State<_SuccessDialog>
                                       _row(Icons.credit_card_rounded,
                                           'طريقة الدفع', widget.paymentMethod),
                                       _divider(),
-                                      _row(Icons.access_time_rounded,
-                                          'التاريخ', _formatDate()),
+                                      _row(Icons.access_time_rounded, 'التاريخ',
+                                          _formatDate()),
                                     ],
                                   ),
                                 ),
@@ -342,8 +353,7 @@ class _SuccessDialogState extends State<_SuccessDialog>
 
   // ── Sub-widgets ───────────────────────────────
 
-  Widget _row(IconData icon, String label, String value,
-      {bool big = false}) {
+  Widget _row(IconData icon, String label, String value, {bool big = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
@@ -363,15 +373,13 @@ class _SuccessDialogState extends State<_SuccessDialog>
               children: [
                 Text(label,
                     style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withOpacity(0.65))),
+                        fontSize: 12, color: Colors.white.withOpacity(0.65))),
                 const SizedBox(height: 3),
                 Text(
                   value,
                   style: TextStyle(
                     fontSize: big ? 19 : 14,
-                    fontWeight:
-                        big ? FontWeight.bold : FontWeight.w600,
+                    fontWeight: big ? FontWeight.bold : FontWeight.w600,
                     color: Colors.white,
                   ),
                 ),
