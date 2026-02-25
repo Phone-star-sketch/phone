@@ -1,15 +1,13 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/system.dart';
 import 'package:phone_system_app/models/system_type.dart';
-import 'package:phone_system_app/services/backend/backend_service_type.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 
 class ClientBottomSheetController extends GetxController {
-  //--------------------------------------
-
-  //--------------------------------------
   late final Rx<Client> _client;
   final List<Log> _logs = <Log>[].obs;
   final List<System> _systems = <System>[].obs;
@@ -23,8 +21,16 @@ class ClientBottomSheetController extends GetxController {
   final dateSelected = DateTime.now().obs;
   final RxMap<Object, bool> systemLoadingStatus = <Object, bool>{}.obs;
 
+  // Store stream subscriptions for proper cleanup
+  StreamSubscription? _logsSubscription;
+  StreamSubscription? _systemsSubscription;
+  StreamSubscription? _clientSubscription;
+
   Future<void> setClient(Client client) async {
     try {
+      // Cancel any previous subscriptions before setting up new ones
+      await _cancelSubscriptions();
+
       _client = client.obs;
       _client.value = client;
 
@@ -36,8 +42,8 @@ class ClientBottomSheetController extends GetxController {
       _types =
           await BackendServices.instance.systemTypeRepository.getAllTypes(true);
 
-      // Set up streams
-      BackendServices.instance.clientRepository
+      // Set up streams and store subscriptions for cleanup
+      _logsSubscription = BackendServices.instance.clientRepository
           .bindStreamToClientLogsChanges(client, (data) {
         final mapped =
             data.map((logJsonObject) => Log.fromJson(logJsonObject)).toList();
@@ -45,10 +51,10 @@ class ClientBottomSheetController extends GetxController {
         _logs.clear();
         _logs.addAll(mapped);
         _logsLength = _logs.length;
-        update(); // Trigger UI update
+        update();
       });
 
-      BackendServices.instance.clientRepository
+      _systemsSubscription = BackendServices.instance.clientRepository
           .bindStreamToClientSystemsChanges(
         client,
         (payload) {
@@ -65,30 +71,40 @@ class ClientBottomSheetController extends GetxController {
             _systems.addAll(systems);
           }
           _systemsLength = _systems.length;
-          update(); // Trigger UI update
+          update();
         },
       );
 
-      BackendServices.instance.clientRepository.bindStreamToClientChanges(
+      _clientSubscription =
+          BackendServices.instance.clientRepository.bindStreamToClientChanges(
         client,
         (payload) {
           try {
             final data = payload[0];
             _client.value.totalCash = data[Client.totalCashColumns];
-            update(); // Trigger UI update
-          } catch (e) {}
+            update();
+          } catch (_) {}
         },
       );
     } catch (e) {
-      print('Error in setClient: $e');
-      _systems.clear(); // Initialize with empty list on error
+      debugPrint('Error in setClient: $e');
+      _systems.clear();
       update();
     }
   }
 
+  Future<void> _cancelSubscriptions() async {
+    await _logsSubscription?.cancel();
+    _logsSubscription = null;
+    await _systemsSubscription?.cancel();
+    _systemsSubscription = null;
+    await _clientSubscription?.cancel();
+    _clientSubscription = null;
+  }
+
   @override
   void onClose() {
-    // Clean up streams and data
+    _cancelSubscriptions();
     _logs.clear();
     _systems.clear();
     super.onClose();

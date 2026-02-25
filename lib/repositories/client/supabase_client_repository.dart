@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
@@ -105,9 +106,8 @@ class SupabaseClientRepository extends ClientRepository
       if (amount > 0) {
         logMessage = "تم التسديد: ${amount.abs().toStringAsFixed(0)} جنيه";
       } else {
-                logMessage =
+        logMessage =
             "تم إضافة المديونية: ${amount.abs().toStringAsFixed(0)} جنيه";
-
       }
 
       final log = Log(
@@ -181,9 +181,9 @@ class SupabaseClientRepository extends ClientRepository
   }
 
   @override
-  void bindStreamToClientChanges(
+  StreamSubscription bindStreamToClientChanges(
       Client clinet, Function(List<Map<String, dynamic>> payload) callback) {
-    _clinet
+    return _clinet
         .from(clientTableName)
         .stream(primaryKey: ['id'])
         .eq('id', clinet.id)
@@ -191,9 +191,9 @@ class SupabaseClientRepository extends ClientRepository
   }
 
   @override
-  void bindStreamToClientLogsChanges(
+  StreamSubscription bindStreamToClientLogsChanges(
       Client clinet, Function(List<Map<String, dynamic>> data) callback) {
-    _clinet
+    return _clinet
         .from("log")
         .stream(primaryKey: ['id'])
         .eq('client_id', clinet.id)
@@ -206,10 +206,10 @@ class SupabaseClientRepository extends ClientRepository
   }
 
   @override
-  void bindStreamToClientSystemsChanges(
+  StreamSubscription bindStreamToClientSystemsChanges(
       Client clinet, Function(List<Map<String, dynamic>> data) callback) {
     final phoneId = clinet.numbers![0].id;
-    _clinet
+    return _clinet
         .from("system")
         .stream(primaryKey: ['id'])
         .eq('phone_id', phoneId)

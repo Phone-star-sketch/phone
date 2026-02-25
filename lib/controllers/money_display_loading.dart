@@ -4,7 +4,8 @@ import 'package:phone_system_app/models/system_type.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 
 class Loaders extends GetxController {
-  static Loaders get to => Get.put(Loaders());
+  static Loaders get to =>
+      Get.isRegistered<Loaders>() ? Get.find<Loaders>() : Get.put(Loaders());
 
   RxBool moneyIsLoading = false.obs;
   RxBool systemIsLoading = false.obs;

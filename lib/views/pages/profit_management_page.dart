@@ -30,7 +30,7 @@ class _ProfitManagementState extends State<ProfitManagement>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   final profitController = Get.put(ProfitController());
-  final loaders = Get.put(Loaders());
+  final loaders = Loaders.to;
   final clientController = Get.find<AccountClientInfo>();
   List<int> years = List<int>.generate(10, (index) => 2024 + index);
 
@@ -186,23 +186,25 @@ class _ProfitManagementState extends State<ProfitManagement>
                                           ),
                                           child: Column(
                                             children: [
-                                                const Text(
+                                              const Text(
                                                 "المبلغ المتوقع جمعه",
                                                 style: TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w600,
                                                   color: Color(0xFF424874),
                                                 ),
-                                                ),
-                                                const SizedBox(height: 8),
-                                                CustomInputField(
+                                              ),
+                                              const SizedBox(height: 8),
+                                              CustomInputField(
                                                 title: "",
-                                                controller: profitController.expectedMoneyController,
+                                                controller: profitController
+                                                    .expectedMoneyController,
                                                 suffix: "ج.م",
                                                 onChanged: (value) {
-                                                  profitController.calculateDiscount();
+                                                  profitController
+                                                      .calculateDiscount();
                                                 },
-                                                ),
+                                              ),
                                             ],
                                           ),
                                         );

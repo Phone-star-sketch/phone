@@ -198,7 +198,7 @@ Future clientEditModelSheet(
     }
   }
 
-  final loaders = Get.put(Loaders());
+  final loaders = Loaders.to;
 
   return showModalBottomSheet(
     backgroundColor: Colors.blue[50],

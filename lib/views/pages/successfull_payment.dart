@@ -107,7 +107,7 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
   void _scheduleAutoClose() {
     // Use Timer instead of Future.delayed so we can cancel on dispose
     _autoCloseTimer = Timer(const Duration(milliseconds: 1200), _closePage);
-    _fallbackTimer = Timer(const Duration(milliseconds: 3500), _closePage);
+    _fallbackTimer = Timer(const Duration(milliseconds: 2000), _closePage);
   }
 
   void _closePage() {
@@ -115,17 +115,15 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
     _hasClosed = true;
     _cancelTimers();
 
-    // Use Navigator.of(context).pop() directly - this is the most reliable
-    // way to close a page. GetX's Get.back() can fail silently when the
-    // internal route stack is out of sync (e.g. after mixing Navigator.pop
-    // with GetX navigation). Navigator.pop always works on the real stack.
+    // MUST use Get.back() since the page was opened with Get.to().
+    // Using Navigator.pop() would desync GetX's internal route stack,
+    // causing accumulation bugs on repeated payment operations.
     if (mounted) {
       try {
-        Navigator.of(context).pop();
+        Get.back();
       } catch (_) {
-        // Last resort fallback
         try {
-          Get.back();
+          Navigator.of(context).pop();
         } catch (_) {}
       }
     }

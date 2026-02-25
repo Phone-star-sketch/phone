@@ -777,12 +777,10 @@ class _SettingButton extends StatelessWidget {
 Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
     [bool both = false]) async {
   final controller = TextEditingController();
-  final loaders = Get.put(Loaders());
+  final loaders = Loaders.to;
 
-  await showDialog(
-    context: context,
-    barrierDismissible: true,
-    builder: (dialogContext) => AlertDialog(
+  await Get.dialog(
+    AlertDialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
@@ -873,15 +871,13 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
 
                             loaders.moneyIsLoading.value = false;
 
-                            // Close dialog + bottom sheet.
-                            // Even though they were opened with showDialog/
-                            // showModalBottomSheet, GetMaterialApp wraps the
-                            // navigator so Get.back() works and keeps GetX's
-                            // internal route tracking in sync.
-                            Get.back(); // close dialog
-                            Get.back(); // close bottom sheet
+                            // Close ALL overlays cleanly:
+                            // 1. Close the dialog (opened with Get.dialog)
+                            Get.back();
+                            // 2. Close the bottom sheet
+                            Get.back();
 
-                            // Wait for pop animations to complete
+                            // Wait for close animations to finish
                             await Future.delayed(
                                 const Duration(milliseconds: 300));
 
@@ -936,6 +932,7 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
         ),
       ),
     ),
+    barrierDismissible: true,
   );
 }
 
@@ -1194,7 +1191,7 @@ bool shouldShowSystem(System system) {
 void showSystemAddDialog(Client client) async {
   SystemType? currentType;
   final controller = Get.find<ClientBottomSheetController>();
-  final loaders = Get.put(Loaders());
+  final loaders = Loaders.to;
 
   await Get.dialog(
     AlertDialog(
