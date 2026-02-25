@@ -1,605 +1,428 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/client.dart';
-import 'dart:math' as math;
-import 'dart:async';
 
-class SuccessfulPaymentPage extends StatefulWidget {
-  final String? amount;
-  final String? transactionId;
-  final String? paymentMethod;
-  final Client? client;
+/// Shows the success payment overlay as a GetX dialog.
+/// Using Get.dialog instead of Get.to() avoids all navigation-stack
+/// conflicts when the user performs multiple consecutive payments.
+void showSuccessfulPayment({
+  required String amount,
+  required String transactionId,
+  required String paymentMethod,
+  Client? client,
+}) {
+  // Guard: don't stack duplicates
+  if (Get.isDialogOpen ?? false) Get.back();
 
-  const SuccessfulPaymentPage({
-    super.key,
-    this.amount,
-    this.transactionId,
-    this.paymentMethod,
-    this.client,
+  Get.dialog(
+    _SuccessDialog(
+      amount: amount,
+      transactionId: transactionId,
+      paymentMethod: paymentMethod,
+    ),
+    barrierDismissible: true,
+    barrierColor: Colors.black54,
+    useSafeArea: false,
+  );
+}
+
+// ─────────────────────────────────────────────
+// Internal dialog widget
+// ─────────────────────────────────────────────
+
+class _SuccessDialog extends StatefulWidget {
+  final String amount;
+  final String transactionId;
+  final String paymentMethod;
+
+  const _SuccessDialog({
+    required this.amount,
+    required this.transactionId,
+    required this.paymentMethod,
   });
 
   @override
-  State<SuccessfulPaymentPage> createState() => _SuccessfulPaymentPageState();
+  State<_SuccessDialog> createState() => _SuccessDialogState();
 }
 
-class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
-    with TickerProviderStateMixin {
-  late AnimationController _checkmarkController;
-  late AnimationController _fadeController;
-  late AnimationController _scaleController;
-  late AnimationController _confettiController;
-  late AnimationController _shimmerController;
-
-  late Animation<double> _checkmarkAnimation;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
-
-  bool _hasClosed = false;
-  Timer? _autoCloseTimer;
-  Timer? _fallbackTimer;
+class _SuccessDialogState extends State<_SuccessDialog>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  late final Animation<double> _fade;
+  late final Animation<double> _checkmark;
 
   @override
   void initState() {
     super.initState();
 
-    _checkmarkController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
+    _ctrl = AnimationController(
+      duration: const Duration(milliseconds: 900),
       vsync: this,
     );
 
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
+    _scale = CurvedAnimation(
+      parent: _ctrl,
+      curve: const Interval(0.0, 0.5, curve: Curves.easeOutBack),
     );
 
-    _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
+    _checkmark = CurvedAnimation(
+      parent: _ctrl,
+      curve: const Interval(0.3, 0.8, curve: Curves.elasticOut),
     );
 
-    _confettiController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
-      vsync: this,
+    _fade = CurvedAnimation(
+      parent: _ctrl,
+      curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
     );
 
-    _shimmerController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    )..repeat();
+    _ctrl.forward();
 
-    _checkmarkAnimation = CurvedAnimation(
-      parent: _checkmarkController,
-      curve: Curves.elasticOut,
-    );
-
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    );
-
-    _scaleAnimation = CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.easeOutBack,
-    );
-
-    _startAnimations();
-    _scheduleAutoClose();
+    // Auto-close: wait for animation + a brief reading moment
+    Future.delayed(const Duration(milliseconds: 2200), _close);
   }
 
-  void _startAnimations() {
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (!mounted) return;
-      _scaleController.forward();
-      _confettiController.forward();
-    });
-
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (!mounted) return;
-      _checkmarkController.forward();
-    });
-
-    Future.delayed(const Duration(milliseconds: 700), () {
-      if (!mounted) return;
-      _fadeController.forward();
-    });
-  }
-
-  void _scheduleAutoClose() {
-    // Primary timer: close after animations complete and user has a moment to see
-    _autoCloseTimer = Timer(const Duration(milliseconds: 1200), _closePage);
-    // Fallback timer: ensure page closes even if something delays
-    _fallbackTimer = Timer(const Duration(milliseconds: 2000), _closePage);
-  }
-
-  void _closePage() {
-    if (_hasClosed) return;
-    _hasClosed = true;
-    _cancelTimers();
-
+  void _close() {
     if (!mounted) return;
-
-    // Use Get.back() since the page was opened with Get.to().
-    // This keeps GetX's internal route stack in sync.
-    try {
+    if (Get.isDialogOpen ?? false) {
       Get.back();
-    } catch (_) {
-      // Fallback: if GetX fails, try Flutter's navigator directly
-      try {
-        if (mounted) Navigator.of(context).pop();
-      } catch (_) {}
     }
-  }
-
-  void _cancelTimers() {
-    _autoCloseTimer?.cancel();
-    _autoCloseTimer = null;
-    _fallbackTimer?.cancel();
-    _fallbackTimer = null;
-  }
-
-  void _navigateBack() {
-    _closePage();
   }
 
   @override
   void dispose() {
-    _cancelTimers();
-    _checkmarkController.dispose();
-    _fadeController.dispose();
-    _scaleController.dispose();
-    _confettiController.dispose();
-    _shimmerController.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
+
+  // ── Helpers ──────────────────────────────────
+
+  String _formatDate() {
+    final now = DateTime.now();
+    final months = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+    ];
+    String toAr(int n) {
+      const e = ['0','1','2','3','4','5','6','7','8','9'];
+      const a = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+      return n.toString().split('').map((c) {
+        final i = e.indexOf(c);
+        return i >= 0 ? a[i] : c;
+      }).join();
+    }
+    return '${toAr(now.day)} ${months[now.month - 1]} ${toAr(now.year)}'
+        '  ${toAr(now.hour)}:${toAr(now.minute)}';
+  }
+
+  // ── Build ─────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-              Color(0xFFf093fb),
-            ],
+      backgroundColor: Colors.transparent,
+      body: GestureDetector(
+        onTap: _close,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF667eea), Color(0xFF764ba2), Color(0xFFf093fb)],
+            ),
           ),
-        ),
-        child: Stack(
-          children: [
-            ...List.generate(20, (index) => _buildFloatingParticle(index)),
-            SafeArea(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        FadeTransition(
-                          opacity: _fadeAnimation,
+          child: Stack(
+            children: [
+              // Floating particles (lightweight – random but seeded)
+              ..._particles(),
+
+              // Main content
+              SafeArea(
+                child: Column(
+                  children: [
+                    // Close button
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: FadeTransition(
+                          opacity: _fade,
                           child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: _navigateBack,
+                            onTap: _close,
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
+                                color: Colors.white.withOpacity(0.15),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.3),
-                                  width: 1.5,
-                                ),
+                                    color: Colors.white.withOpacity(0.3)),
                               ),
-                              child: const Icon(
-                                Icons.close_rounded,
-                                color: Colors.white,
-                                size: 24,
-                              ),
+                              child: const Icon(Icons.close_rounded,
+                                  color: Colors.white, size: 22),
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                AnimatedBuilder(
-                                  animation: _confettiController,
-                                  builder: (context, child) {
-                                    return CustomPaint(
-                                      size: const Size(200, 200),
-                                      painter: ConfettiPainter(
-                                          _confettiController.value),
-                                    );
-                                  },
-                                ),
-                                ScaleTransition(
-                                  scale: _scaleAnimation,
-                                  child: Container(
-                                    width: 140,
-                                    height: 140,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient: const LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Color(0xFF11998e),
-                                          Color(0xFF38ef7d),
-                                        ],
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFF38ef7d)
-                                              .withValues(alpha: 0.5),
-                                          blurRadius: 30,
-                                          spreadRadius: 5,
-                                        ),
-                                      ],
-                                    ),
-                                    child: AnimatedBuilder(
-                                      animation: _checkmarkAnimation,
-                                      builder: (context, child) {
-                                        return Transform.scale(
-                                          scale: _checkmarkAnimation.value,
-                                          child: const Icon(
-                                            Icons.check_rounded,
-                                            color: Colors.white,
-                                            size: 70,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 40),
-                            FadeTransition(
-                              opacity: _fadeAnimation,
-                              child: AnimatedBuilder(
-                                animation: _shimmerController,
-                                builder: (context, child) {
-                                  return ShaderMask(
-                                    shaderCallback: (bounds) {
-                                      return LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: const [
-                                          Colors.white,
-                                          Color(0xFFffeaa7),
-                                          Colors.white,
-                                        ],
-                                        stops: [
-                                          _shimmerController.value - 0.3,
-                                          _shimmerController.value,
-                                          _shimmerController.value + 0.3,
-                                        ],
-                                      ).createShader(bounds);
-                                    },
-                                    child: const Text(
-                                      '🎉 تم الدفع بنجاح!',
-                                      style: TextStyle(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            FadeTransition(
-                              opacity: _fadeAnimation,
-                              child: Text(
-                                'تمت معالجة عملية الدفع الخاصة بك بنجاح',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  height: 1.5,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            const SizedBox(height: 50),
-                            FadeTransition(
-                              opacity: _fadeAnimation,
-                              child: Container(
-                                width: double.infinity,
-                                constraints:
-                                    const BoxConstraints(maxWidth: 500),
-                                padding: const EdgeInsets.all(28),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.1),
-                                      blurRadius: 30,
-                                      offset: const Offset(0, 10),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  children: [
-                                    _buildDetailRow(
-                                      icon: Icons.payments_rounded,
-                                      label: 'المبلغ',
-                                      value: widget.amount ?? '٩٩.٩٩ ج.م',
-                                      isHighlighted: true,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildDivider(),
-                                    const SizedBox(height: 20),
-                                    _buildDetailRow(
-                                      icon: Icons.receipt_long_rounded,
-                                      label: 'رقم المعاملة',
-                                      value: widget.transactionId ??
-                                          'TXN123456789',
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildDetailRow(
-                                      icon: Icons.credit_card_rounded,
-                                      label: 'طريقة الدفع',
-                                      value: widget.paymentMethod ??
-                                          'بطاقة ائتمان',
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildDetailRow(
-                                      icon: Icons.access_time_rounded,
-                                      label: 'التاريخ',
-                                      value: _formatDate(),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 40),
-                            FadeTransition(
-                              opacity: _fadeAnimation,
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: _navigateBack,
+
+                    Expanded(
+                      child: Center(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // ── Check circle ──
+                              ScaleTransition(
+                                scale: _scale,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 40,
-                                    vertical: 16,
-                                  ),
+                                  width: 130,
+                                  height: 130,
                                   decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
                                     gradient: const LinearGradient(
                                       colors: [
                                         Color(0xFF11998e),
-                                        Color(0xFF38ef7d),
+                                        Color(0xFF38ef7d)
                                       ],
                                     ),
-                                    borderRadius: BorderRadius.circular(30),
                                     boxShadow: [
                                       BoxShadow(
                                         color: const Color(0xFF38ef7d)
-                                            .withValues(alpha: 0.4),
-                                        blurRadius: 20,
+                                            .withOpacity(0.45),
+                                        blurRadius: 28,
+                                        spreadRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                  child: AnimatedBuilder(
+                                    animation: _checkmark,
+                                    builder: (_, __) => Transform.scale(
+                                      scale: _checkmark.value,
+                                      child: const Icon(Icons.check_rounded,
+                                          color: Colors.white, size: 68),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 32),
+
+                              // ── Title ──
+                              FadeTransition(
+                                opacity: _fade,
+                                child: const Text(
+                                  '🎉 تم الدفع بنجاح!',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              FadeTransition(
+                                opacity: _fade,
+                                child: Text(
+                                  'تمت معالجة عملية الدفع بنجاح',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.white.withOpacity(0.85),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+
+                              const SizedBox(height: 36),
+
+                              // ── Details card ──
+                              FadeTransition(
+                                opacity: _fade,
+                                child: Container(
+                                  width: double.infinity,
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 480),
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.14),
+                                    borderRadius: BorderRadius.circular(22),
+                                    border: Border.all(
+                                        color: Colors.white.withOpacity(0.2),
+                                        width: 1.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.08),
+                                        blurRadius: 24,
                                         offset: const Offset(0, 8),
                                       ),
                                     ],
                                   ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                  child: Column(
                                     children: [
-                                      Icon(
-                                        Icons.arrow_back_rounded,
-                                        color: Colors.white,
-                                        size: 22,
-                                      ),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        'العودة للحسابات',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
+                                      _row(Icons.payments_rounded, 'المبلغ',
+                                          widget.amount,
+                                          big: true),
+                                      _divider(),
+                                      _row(Icons.receipt_long_rounded,
+                                          'رقم المعاملة', widget.transactionId),
+                                      _divider(),
+                                      _row(Icons.credit_card_rounded,
+                                          'طريقة الدفع', widget.paymentMethod),
+                                      _divider(),
+                                      _row(Icons.access_time_rounded,
+                                          'التاريخ', _formatDate()),
                                     ],
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+
+                              const SizedBox(height: 36),
+
+                              // ── Back button ──
+                              FadeTransition(
+                                opacity: _fade,
+                                child: GestureDetector(
+                                  onTap: _close,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 36, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(colors: [
+                                        Color(0xFF11998e),
+                                        Color(0xFF38ef7d)
+                                      ]),
+                                      borderRadius: BorderRadius.circular(30),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF38ef7d)
+                                              .withOpacity(0.4),
+                                          blurRadius: 18,
+                                          offset: const Offset(0, 6),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.arrow_back_rounded,
+                                            color: Colors.white, size: 20),
+                                        SizedBox(width: 10),
+                                        Text(
+                                          'العودة للحسابات',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFloatingParticle(int index) {
-    final random = math.Random(index);
-    final size = random.nextDouble() * 8 + 4;
-    final duration = random.nextInt(3000) + 2000;
-
-    return Positioned(
-      left: random.nextDouble() * 400,
-      top: random.nextDouble() * 800,
-      child: TweenAnimationBuilder(
-        tween: Tween<double>(begin: 0, end: 1),
-        duration: Duration(milliseconds: duration),
-        builder: (context, double value, child) {
-          return Transform.translate(
-            offset: Offset(
-              math.sin(value * math.pi * 2) * 20,
-              value * 100,
-            ),
-            child: Opacity(
-              opacity: (1 - value) * 0.6,
-              child: Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildDetailRow({
-    required IconData icon,
-    required String label,
-    required String value,
-    bool isHighlighted = false,
-  }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: Colors.white, size: 20),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.7),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: isHighlighted ? 20 : 15,
-                  fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w600,
-                  color: Colors.white,
+                  ],
                 ),
               ),
             ],
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildDivider() {
-    return Container(
-      height: 1,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.transparent,
-            Colors.white.withValues(alpha: 0.3),
-            Colors.transparent,
-          ],
-        ),
       ),
     );
   }
 
-  String _toArabicNumbers(String englishNumber) {
-    const english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-    String result = englishNumber;
-    for (int i = 0; i < english.length; i++) {
-      result = result.replaceAll(english[i], arabic[i]);
-    }
-    return result;
+  // ── Sub-widgets ───────────────────────────────
+
+  Widget _row(IconData icon, String label, String value,
+      {bool big = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, color: Colors.white, size: 18),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.65))),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: big ? 19 : 14,
+                    fontWeight:
+                        big ? FontWeight.bold : FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  String _getArabicMonth(int month) {
-    const months = [
-      'يناير',
-      'فبراير',
-      'مارس',
-      'أبريل',
-      'مايو',
-      'يونيو',
-      'يوليو',
-      'أغسطس',
-      'سبتمبر',
-      'أكتوبر',
-      'نوفمبر',
-      'ديسمبر'
-    ];
-    return months[month - 1];
-  }
-
-  String _formatDate() {
-    final now = DateTime.now();
-    final day = _toArabicNumbers(now.day.toString());
-    final month = _getArabicMonth(now.month);
-    final year = _toArabicNumbers(now.year.toString());
-    final hour = _toArabicNumbers(now.hour.toString());
-    final minute = _toArabicNumbers(now.minute.toString().padLeft(2, '0'));
-    return '$day $month $year في $hour:$minute';
-  }
-}
-
-class ConfettiPainter extends CustomPainter {
-  final double progress;
-  ConfettiPainter(this.progress);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final random = math.Random(42);
-    final paint = Paint()..style = PaintingStyle.fill;
-
-    for (int i = 0; i < 30; i++) {
-      final angle = (i / 30) * math.pi * 2;
-      final distance = progress * 100;
-      final x = size.width / 2 + math.cos(angle) * distance;
-      final y = size.height / 2 + math.sin(angle) * distance + (progress * 50);
-
-      paint.color = [
-        const Color(0xFFffeaa7),
-        const Color(0xFFff6b6b),
-        const Color(0xFF4ecdc4),
-        const Color(0xFF45b7d1),
-        const Color(0xFFf093fb),
-      ][random.nextInt(5)]
-          .withValues(alpha: 1 - progress);
-
-      canvas.drawCircle(
-        Offset(x, y),
-        random.nextDouble() * 4 + 2,
-        paint,
+  Widget _divider() => Container(
+        height: 1,
+        margin: const EdgeInsets.symmetric(vertical: 2),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [
+            Colors.transparent,
+            Colors.white.withOpacity(0.25),
+            Colors.transparent,
+          ]),
+        ),
       );
-    }
-  }
 
-  @override
-  bool shouldRepaint(ConfettiPainter oldDelegate) => true;
+  List<Widget> _particles() {
+    return List.generate(16, (i) {
+      final rng = math.Random(i * 7);
+      final size = rng.nextDouble() * 7 + 3.0;
+      return Positioned(
+        left: rng.nextDouble() * 420,
+        top: rng.nextDouble() * 820,
+        child: IgnorePointer(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: Duration(milliseconds: 2200 + rng.nextInt(1800)),
+            builder: (_, v, __) => Transform.translate(
+              offset: Offset(math.sin(v * math.pi * 2) * 18, v * 90),
+              child: Opacity(
+                opacity: (1 - v) * 0.5,
+                child: Container(
+                  width: size,
+                  height: size,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.3),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    });
+  }
 }

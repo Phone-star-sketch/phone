@@ -881,28 +881,19 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
 
                             // 2. Close the bottom sheet using Flutter's Navigator
                             //    because showModalBottomSheet is NOT tracked by GetX.
-                            //    Using Get.back() here would desync the route stack
-                            //    and cause failures on repeated operations.
                             if (sheetNavigator != null &&
                                 sheetNavigator.canPop()) {
                               sheetNavigator.pop();
                             }
 
-                            // Wait for close animations to finish
-                            await Future.delayed(
-                                const Duration(milliseconds: 300));
-
-                            // Navigate to success page
-                            Get.to(
-                              () => SuccessfulPaymentPage(
-                                amount: '$amountText جنيه',
-                                transactionId:
-                                    'TXN${DateTime.now().millisecondsSinceEpoch}',
-                                paymentMethod:
-                                    isAdding ? 'إيداع نقدي' : 'تسديد نقدي',
-                                client: client,
-                              ),
-                              preventDuplicates: false,
+                            // 3. Show success overlay as a dialog (no navigation-stack issues)
+                            showSuccessfulPayment(
+                              amount: '$amountText جنيه',
+                              transactionId:
+                                  'TXN${DateTime.now().millisecondsSinceEpoch}',
+                              paymentMethod:
+                                  isAdding ? 'إيداع نقدي' : 'تسديد نقدي',
+                              client: client,
                             );
                           } catch (e) {
                             loaders.moneyIsLoading.value = false;
