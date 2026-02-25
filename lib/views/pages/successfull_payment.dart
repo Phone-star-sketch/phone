@@ -106,9 +106,9 @@ class _SuccessfulPaymentPageState extends State<SuccessfulPaymentPage>
 
   void _scheduleAutoClose() {
     // Primary timer: close after animations complete and user has a moment to see
-    _autoCloseTimer = Timer(const Duration(milliseconds: 2500), _closePage);
+    _autoCloseTimer = Timer(const Duration(milliseconds: 1200), _closePage);
     // Fallback timer: ensure page closes even if something delays
-    _fallbackTimer = Timer(const Duration(milliseconds: 4000), _closePage);
+    _fallbackTimer = Timer(const Duration(milliseconds: 2000), _closePage);
   }
 
   void _closePage() {
