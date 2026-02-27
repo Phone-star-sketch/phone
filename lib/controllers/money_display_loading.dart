@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/models/system_type.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
@@ -29,9 +30,20 @@ class Loaders extends GetxController {
       Client client, String textValue, bool adding) async {
     moneyIsLoading.value = true;
 
-    await BackendServices.instance.clientRepository.addMoneyToClinet(
-        client, double.parse(textValue) * ((adding) ? 1 : -1));
+    // Pause realtime updates during payment to prevent UI rebuilds
+    // that cause jank and delay the success popup.
+    final accountInfo = Get.find<AccountClientInfo>();
+    accountInfo.pauseRealtime();
 
-    moneyIsLoading.value = false;
+    try {
+      await BackendServices.instance.clientRepository.addMoneyToClinet(
+          client, double.parse(textValue) * ((adding) ? 1 : -1));
+    } finally {
+      // Resume realtime after a short delay to let the success popup show first
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        accountInfo.resumeRealtime();
+      });
+      moneyIsLoading.value = false;
+    }
   }
 }

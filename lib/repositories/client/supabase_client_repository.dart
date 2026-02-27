@@ -99,7 +99,6 @@ class SupabaseClientRepository extends ClientRepository
   Future<void> addMoneyToClinet(Client client, double amount) async {
     try {
       client.totalCash += amount;
-      await update(client);
 
       // Create descriptive log message based on transaction type
       String logMessage;
@@ -124,8 +123,11 @@ class SupabaseClientRepository extends ClientRepository
         createdAt: DateTime.now(),
       );
 
-      await BackendServices.instance.logRepository.create(log);
-      // Snackbar removed - success page handles the feedback now
+      // Run update and log creation in parallel to cut latency in half
+      await Future.wait([
+        update(client),
+        BackendServices.instance.logRepository.create(log),
+      ]);
     } catch (e) {
       Get.snackbar("Clinet Error", e.toString());
     }

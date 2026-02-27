@@ -42,6 +42,19 @@ class AccountClientInfo extends GetxController {
   Timer? _realtimeDebounce;
   List<Client>? _pendingUpdate;
   bool _isProcessingBulkOperation = false;
+  bool _isRealtimePaused = false;
+
+  /// Temporarily pause realtime subscription processing.
+  /// Used during payment operations to prevent UI rebuilds
+  /// that cause jank and delay the success popup.
+  void pauseRealtime() {
+    _isRealtimePaused = true;
+  }
+
+  /// Resume realtime subscription processing.
+  void resumeRealtime() {
+    _isRealtimePaused = false;
+  }
 
   @override
   void onInit() {
@@ -54,11 +67,11 @@ class AccountClientInfo extends GetxController {
         BackendServices.instance.clientRepository as SupabaseClientRepository;
     _clientSubscription =
         repository.getRealtimeClients(currentAccount).listen((updatedClients) {
-      // Skip updates during bulk operations to prevent slowdown
-      if (_isProcessingBulkOperation) {
+      // Skip updates during bulk operations or when paused (e.g. during payment)
+      if (_isProcessingBulkOperation || _isRealtimePaused) {
         return;
       }
-      
+
       // Debounce rapid updates to prevent UI slowdown
       _pendingUpdate = updatedClients;
       _realtimeDebounce?.cancel();
@@ -238,15 +251,15 @@ class AccountClientInfo extends GetxController {
       for (Client client in toBePaidClients) {
         currentPayingClient = client.obs;
         countPaid++;
-        
+
         await BackendServices.instance.clientRepository
             .paySystemsBills(client, month, year);
-        
+
         // Update local balance without fetching - calculate new balance
         final index = clinets.indexWhere((c) => c.id == client.id);
         if (index != -1) {
           double bills = client.systemsCost();
-          
+
           // Apply discount if it exists
           if (client.discountPercentage != null &&
               client.discountEndDate != null &&
@@ -254,18 +267,18 @@ class AccountClientInfo extends GetxController {
             double discountAmount = bills * (client.discountPercentage! / 100);
             bills -= discountAmount;
           }
-          
+
           // Update local balance immediately
           clinets[index].totalCash = clinets[index].totalCash - bills;
         }
       }
-      
+
       // Single refresh at the end instead of after each payment
       clinets.refresh();
-      
+
       // Fetch fresh data once after all payments
       await _refreshClientsAfterBulkOperation();
-      
+
       Loaders.to.paymentIsLoading.value = false;
       _isProcessingBulkOperation = false;
     } catch (e) {
@@ -278,7 +291,7 @@ class AccountClientInfo extends GetxController {
       ));
     }
   }
-  
+
   Future<void> _refreshClientsAfterBulkOperation() async {
     try {
       // Fetch all clients once after bulk operation completes
@@ -304,14 +317,14 @@ class AccountClientInfo extends GetxController {
     } catch (e) {
       print('Error fetching clients: $e');
       isLoading.value = false;
-      
+
       String errorMessage = 'حدث خطأ أثناء تحميل بيانات العملاء';
-      if (e.toString().contains('SocketException') || 
+      if (e.toString().contains('SocketException') ||
           e.toString().contains('Connection') ||
           e.toString().contains('timed out')) {
         errorMessage = 'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت.';
       }
-      
+
       Get.snackbar(
         'خطأ',
         errorMessage,
