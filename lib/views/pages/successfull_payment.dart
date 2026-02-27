@@ -80,7 +80,7 @@ class _SuccessOverlayState extends State<_SuccessOverlay>
     _ctrl.forward();
 
     // Auto-dismiss after 1.2s
-    Future.delayed(const Duration(milliseconds: 1200), _close);
+    Future.delayed(const Duration(milliseconds: 800), _close);
   }
 
   void _close() {
