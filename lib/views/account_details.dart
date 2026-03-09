@@ -19,6 +19,7 @@ import 'package:phone_system_app/pages/user_management_page.dart';
 import 'package:phone_system_app/views/pages/letter_of_waiver.dart';
 import 'package:phone_system_app/views/pages/filter_systems.dart';
 import 'package:phone_system_app/views/pages/clients_recets.dart';
+import 'package:phone_system_app/pages/smart_reminders/smart_reminders_page.dart';
 import 'animated_profile_avatar.dart';
 
 class Page {
@@ -139,6 +140,13 @@ class _AccountDetailsState extends State<AccountDetails>
             builder: () => LetterOfWaiver(),
             icon: const Icon(Icons.description_rounded),
             title: "خطاب تنازل",
+          ),
+        if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
+          Page(
+            roles: [UserRoles.manager],
+            builder: () => const SmartRemindersPage(),
+            icon: const Icon(Icons.message_rounded),
+            title: "تذكيرات WhatsApp",
           ),
         // if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
         //   Page(

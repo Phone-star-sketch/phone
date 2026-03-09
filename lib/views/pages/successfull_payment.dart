@@ -19,13 +19,17 @@ void showSuccessfulPayment({
     if (overlay == null) return;
 
     late OverlayEntry entry;
+    bool removed = false;
     entry = OverlayEntry(
       builder: (_) => _SuccessOverlay(
         amount: amount,
         transactionId: transactionId,
         paymentMethod: paymentMethod,
         onDismiss: () {
-          entry.remove();
+          if (!removed) {
+            removed = true;
+            entry.remove();
+          }
         },
       ),
     );
@@ -79,14 +83,20 @@ class _SuccessOverlayState extends State<_SuccessOverlay>
     );
     _ctrl.forward();
 
-    // Auto-dismiss after 1.2s
+    // Auto-dismiss after 2.5s so the user can read the success message
     Future.delayed(const Duration(milliseconds: 800), _close);
   }
 
   void _close() {
     if (_dismissed || !mounted) return;
     _dismissed = true;
-    widget.onDismiss();
+    // Animate out (reverse), then remove the overlay entry
+    _ctrl.reverse().then((_) {
+      widget.onDismiss();
+    }).catchError((_) {
+      // Controller was disposed during animation – still clean up
+      widget.onDismiss();
+    });
   }
 
   @override
