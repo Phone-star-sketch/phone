@@ -13,29 +13,29 @@ class AccountViewController extends GetxController {
   final showWelcome = true.obs;
 
   @override
-  void onInit() async {
-    // check for all client system bills
+  void onInit() {
     super.onInit();
+    _initAsync();
+  }
 
+  void _initAsync() {
     try {
       final next = ProfitController.to.getNextMonthToBePaid();
       final month = next.month;
       final year = next.year;
 
-      print("${month} ${year}");
+      print("$month $year");
     } catch (e) {
       print(e);
     }
-    // final month = next.month;
-    // final year = next.year;
-    //checkSystemBillsByYearsAndMonths(month, year);
   }
 
   checkSystemBillsByYearsAndMonths(int month, int year) async {
+    if (!Get.isRegistered<AccountClientInfo>()) return;
     final clientController = Get.find<AccountClientInfo>();
     final logs =
         await BackendServices.instance.logRepository.getLogsByMatchMapQuery({
-      "account_id": AccountClientInfo.to.currentAccount.id,
+      "account_id": clientController.currentAccount.id,
       "month": month,
       "year": year
     });
@@ -117,12 +117,12 @@ class AccountViewController extends GetxController {
 
   Future<List<Account>> getAccounts() async {
     isLoading.value = true;
-    final accounts =
+    final fetchedAccounts =
         await BackendServices.instance.accountRepository.getAllAccounts();
     isLoading.value = false;
     accounts.clear();
-    accounts.addAll(accounts);
-    return accounts;
+    accounts.addAll(fetchedAccounts);
+    return fetchedAccounts;
   }
 
   Future<void> refreshAccounts() async {

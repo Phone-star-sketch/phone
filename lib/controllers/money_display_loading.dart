@@ -32,17 +32,24 @@ class Loaders extends GetxController {
 
     // Pause realtime updates during payment to prevent UI rebuilds
     // that cause jank and delay the success popup.
-    final accountInfo = Get.find<AccountClientInfo>();
-    accountInfo.pauseRealtime();
+    final AccountClientInfo? accountInfo =
+        Get.isRegistered<AccountClientInfo>() ? Get.find<AccountClientInfo>() : null;
+    accountInfo?.pauseRealtime();
 
     try {
       await BackendServices.instance.clientRepository.addMoneyToClinet(
           client, double.parse(textValue) * ((adding) ? 1 : -1));
+
+      // Optimistic UI update: client.totalCash is already updated locally
+      // by addMoneyToClinet. Refresh the list so cards update instantly.
+      accountInfo?.clinets.refresh();
     } finally {
       // Resume realtime after a short delay to let the success popup show first
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        accountInfo.resumeRealtime();
-      });
+      if (accountInfo != null) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          accountInfo.resumeRealtime();
+        });
+      }
       moneyIsLoading.value = false;
     }
   }

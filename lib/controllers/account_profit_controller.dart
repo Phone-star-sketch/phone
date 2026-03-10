@@ -26,7 +26,8 @@ class ProfitController extends GetxController {
 
   late Rx<MonthlyProfit> currentProfitCalculations;
 
-  static ProfitController get to => Get.put(ProfitController());
+  static ProfitController get to =>
+      Get.isRegistered<ProfitController>() ? Get.find<ProfitController>() : Get.put(ProfitController());
 
   final yearController = TextEditingController(text: "2024");
   final monthController = TextEditingController();
@@ -39,7 +40,7 @@ class ProfitController extends GetxController {
   List<MonthlyProfit> profits = <MonthlyProfit>[].obs;
 
   @override
-  void onInit() async {
+  void onInit() {
     super.onInit();
     monthsToInt = Map.fromIterables(months.values, months.keys);
 

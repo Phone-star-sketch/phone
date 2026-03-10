@@ -220,7 +220,7 @@ class _ModernClientSheet extends StatelessWidget {
                       icon: Icons.add_box_rounded,
                       label: 'باقة جديدة',
                       color: const Color(0xFF10b981),
-                      onTap: () => showSystemAddDialog(currentClient),
+                      onTap: () => showSystemAddDialog(context, currentClient),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -632,14 +632,15 @@ class _SettingsTab extends StatelessWidget {
   }
 
   void _showDeleteDialog(BuildContext sheetContext, Client client) async {
-    // Capture the bottom sheet's Navigator BEFORE opening any dialogs.
-    // showModalBottomSheet uses Flutter's Navigator, so Get.back() cannot
-    // close it — we must use this reference.
-    final sheetNavigator = Navigator.of(sheetContext);
+    // All dialogs use Flutter's showDialog so they share the same Navigator
+    // as the bottom sheet (showModalBottomSheet). This prevents Get.back()
+    // from popping the wrong route.
+    final navigator = Navigator.of(sheetContext);
 
-    // Step 1: Confirmation dialog (awaited — runs after dialog is fully closed)
-    final confirmed = await Get.dialog<bool>(
-      AlertDialog(
+    // Step 1: Confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: sheetContext,
+      builder: (dialogCtx) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('حذف العميل',
@@ -649,11 +650,11 @@ class _SettingsTab extends StatelessWidget {
             style: TextStyle(color: Colors.grey[600])),
         actions: [
           TextButton(
-            onPressed: () => Get.back(result: false),
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
             child: Text('إلغاء', style: TextStyle(color: Colors.grey[500])),
           ),
           ElevatedButton(
-            onPressed: () => Get.back(result: true),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFef4444),
               shape: RoundedRectangleBorder(
@@ -668,10 +669,12 @@ class _SettingsTab extends StatelessWidget {
     if (confirmed != true) return;
 
     // Step 2: Show loading dialog
-    Get.dialog(
-      PopScope(
+    showDialog(
+      context: sheetContext,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
         canPop: false,
-        child: const Center(
+        child: Center(
           child: Card(
             child: Padding(
               padding: EdgeInsets.all(20),
@@ -687,7 +690,6 @@ class _SettingsTab extends StatelessWidget {
           ),
         ),
       ),
-      barrierDismissible: false,
     );
 
     try {
@@ -697,11 +699,9 @@ class _SettingsTab extends StatelessWidget {
       controller.clinets.removeWhere((c) => c.id == client.id);
       controller.clinets.refresh();
 
-      // Step 3: Close loading dialog
-      if (Get.isDialogOpen == true) Get.back();
-
-      // Step 4: Close bottom sheet via Flutter's Navigator
-      if (sheetNavigator.canPop()) sheetNavigator.pop();
+      // Close loading dialog then bottom sheet (same Navigator)
+      if (navigator.canPop()) navigator.pop(); // loading dialog
+      if (navigator.canPop()) navigator.pop(); // bottom sheet
 
       Get.showSnackbar(const GetSnackBar(
         message: 'تم حذف العميل بنجاح',
@@ -711,7 +711,7 @@ class _SettingsTab extends StatelessWidget {
         margin: EdgeInsets.all(12),
       ));
     } catch (e) {
-      if (Get.isDialogOpen == true) Get.back();
+      if (navigator.canPop()) navigator.pop(); // loading dialog
 
       Get.showSnackbar(GetSnackBar(
         message: 'حدث خطأ أثناء الحذف: ${e.toString()}',
@@ -780,14 +780,13 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
   final controller = TextEditingController();
   final loaders = Loaders.to;
 
-  // Capture the Navigator that owns the bottom sheet so we can close it
-  // properly. showModalBottomSheet uses Flutter's native Navigator, NOT GetX,
-  // so Get.back() cannot close it and will desync the route stack.
-  final NavigatorState? sheetNavigator = Navigator.maybeOf(context);
+  // Same Flutter Navigator for bottom sheet AND dialog — no conflicts.
+  final navigator = Navigator.of(context);
 
-  // Dialog returns a Map on success, or null on cancel/dismiss.
-  final result = await Get.dialog<Map<String, dynamic>>(
-    AlertDialog(
+  final result = await showDialog<Map<String, dynamic>>(
+    context: context,
+    barrierDismissible: true,
+    builder: (dialogCtx) => AlertDialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
@@ -876,13 +875,12 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                             final amountText = controller.text;
                             loaders.moneyIsLoading.value = false;
 
-                            // Only close the dialog and pass result back.
-                            // Post-dialog logic (close sheet, show overlay)
-                            // runs AFTER await Get.dialog() completes below.
-                            Get.back(result: {
-                              'amount': amountText,
-                              'adding': adding,
-                            });
+                            if (dialogCtx.mounted) {
+                              Navigator.of(dialogCtx).pop({
+                                'amount': amountText,
+                                'adding': adding,
+                              });
+                            }
                           } catch (e) {
                             loaders.moneyIsLoading.value = false;
                             rethrow;
@@ -922,19 +920,12 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
         ),
       ),
     ),
-    barrierDismissible: true,
   );
 
-  // --- Post-dialog logic: runs only AFTER the dialog is fully closed ---
+  // --- Post-dialog: runs AFTER the dialog is fully closed ---
   if (result != null) {
-    // Close the bottom sheet via Flutter's Navigator
-    // (showModalBottomSheet is NOT tracked by GetX)
-    if (sheetNavigator != null && sheetNavigator.canPop()) {
-      sheetNavigator.pop();
-    }
+    if (navigator.canPop()) navigator.pop(); // close bottom sheet
 
-    // Show success overlay (uses addPostFrameCallback internally
-    // to wait one more frame for the sheet close to settle)
     showSuccessfulPayment(
       amount: '${result['amount']} جنيه',
       transactionId: 'TXN${DateTime.now().millisecondsSinceEpoch}',
@@ -950,8 +941,9 @@ Future<void> showDiscountDialog(BuildContext context, Client client) async {
       TextEditingController(text: client.discountPercentage?.toString() ?? '');
   final selectedDate = (client.discountEndDate ?? DateTime.now()).obs;
 
-  await Get.dialog(
-    AlertDialog(
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (dialogCtx) => AlertDialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
@@ -1003,7 +995,7 @@ Future<void> showDiscountDialog(BuildContext context, Client client) async {
           Obx(() => GestureDetector(
                 onTap: () async {
                   final date = await showDatePicker(
-                    context: context,
+                    context: dialogCtx,
                     initialDate: selectedDate.value,
                     firstDate: DateTime.now(),
                     lastDate: DateTime(DateTime.now().year + 5),
@@ -1050,18 +1042,17 @@ Future<void> showDiscountDialog(BuildContext context, Client client) async {
                   await BackendServices.instance.clientRepository
                       .update(client);
 
+                  // Optimistic UI refresh
+                  if (Get.isRegistered<AccountClientInfo>()) {
+                    Get.find<AccountClientInfo>().clinets.refresh();
+                  }
                   if (Get.isRegistered<ClientBottomSheetController>()) {
                     Get.find<ClientBottomSheetController>().updateClient();
                   }
 
-                  Get.back();
-                  Get.snackbar(
-                    'نجاح',
-                    'تم إضافة الخصم بنجاح',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: const Color(0xFF10b981).withOpacity(0.1),
-                    colorText: const Color(0xFF10b981),
-                  );
+                  if (dialogCtx.mounted) {
+                    Navigator.of(dialogCtx).pop(true);
+                  }
                 } catch (e) {
                   Get.snackbar(
                     'خطأ',
@@ -1087,6 +1078,16 @@ Future<void> showDiscountDialog(BuildContext context, Client client) async {
       ),
     ),
   );
+
+  if (result == true) {
+    Get.snackbar(
+      'نجاح',
+      'تم إضافة الخصم بنجاح',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFF10b981).withOpacity(0.1),
+      colorText: const Color(0xFF10b981),
+    );
+  }
 }
 
 // Danger Dialog
@@ -1196,14 +1197,14 @@ bool shouldShowSystem(System system) {
 }
 
 // Add System Dialog
-void showSystemAddDialog(Client client) async {
+void showSystemAddDialog(BuildContext context, Client client) async {
   SystemType? currentType;
   final controller = Get.find<ClientBottomSheetController>();
   final loaders = Loaders.to;
 
-  // Dialog returns true on success, null/false otherwise.
-  final result = await Get.dialog<bool>(
-    AlertDialog(
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (dialogCtx) => AlertDialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
@@ -1287,10 +1288,16 @@ void showSystemAddDialog(Client client) async {
                             await loaders.manageSystemType(
                                 client, currentType!);
 
+                            // Optimistic UI refresh
+                            if (Get.isRegistered<AccountClientInfo>()) {
+                              Get.find<AccountClientInfo>().clinets.refresh();
+                            }
+
                             loaders.systemIsLoading.value = false;
 
-                            // Close dialog and signal success
-                            Get.back(result: true);
+                            if (dialogCtx.mounted) {
+                              Navigator.of(dialogCtx).pop(true);
+                            }
                           } catch (e) {
                             loaders.systemIsLoading.value = false;
 

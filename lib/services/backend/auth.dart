@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/user.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
@@ -20,8 +22,10 @@ class SupabaseAuthentication extends GetxController {
   static List<AppUser>? allUser;
   static AppUser? myUser;
 
+  StreamSubscription<AuthState>? _authSubscription;
+
   @override
-  void onReady() async {
+  void onReady() {
     super.onReady();
     authstate();
   }
@@ -53,12 +57,14 @@ class SupabaseAuthentication extends GetxController {
       
     } catch (e) {
       await signOut();
-      throw e;
+      rethrow;
     }
   }
 
   Future<void> authstate() async {
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+    // Cancel previous listener to prevent duplicates
+    await _authSubscription?.cancel();
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       try {
         final AuthChangeEvent event = data.event;
         print('event captured : $event');
@@ -87,6 +93,13 @@ class SupabaseAuthentication extends GetxController {
         print('Auth state error: $e');
       }
     });
+  }
+
+  @override
+  void onClose() {
+    _authSubscription?.cancel();
+    _authSubscription = null;
+    super.onClose();
   }
 
   Future<void> signOut() async {

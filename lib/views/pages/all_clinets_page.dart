@@ -232,11 +232,18 @@ class _AllClientsPageState extends State<AllClientsPage>
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: clients.length,
+      cacheExtent: 300,
+      addAutomaticKeepAlives: false,
       itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: ModernClientCard(
-              client: clients[index], index: index, lightTheme: true),
+        return RepaintBoundary(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: ModernClientCard(
+                key: ValueKey(clients[index].id),
+                client: clients[index],
+                index: index,
+                lightTheme: true),
+          ),
         );
       },
     );

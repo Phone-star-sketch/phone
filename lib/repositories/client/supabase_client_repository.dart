@@ -21,7 +21,7 @@ class SupabaseClientRepository extends ClientRepository
 
   final _clinet = Supabase.instance.client;
   DateTime _lastFullFetch = DateTime.now();
-  static const Duration _fullFetchThrottle = Duration(seconds: 5);
+  static const Duration _fullFetchThrottle = Duration(seconds: 2);
 
   @override
   Future<List<Client>> getAllClientsByAccount(Account account) async {

@@ -7,9 +7,17 @@ class ClientSystemController extends GetxController {
   static final RxList<Map<String,dynamic>> allTypesId = <Map<String,dynamic>>[].obs;
 
   @override
-  void onInit() async {
+  void onInit() {
     super.onInit();
-    allTypesId.value =
-        await BackendServices.instance.systemRepository.getAll("type_id");
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      allTypesId.value =
+          await BackendServices.instance.systemRepository.getAll("type_id");
+    } catch (e) {
+      print('Error loading system type IDs: $e');
+    }
   }
 }

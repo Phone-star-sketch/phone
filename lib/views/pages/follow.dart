@@ -23,11 +23,11 @@ class LogWidthUser {
   AppUser? user;
   Client? client;
   LogWidthUser({required this.log}) {
-    user = SupabaseAuthentication.allUser!.firstWhereOrNull(
+    user = SupabaseAuthentication.allUser?.firstWhereOrNull(
       (element) => element.id == log.createdBy,
     );
 
-    if (log.clientId != null) {
+    if (log.clientId != null && Get.isRegistered<AccountClientInfo>()) {
       client = AccountClientInfo.to.clinets.firstWhereOrNull(
         (element) => element.id == log.clientId,
       );
@@ -44,8 +44,12 @@ class FollowController extends GetxController {
   static const String LAST_NOTIFICATION_KEY = 'last_notified_transaction_id';
 
   @override
-  void onInit() async {
+  void onInit() {
     super.onInit();
+    _initController();
+  }
+
+  Future<void> _initController() async {
     // Initialize notification service
     await TransactionNotificationService.instance.initialize();
 

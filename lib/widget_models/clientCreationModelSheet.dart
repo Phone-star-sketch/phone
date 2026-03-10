@@ -11,7 +11,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 import 'package:phone_system_app/controllers/client_bottom_sheet_controller.dart';
 
-final accountController = Get.find<AccountClientInfo>();
+AccountClientInfo get accountController => Get.find<AccountClientInfo>();
 
 Future clientEditModelSheet(
   BuildContext context, {

@@ -208,7 +208,7 @@ class ExpiredSystemsController extends GetxController {
 
   Future<void> fetchClients() async {
     var clients = await BackendServices.instance.clientRepository
-        .getAllClientsByAccount(Get.put(AccountClientInfo.to).currentAccount);
+        .getAllClientsByAccount(AccountClientInfo.to.currentAccount);
 
     // Combine both expired and no expiry clients
     var expiredClients = clients

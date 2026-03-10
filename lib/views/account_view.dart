@@ -610,9 +610,11 @@ class _AccountCardState extends State<_AccountCard> {
       Get.delete<ProfitController>(force: true);
     }
 
-    // Create new controllers with the selected account
-    Get.put(AccountClientInfo(currentAccount: widget.account));
-    final p = Get.put(ProfitController());
+    // Create new controllers with the selected account.
+    // permanent: true prevents GetX from auto-disposing during navigation.
+    // The explicit Get.delete(force: true) above still cleans them up.
+    Get.put(AccountClientInfo(currentAccount: widget.account), permanent: true);
+    final p = Get.put(ProfitController(), permanent: true);
     p.updateTheProfitByAccount(widget.account);
 
     Get.to(

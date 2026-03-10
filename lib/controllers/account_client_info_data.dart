@@ -75,7 +75,7 @@ class AccountClientInfo extends GetxController {
       // Debounce rapid updates to prevent UI slowdown
       _pendingUpdate = updatedClients;
       _realtimeDebounce?.cancel();
-      _realtimeDebounce = Timer(const Duration(milliseconds: 500), () {
+      _realtimeDebounce = Timer(const Duration(milliseconds: 200), () {
         if (_pendingUpdate != null && !_isProcessingBulkOperation) {
           clinets.value = _pendingUpdate!;
           searchQueryChanged(query.value);
@@ -86,7 +86,12 @@ class AccountClientInfo extends GetxController {
   }
 
   @override
-  void onReady() async {
+  void onReady() {
+    super.onReady();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
     isLoading.value = true;
     if (currentAccount.id != -1) {
       clinets.value = await BackendServices.instance.clientRepository
@@ -153,7 +158,7 @@ class AccountClientInfo extends GetxController {
 
   void searchQueryChanged(String query) {
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 150), () {
       this.query.value = normalizeArabic(query);
     });
   }

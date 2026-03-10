@@ -66,7 +66,6 @@ class SupabaseBackendServices extends BackendServiceType {
     _profitRepository = SupabaseProfitRepository();
     // Authentication
     _supabaseAuthentication = SupabaseAuthentication();
-    _supabaseAuthentication = SupabaseAuthentication();
     _userRepository = SupabaseUserRepository();
   }
 

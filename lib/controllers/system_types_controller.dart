@@ -6,9 +6,17 @@ class SystemTypeController extends GetxController {
   static final RxList<SystemType> types = <SystemType>[].obs;
 
   @override
-  void onInit() async {
+  void onInit() {
     super.onInit();
-    types.value =
-        await BackendServices.instance.systemTypeRepository.getAllTypes(true);
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      types.value =
+          await BackendServices.instance.systemTypeRepository.getAllTypes(true);
+    } catch (e) {
+      print('Error loading system types: $e');
+    }
   }
 }

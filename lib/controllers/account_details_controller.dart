@@ -26,7 +26,8 @@ class PageData {
 }
 
 class AccountDetailsController extends GetxController {
-  static AccountDetailsController get to => Get.find();
+  static AccountDetailsController get to =>
+      Get.isRegistered<AccountDetailsController>() ? Get.find<AccountDetailsController>() : Get.put(AccountDetailsController());
   final RxInt selectedIndex = 0.obs;
 
   final Rx<String?> profileImage = Rx<String?>(null);
