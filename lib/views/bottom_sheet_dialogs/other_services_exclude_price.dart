@@ -6,7 +6,6 @@ import 'package:phone_system_app/models/system_type.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/controllers/client_bottom_sheet_controller.dart';
-import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_sheet.dart';
 
 class ExcludedSystemsManager extends GetxController {
   final RxList<System> _excludedSystems = <System>[].obs;
@@ -43,7 +42,7 @@ class ExcludedSystemsManager extends GetxController {
       if (system.type!.category == SystemCategory.mobileInternet) {
         bool isPaid = system.name?.contains('[مدفوع]') ?? false;
         if (!isPaid) {
-          total += system.type!.price ?? 0;
+          total += system.type!.price;
         }
       }
     }
@@ -92,11 +91,11 @@ class OtherServicesExcludePriceController extends GetxController {
         // Check if paid
         bool isPaid = system.name?.contains('[مدفوع]') ?? false;
         if (!isPaid) {
-          total += system.type!.price ?? 0;
+          total += system.type!.price;
         }
       } else {
         // Always add flex systems (if recurring)
-        total += system.type!.price ?? 0;
+        total += system.type!.price;
       }
     }
     return total;
@@ -111,7 +110,7 @@ class OtherServicesExcludePriceController extends GetxController {
       if (system.type!.category == SystemCategory.mobileInternet) {
         bool isPaid = system.name?.contains('[مدفوع]') ?? false;
         if (!isPaid) {
-          total += system.type!.price ?? 0;
+          total += system.type!.price;
         }
       }
     }
@@ -140,7 +139,7 @@ class OtherServicesExcludePriceController extends GetxController {
         final clientController = Get.find<ClientBottomSheetController>();
         final client = clientController.getClient();
 
-        if (client != null) {
+        {
           // Use all systems for calculation
           final newTotal = calculateTotalWithExclusions(_allSystems);
           final excludedAmount = calculateExcludedAmount();
@@ -156,7 +155,7 @@ class OtherServicesExcludePriceController extends GetxController {
               for (var system in systems) {
                 // Add non-mobileInternet systems (like mainPackage, internetPackage)
                 if (system.type!.category != SystemCategory.mobileInternet) {
-                  otherTotal += system.type!.price ?? 0;
+                  otherTotal += system.type!.price;
                 }
               }
             }
@@ -214,7 +213,7 @@ class OtherServicesExcludePriceController extends GetxController {
         final clientController = Get.find<ClientBottomSheetController>();
         final client = clientController.getClient();
 
-        if (client != null) {
+        {
           // Delete each excluded system from database
           for (var system in _excludedSystems) {
             await BackendServices.instance.systemRepository.delete(system);
@@ -231,9 +230,7 @@ class OtherServicesExcludePriceController extends GetxController {
           client.totalServicesPrice = newTotal;
 
           // Update totalCash: reduce the debt by the excluded amount
-          if (client.totalCash != null) {
-            client.totalCash = client.totalCash! + excludedAmount;
-          }
+          client.totalCash = client.totalCash + excludedAmount;
 
           await BackendServices.instance.clientRepository.update(client);
 
@@ -664,7 +661,7 @@ class OtherServicesExcludeWidget extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${system.type!.price!} جنيه',
+                              '${system.type!.price} جنيه',
                               style: TextStyle(
                                 color: isPaid ? Colors.grey : Colors.green[700],
                                 fontWeight: FontWeight.bold,
@@ -734,10 +731,10 @@ class OtherServicesExcludeWidget extends StatelessWidget {
       if (system.type!.category == SystemCategory.mobileInternet) {
         bool isPaid = system.name?.contains('[مدفوع]') ?? false;
         if (!isPaid) {
-          total += system.type!.price ?? 0;
+          total += system.type!.price;
         }
       } else {
-        total += system.type!.price ?? 0;
+        total += system.type!.price;
       }
     }
 

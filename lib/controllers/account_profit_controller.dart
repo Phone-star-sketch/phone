@@ -98,7 +98,7 @@ class ProfitController extends GetxController {
 
     MonthlyProfit? profit = await calculateTotalProfit(month!, year);
 
-    print(profit);
+    debugPrint(profit.toString());
 
     try {
       if (profit != null) {

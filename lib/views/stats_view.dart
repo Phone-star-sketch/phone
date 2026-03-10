@@ -30,9 +30,11 @@ class _StatsViewState extends State<StatsView> {
       setState(() {
         isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading stats: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading stats: ${e.toString()}')),
+        );
+      }
     }
   }
 

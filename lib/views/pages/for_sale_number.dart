@@ -180,7 +180,7 @@ class ForSaleNumbers extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF667EEA).withOpacity(0.3),
+              color: const Color(0xFF667EEA).withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -229,7 +229,7 @@ class ForSaleNumbers extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 20,
                     offset: const Offset(0, 4),
                   ),
@@ -250,7 +250,7 @@ class ForSaleNumbers extends StatelessWidget {
                   prefixIcon: Container(
                     margin: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF667EEA).withOpacity(0.1),
+                      color: const Color(0xFF667EEA).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -348,13 +348,13 @@ class ForSaleNumbers extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 30,
                 offset: const Offset(0, 8),
                 spreadRadius: 0,
               ),
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
                 spreadRadius: 0,
@@ -392,7 +392,7 @@ class ForSaleNumbers extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF667EEA).withOpacity(0.2),
+                      color: const Color(0xFF667EEA).withValues(alpha: 0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -426,13 +426,13 @@ class ForSaleNumbers extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            const Color(0xFF48BB78).withOpacity(0.1),
-                            const Color(0xFF38A169).withOpacity(0.05),
+                            const Color(0xFF48BB78).withValues(alpha: 0.1),
+                            const Color(0xFF38A169).withValues(alpha: 0.05),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: const Color(0xFF48BB78).withOpacity(0.2),
+                          color: const Color(0xFF48BB78).withValues(alpha: 0.2),
                           width: 1,
                         ),
                       ),
@@ -518,7 +518,7 @@ class ForSaleNumbers extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF667EEA).withOpacity(0.3),
+                      color: const Color(0xFF667EEA).withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -572,8 +572,8 @@ class ForSaleNumbers extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  const Color(0xFF48BB78).withOpacity(0.1),
-                  const Color(0xFF38A169).withOpacity(0.05),
+                  const Color(0xFF48BB78).withValues(alpha: 0.1),
+                  const Color(0xFF38A169).withValues(alpha: 0.05),
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
@@ -627,10 +627,10 @@ class ForSaleNumbers extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -655,7 +655,7 @@ class ForSaleNumbers extends StatelessWidget {
         height: 32,
         margin: const EdgeInsets.only(left: 4),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -677,7 +677,7 @@ class ForSaleNumbers extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 20,
               offset: const Offset(0, 4),
             ),
@@ -690,7 +690,7 @@ class ForSaleNumbers extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFF667EEA).withOpacity(0.1),
+                color: const Color(0xFF667EEA).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(40),
               ),
               child: Icon(
@@ -885,7 +885,7 @@ Future<void> showNewNumberModalForm(BuildContext context) {
                           borderRadius: BorderRadius.circular(15),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF48BB78).withOpacity(0.3),
+                              color: const Color(0xFF48BB78).withValues(alpha: 0.3),
                               blurRadius: 12,
                               offset: const Offset(0, 6),
                             ),
@@ -1032,7 +1032,7 @@ Future<void> showEditPriceModal(BuildContext context, PhoneNumber phone) {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF667EEA).withOpacity(0.1),
+                      color: const Color(0xFF667EEA).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: Row(
@@ -1079,7 +1079,7 @@ Future<void> showEditPriceModal(BuildContext context, PhoneNumber phone) {
                           borderRadius: BorderRadius.circular(15),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF4299E1).withOpacity(0.3),
+                              color: const Color(0xFF4299E1).withValues(alpha: 0.3),
                               blurRadius: 12,
                               offset: const Offset(0, 6),
                             ),
@@ -1183,7 +1183,7 @@ Widget _buildFormField({
       prefixIcon: Container(
         margin: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.1),
+          color: iconColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: iconColor, size: 20),

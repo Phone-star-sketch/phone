@@ -139,7 +139,7 @@ class ClientReceiptsExcelGenerator {
             .value = phoneNumber;
 
         // Amount Due (convert to positive for display)
-        double amountDue = ((client.totalCash ?? 0) * -1).toDouble();
+        double amountDue = (client.totalCash * -1).toDouble();
         sheetObject
             .cell(
                 CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex))
@@ -213,7 +213,7 @@ class ClientReceiptsExcelGenerator {
 
       // Calculate total amount due
       double totalAmount = validClients.fold(
-          0.0, (sum, client) => sum + ((client.totalCash ?? 0) * -1));
+          0.0, (sum, client) => sum + (client.totalCash * -1));
       sheetObject
           .cell(CellIndex.indexByColumnRow(
               columnIndex: 0, rowIndex: summaryRowIndex + 1))
@@ -221,7 +221,7 @@ class ClientReceiptsExcelGenerator {
       sheetObject
           .cell(CellIndex.indexByColumnRow(
               columnIndex: 1, rowIndex: summaryRowIndex + 1))
-          .value = '${totalAmount.toStringAsFixed(0)}';
+          .value = totalAmount.toStringAsFixed(0);
 
       // Count clients with notes
       int clientsWithNotes = 0;
@@ -294,9 +294,7 @@ class ClientReceiptsExcelGenerator {
 
     try {
       // Ensure client data is valid before processing
-      if (client.id == null) {
-        throw Exception('Client ID is null');
-      }
+      // client.id is non-nullable, no null check needed
 
       // Use the same approach as ClientReceiptCard for loading systems
       final String controllerTag =
@@ -615,10 +613,8 @@ class ClientReceiptsExcelGenerator {
   // Helper method to validate client data before processing - Add null safety
   static bool _isValidClient(Client client) {
     try {
-      bool isValid = client.id != null &&
-          client.name != null &&
-          client.name!.isNotEmpty &&
-          client.totalCash != null;
+      bool isValid = client.name != null &&
+          client.name!.isNotEmpty;
 
       if (!isValid) {
         developer.log(
@@ -771,7 +767,7 @@ class ClientReceiptsExcelGenerator {
                 CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex))
             .value = phoneNumber;
 
-        double amountDue = ((client.totalCash ?? 0) * -1).toDouble();
+        double amountDue = (client.totalCash * -1).toDouble();
         sheetObject
             .cell(
                 CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex))
@@ -839,7 +835,7 @@ class ClientReceiptsExcelGenerator {
 
       // Calculate total amount due
       double totalAmount = validClients.fold(
-          0.0, (sum, client) => sum + ((client.totalCash ?? 0) * -1));
+          0.0, (sum, client) => sum + (client.totalCash * -1));
       sheetObject
           .cell(CellIndex.indexByColumnRow(
               columnIndex: 0, rowIndex: summaryRowIndex + 1))

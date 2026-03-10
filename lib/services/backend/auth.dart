@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/user.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
@@ -45,9 +46,9 @@ class SupabaseAuthentication extends GetxController {
       userSession.value = response.session!;
       
       // Get user data with secpass
-      if (userSession.value.user != null) {
+      {
         myUser = await BackendServices.instance.userRepository
-            .getCurrentUser(userSession.value.user!.id);
+            .getCurrentUser(userSession.value.user.id);
         
         if (myUser == null || myUser!.secpass == null) {
           await signOut();
@@ -67,7 +68,7 @@ class SupabaseAuthentication extends GetxController {
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       try {
         final AuthChangeEvent event = data.event;
-        print('event captured : $event');
+        debugPrint('event captured : $event');
         
         if (data.session != null) {
           userSession.value = data.session!;
@@ -90,7 +91,7 @@ class SupabaseAuthentication extends GetxController {
           allUser = null;
         }
       } catch (e) {
-        print('Auth state error: $e');
+        debugPrint('Auth state error: $e');
       }
     });
   }

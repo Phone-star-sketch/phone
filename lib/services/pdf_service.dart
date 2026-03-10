@@ -5,7 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:flutter/services.dart';
 import 'package:universal_html/html.dart' as html;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import '../models/profit.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 
@@ -191,7 +191,7 @@ class PdfService {
         await OpenFile.open(file.path);
       }
     } catch (e) {
-      print('Error generating PDF: $e');
+      debugPrint('Error generating PDF: $e');
       rethrow;
     }
   }

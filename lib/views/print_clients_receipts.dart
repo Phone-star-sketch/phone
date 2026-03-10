@@ -274,7 +274,6 @@ class PrintClientsReceipts extends StatelessWidget {
 
       // Create subsequent pages for each client
       final (month, year) = getPreviousMonthAndYear();
-      int pageNumber = 0;
 
       for (Client c in clients) {
         // Fixed: Added null safety checks
@@ -289,7 +288,6 @@ class PrintClientsReceipts extends StatelessWidget {
         // Create page if client has transactions OR negative balance (even without payment)
         if (logs.isNotEmpty ||
             (!hasPaymentForMonth(c, month, year) && c.totalCash < 0)) {
-          pageNumber++;
           document.addPage(
             pw.Page(
               pageFormat: pageFormat,
@@ -351,7 +349,7 @@ class PrintClientsReceipts extends StatelessWidget {
     try {
       return excludedManager.isSystemTypeExcluded(systemTypeName);
     } catch (e) {
-      print("Error checking exclusion for $systemTypeName: $e");
+      debugPrint("Error checking exclusion for $systemTypeName: $e");
       return false;
     }
   }
@@ -375,12 +373,6 @@ class PrintClientsReceipts extends StatelessWidget {
     }
 
     return allSystems;
-  }
-
-  // Helper method to check if a system still exists (not permanently deleted)
-  bool _systemStillExists(System system, Client client) {
-    final allCurrentSystems = _getAllClientSystems(client);
-    return allCurrentSystems.any((s) => s.id == system.id);
   }
 
   // Helper method to calculate adjusted total cash considering exclusions and deletions
@@ -494,13 +486,13 @@ class PrintClientsReceipts extends StatelessWidget {
                       : "غير محدد",
                   // Show total amount only in first row, empty for others
                   index == 0 ? totalPrice.toStringAsFixed(2) : "",
-                  "${system.type?.price?.toStringAsFixed(0) ?? '0'} جنيه",
+                  "${system.type?.price.toStringAsFixed(0) ?? '0'} جنيه",
                   system.type?.name ?? "غير محدد"
                 ],
                 regularFont,
                 11.0,
               );
-            }).toList(),
+            }),
             // Add a row if no visible systems to show
             if (uniqueSystemsList.isEmpty)
               pw.TableRow(

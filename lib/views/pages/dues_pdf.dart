@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -20,7 +21,7 @@ class ArabicDuesPdfGenerator {
     try {
       if (_fontsInitialized) return;
 
-      print('Loading Cairo fonts from assets...');
+      debugPrint('Loading Cairo fonts from assets...');
 
       // Load Cairo fonts from your local assets
       final regularFontData =
@@ -35,9 +36,9 @@ class ArabicDuesPdfGenerator {
       _cairoExtraBold = pw.Font.ttf(extraBoldFontData);
 
       _fontsInitialized = true;
-      print('Cairo fonts from assets initialized successfully');
+      debugPrint('Cairo fonts from assets initialized successfully');
     } catch (e) {
-      print('Error loading local Cairo fonts: $e');
+      debugPrint('Error loading local Cairo fonts: $e');
       // Try fallback with Google Fonts as last resort
     }
   }
@@ -73,7 +74,7 @@ class ArabicDuesPdfGenerator {
       final data = await rootBundle.load(path);
       return data.buffer.asUint8List();
     } catch (e) {
-      print('Failed to load asset image: $path, Error: $e');
+      debugPrint('Failed to load asset image: $path, Error: $e');
       return null;
     }
   }
@@ -254,7 +255,7 @@ class ArabicDuesPdfGenerator {
           ),
         );
       } catch (e) {
-        print('Error loading logo image: $e');
+        debugPrint('Error loading logo image: $e');
       }
     }
 
@@ -553,7 +554,7 @@ class ArabicDuesPdfGenerator {
 
       return endDate != null && endDate.isBefore(DateTime.now());
     } catch (e) {
-      print('Error checking overdue status: $e');
+      debugPrint('Error checking overdue status: $e');
       return false;
     }
   }
@@ -650,7 +651,7 @@ class ArabicDuesPdfGenerator {
     String companyName = "",
   }) async {
     try {
-      print('Starting PDF generation...');
+      debugPrint('Starting PDF generation...');
 
       // Initialize fonts if not already done
       await initializeFonts();
@@ -664,7 +665,7 @@ class ArabicDuesPdfGenerator {
         throw Exception('No dues data provided');
       }
 
-      print('Fonts initialized, processing ${dues.length} dues');
+      debugPrint('Fonts initialized, processing ${dues.length} dues');
 
       // Load logo - always use rece.png only
       Uint8List? logo = await _loadAssetImage('assets/images/MKQ.png');
@@ -674,7 +675,7 @@ class ArabicDuesPdfGenerator {
       final boldFont = _getBoldFont();
       final extraBoldFont = _getExtraBoldFont();
 
-      print('Creating PDF document...');
+      debugPrint('Creating PDF document...');
 
       final doc = pw.Document();
 
@@ -716,7 +717,7 @@ class ArabicDuesPdfGenerator {
               boldFont: boldFont,
             ));
           } catch (e) {
-            print('Error building row $i: $e');
+            debugPrint('Error building row $i: $e');
             // Continue with other rows
           }
         }
@@ -778,7 +779,7 @@ class ArabicDuesPdfGenerator {
               }
               return pw.Container(); // Empty header for first page
             } catch (e) {
-              print('Error in header: $e');
+              debugPrint('Error in header: $e');
               return pw.Container(); // Return empty container on error
             }
           },
@@ -793,7 +794,7 @@ class ArabicDuesPdfGenerator {
         ),
       );
 
-      print('Generating PDF bytes...');
+      debugPrint('Generating PDF bytes...');
 
       // Generate and return the PDF
       final pdfBytes = await doc.save();
@@ -803,11 +804,11 @@ class ArabicDuesPdfGenerator {
         throw Exception('Generated PDF is empty');
       }
 
-      print('PDF generated successfully, size: ${pdfBytes.length} bytes');
+      debugPrint('PDF generated successfully, size: ${pdfBytes.length} bytes');
       return pdfBytes;
     } catch (e, stackTrace) {
-      print('Error generating PDF: $e');
-      print('Stack trace: $stackTrace');
+      debugPrint('Error generating PDF: $e');
+      debugPrint('Stack trace: $stackTrace');
       throw Exception('Failed to generate PDF: $e');
     }
   }
@@ -843,25 +844,25 @@ class ArabicDuesPdfGenerator {
       // Write PDF bytes to file
       await file.writeAsBytes(pdfBytes);
 
-      print('PDF saved to: ${file.path}');
+      debugPrint('PDF saved to: ${file.path}');
 
       // Automatically open the PDF if requested
       if (autoOpen) {
         try {
           final result = await OpenFile.open(file.path);
-          print('Open file result: ${result.message}');
+          debugPrint('Open file result: ${result.message}');
           if (result.type != ResultType.done) {
-            print(
+            debugPrint(
                 'Warning: Could not open PDF automatically: ${result.message}');
           }
         } catch (e) {
-          print('Error opening PDF: $e');
+          debugPrint('Error opening PDF: $e');
         }
       }
 
       return file;
     } catch (e) {
-      print('Error saving PDF to file: $e');
+      debugPrint('Error saving PDF to file: $e');
       throw Exception('Failed to save PDF: $e');
     }
   }
@@ -911,25 +912,25 @@ class ArabicDuesPdfGenerator {
       // Write PDF bytes to file
       await file.writeAsBytes(pdfBytes);
 
-      print('PDF saved to Downloads: ${file.path}');
+      debugPrint('PDF saved to Downloads: ${file.path}');
 
       // Automatically open the PDF if requested
       if (autoOpen) {
         try {
           final result = await OpenFile.open(file.path);
-          print('Open file result: ${result.message}');
+          debugPrint('Open file result: ${result.message}');
           if (result.type != ResultType.done) {
-            print(
+            debugPrint(
                 'Warning: Could not open PDF automatically: ${result.message}');
           }
         } catch (e) {
-          print('Error opening PDF: $e');
+          debugPrint('Error opening PDF: $e');
         }
       }
 
       return file;
     } catch (e) {
-      print('Error saving PDF to Downloads: $e');
+      debugPrint('Error saving PDF to Downloads: $e');
       throw Exception('Failed to save PDF to Downloads: $e');
     }
   }
@@ -945,7 +946,7 @@ class ArabicDuesPdfGenerator {
     bool autoOpen = true,
   }) async {
     try {
-      print('Generating PDF directly to Downloads...');
+      debugPrint('Generating PDF directly to Downloads...');
 
       // Generate PDF bytes
       final pdfBytes = await buildDuesPdf(
@@ -987,31 +988,31 @@ class ArabicDuesPdfGenerator {
       // Write PDF bytes directly to file
       await file.writeAsBytes(pdfBytes);
 
-      print('PDF saved successfully to: ${file.path}');
+      debugPrint('PDF saved successfully to: ${file.path}');
 
       // Automatically open the PDF if requested
       if (autoOpen) {
         try {
-          print('Opening PDF file...');
+          debugPrint('Opening PDF file...');
           final result = await OpenFile.open(file.path);
-          print('Open file result: ${result.message}');
+          debugPrint('Open file result: ${result.message}');
 
           if (result.type == ResultType.done) {
-            print('PDF opened successfully');
+            debugPrint('PDF opened successfully');
           } else {
-            print('Could not open PDF: ${result.message}');
+            debugPrint('Could not open PDF: ${result.message}');
             // Even if we can't open it, the file was saved successfully
           }
         } catch (e) {
-          print('Error opening PDF: $e');
+          debugPrint('Error opening PDF: $e');
           // File was still saved successfully
         }
       }
 
       return file;
     } catch (e, stackTrace) {
-      print('Error generating and saving PDF: $e');
-      print('Stack trace: $stackTrace');
+      debugPrint('Error generating and saving PDF: $e');
+      debugPrint('Stack trace: $stackTrace');
       throw Exception('Failed to generate and save PDF: $e');
     }
   }

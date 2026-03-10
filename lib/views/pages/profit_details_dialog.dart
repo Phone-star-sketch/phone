@@ -67,7 +67,7 @@ class ProfitDetailsDialog extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.blue.withOpacity(0.1),
+              color: Colors.blue.withValues(alpha: 0.1),
               blurRadius: 20,
               spreadRadius: 5,
             ),
@@ -96,7 +96,7 @@ class ProfitDetailsDialog extends StatelessWidget {
                       width: 80, // Reduced size
                       height: 80, // Reduced size
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -222,7 +222,7 @@ class ProfitDetailsDialog extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12), // Reduced margin
       child: Card(
         elevation: 4,
-        shadowColor: color.withOpacity(0.3),
+        shadowColor: color.withValues(alpha: 0.3),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: Container(
           padding: const EdgeInsets.all(12), // Reduced padding
@@ -230,7 +230,7 @@ class ProfitDetailsDialog extends StatelessWidget {
             borderRadius: BorderRadius.circular(15),
             gradient: LinearGradient(
               colors: [
-                color.withOpacity(0.1),
+                color.withValues(alpha: 0.1),
                 Colors.white,
               ],
               begin: Alignment.topLeft,
@@ -242,7 +242,7 @@ class ProfitDetailsDialog extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10), // Reduced padding
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 24), // Reduced icon size
@@ -280,6 +280,6 @@ class ProfitDetailsDialog extends StatelessWidget {
         .animate(delay: Duration(milliseconds: delay))
         .fadeIn()
         .slideX(begin: 0.2)
-        .shimmer(duration: 1200.ms, color: color.withOpacity(0.3));
+        .shimmer(duration: 1200.ms, color: color.withValues(alpha: 0.3));
   }
 }

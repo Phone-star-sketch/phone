@@ -129,7 +129,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
   Future<void> _searchPhones(String query) async {
     if (query.isEmpty) return;
 
-    print('=== DEBUG: Searching for: $query ===');
+    debugPrint('=== DEBUG: Searching for: $query ===');
     setState(() => _isSearching = true);
 
     try {
@@ -139,13 +139,13 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
           .ilike('phone_number', '%$query%')
           .limit(10);
 
-      print('Response from Supabase: $response');
+      debugPrint('Response from Supabase: $response');
 
       final List<PhoneData> phones = [];
       for (var item in response) {
-        print('Processing item: $item');
+        debugPrint('Processing item: $item');
         final clientData = item['client'];
-        print('Client data: $clientData');
+        debugPrint('Client data: $clientData');
 
         final phoneData = PhoneData(
           phoneNumber: item['phone_number'] ?? '',
@@ -153,12 +153,12 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
           nationalId: clientData != null ? clientData['national_id'] : null,
         );
 
-        print(
+        debugPrint(
             'Created PhoneData: phone=${phoneData.phoneNumber}, name=${phoneData.clientName}, id=${phoneData.nationalId}');
         phones.add(phoneData);
       }
 
-      print('Total phones found: ${phones.length}');
+      debugPrint('Total phones found: ${phones.length}');
 
       if (mounted) {
         setState(() {
@@ -173,7 +173,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
         }
       }
     } catch (e) {
-      print('ERROR in _searchPhones: $e');
+      debugPrint('ERROR in _searchPhones: $e');
       if (mounted) {
         setState(() => _isSearching = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -187,10 +187,10 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
   }
 
   void _selectPhone(PhoneData phoneData) {
-    print('=== DEBUG: _selectPhone called ===');
-    print('Phone Number: ${phoneData.phoneNumber}');
-    print('Client Name: ${phoneData.clientName}');
-    print('National ID: ${phoneData.nationalId}');
+    debugPrint('=== DEBUG: _selectPhone called ===');
+    debugPrint('Phone Number: ${phoneData.phoneNumber}');
+    debugPrint('Client Name: ${phoneData.clientName}');
+    debugPrint('National ID: ${phoneData.nationalId}');
 
     // Hide overlay and remove focus first
     _hideOverlay();
@@ -205,34 +205,34 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
       // Update client name if available
       if (phoneData.clientName != null && phoneData.clientName!.isNotEmpty) {
         _recipientNameController.text = phoneData.clientName!;
-        print('✓ Set recipient name: ${phoneData.clientName}');
+        debugPrint('✓ Set recipient name: ${phoneData.clientName}');
       } else {
         _recipientNameController.clear();
-        print('✗ Client name is null or empty');
+        debugPrint('✗ Client name is null or empty');
       }
 
       // Update national ID if available
       if (phoneData.nationalId != null && phoneData.nationalId!.isNotEmpty) {
         _nationalIdController.text = phoneData.nationalId!;
-        print('✓ Set national ID: ${phoneData.nationalId}');
+        debugPrint('✓ Set national ID: ${phoneData.nationalId}');
       } else {
         _nationalIdController.clear();
-        print('✗ National ID is null or empty');
+        debugPrint('✗ National ID is null or empty');
       }
     });
 
-    print('=== DEBUG: _selectPhone completed ===');
+    debugPrint('=== DEBUG: _selectPhone completed ===');
   }
 
   void _showOverlay() {
     _hideOverlay();
 
-    print('=== DEBUG: _showOverlay called ===');
-    print('Suggestions count: ${_phonesSuggestions.length}');
+    debugPrint('=== DEBUG: _showOverlay called ===');
+    debugPrint('Suggestions count: ${_phonesSuggestions.length}');
 
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) {
-      print('ERROR: RenderBox is null');
+      debugPrint('ERROR: RenderBox is null');
       return;
     }
 
@@ -256,7 +256,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                 border: Border.all(color: Colors.blue[200]!, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withOpacity(0.15),
+                    color: Colors.blue.withValues(alpha: 0.15),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -282,7 +282,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                         final phone = _phonesSuggestions[index];
                         return InkWell(
                           onTap: () {
-                            print(
+                            debugPrint(
                                 '=== Tapped on phone: ${phone.phoneNumber} ===');
                             _selectPhone(phone);
                           },
@@ -292,7 +292,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                             margin: const EdgeInsets.only(bottom: 4),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
-                              color: Colors.blue[50]?.withOpacity(0.5),
+                              color: Colors.blue[50]?.withValues(alpha: 0.5),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,7 +373,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
     );
 
     Overlay.of(context).insert(_overlayEntry!);
-    print('=== DEBUG: Overlay inserted ===');
+    debugPrint('=== DEBUG: Overlay inserted ===');
   }
 
   void _hideOverlay() {
@@ -431,11 +431,11 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
@@ -477,7 +477,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 40,
             offset: const Offset(0, 15),
           ),
@@ -602,7 +602,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
         border: Border.all(color: Colors.indigo[200]!, width: 2),
         boxShadow: [
           BoxShadow(
-            color: Colors.indigo.withOpacity(0.08),
+            color: Colors.indigo.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -672,13 +672,13 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.white, Colors.indigo[50]!.withOpacity(0.3)],
+          colors: [Colors.white, Colors.indigo[50]!.withValues(alpha: 0.3)],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.indigo[100]!, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.indigo.withOpacity(0.05),
+            color: Colors.indigo.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -717,7 +717,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.08),
+            color: Colors.blue.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -729,7 +729,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
             return const Iterable<PhoneData>.empty();
           }
 
-          print('=== Autocomplete searching for: ${textEditingValue.text} ===');
+          debugPrint('=== Autocomplete searching for: ${textEditingValue.text} ===');
 
           try {
             final response = await Supabase.instance.client
@@ -738,7 +738,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                 .ilike('phone_number', '%${textEditingValue.text}%')
                 .limit(10);
 
-            print('Response: $response');
+            debugPrint('Response: $response');
 
             final List<PhoneData> phones = [];
             for (var item in response) {
@@ -751,16 +751,16 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
               ));
             }
 
-            print('Found ${phones.length} phones');
+            debugPrint('Found ${phones.length} phones');
             return phones;
           } catch (e) {
-            print('ERROR: $e');
+            debugPrint('ERROR: $e');
             return const Iterable<PhoneData>.empty();
           }
         },
         displayStringForOption: (PhoneData option) => option.phoneNumber,
         onSelected: (PhoneData selection) {
-          print('=== Selected: ${selection.phoneNumber} ===');
+          debugPrint('=== Selected: ${selection.phoneNumber} ===');
           setState(() {
             _phoneNumberController.text = selection.phoneNumber;
             _waivedPhoneController.text = selection.phoneNumber;
@@ -768,13 +768,13 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
             if (selection.clientName != null &&
                 selection.clientName!.isNotEmpty) {
               _recipientNameController.text = selection.clientName!;
-              print('✓ Set name: ${selection.clientName}');
+              debugPrint('✓ Set name: ${selection.clientName}');
             }
 
             if (selection.nationalId != null &&
                 selection.nationalId!.isNotEmpty) {
               _nationalIdController.text = selection.nationalId!;
-              print('✓ Set ID: ${selection.nationalId}');
+              debugPrint('✓ Set ID: ${selection.nationalId}');
             }
           });
         },
@@ -874,7 +874,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                         margin: const EdgeInsets.only(bottom: 4),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          color: Colors.blue[50]?.withOpacity(0.5),
+                          color: Colors.blue[50]?.withValues(alpha: 0.5),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1010,7 +1010,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.08),
+            color: color.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1097,7 +1097,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.indigo.withOpacity(0.4),
+            color: Colors.indigo.withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -1143,7 +1143,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                 ],
@@ -1154,7 +1154,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(

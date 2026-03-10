@@ -332,7 +332,7 @@ class SupabaseClientRepository extends ClientRepository
                   .order('name', ascending: true);
               return fullData.map((e) => Client.fromJson(e)).toList();
             } catch (e) {
-              print('Error fetching full client data in stream: $e');
+              debugPrint('Error fetching full client data in stream: $e');
               // Fallback to basic data if fetch fails
               return list.map((e) => Client.fromJson(e)).toList();
             }
@@ -348,16 +348,11 @@ class SupabaseClientRepository extends ClientRepository
       final response = await _clinet.from(clientTableName).select(
           'id, account_id, account:account_id (id, name)'); // Join with accounts table
 
-      print('Fetched client data: $response');
-
-      if (response == null) {
-        print('No data returned from query');
-        return [];
-      }
+      debugPrint('Fetched client data: $response');
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      print('Error in getAllClientsData: $e');
+      debugPrint('Error in getAllClientsData: $e');
       return [];
     }
   }
@@ -370,12 +365,9 @@ class SupabaseClientRepository extends ClientRepository
           .eq('id', clientId)
           .single();
 
-      if (response != null) {
-        return Client.fromJson(response);
-      }
-      return null;
+      return Client.fromJson(response);
     } catch (e) {
-      print('Error fetching client: $e');
+      debugPrint('Error fetching client: $e');
       return null;
     }
   }
@@ -416,7 +408,7 @@ class SupabaseClientRepository extends ClientRepository
       }
       return null;
     } catch (e) {
-      print('Error fetching client by phone number: $e');
+      debugPrint('Error fetching client by phone number: $e');
       return null;
     }
   }

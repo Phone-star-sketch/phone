@@ -19,7 +19,6 @@ class _WelcomePageState extends State<WelcomePage>
   late AnimationController _cloudsController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  late Animation<double> _scaleAnimation;
   late Animation<Offset> _sheepSlideAnimation;
   late Animation<double> _sheepScaleAnimation;
   final List<Star> _stars = [];
@@ -74,10 +73,6 @@ class _WelcomePageState extends State<WelcomePage>
       parent: _controller,
       curve: Interval(0.3, 0.8, curve: Curves.easeOut),
     ));
-
-    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
 
     _sheepSlideAnimation = Tween<Offset>(
       begin: Offset(-1, 0.3),
@@ -192,7 +187,7 @@ class _WelcomePageState extends State<WelcomePage>
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.white.withOpacity(0.7),
+                            color: Colors.white.withValues(alpha: 0.7),
                             blurRadius: star.size,
                             spreadRadius: star.size * 0.2,
                           ),
@@ -303,7 +298,7 @@ class _WelcomePageState extends State<WelcomePage>
                                         boxShadow: [
                                           BoxShadow(
                                             color:
-                                                Colors.amber.withOpacity(0.3),
+                                                Colors.amber.withValues(alpha: 0.3),
                                             blurRadius: 20,
                                             spreadRadius: 5,
                                           ),
@@ -336,12 +331,12 @@ class _WelcomePageState extends State<WelcomePage>
                                     color: Colors.amber.shade300,
                                     shadows: [
                                       Shadow(
-                                        color: Colors.amber.withOpacity(0.8),
+                                        color: Colors.amber.withValues(alpha: 0.8),
                                         blurRadius: 15,
                                         offset: Offset(0, 5),
                                       ),
                                       Shadow(
-                                        color: Colors.amber.withOpacity(0.4),
+                                        color: Colors.amber.withValues(alpha: 0.4),
                                         blurRadius: 25,
                                         offset: Offset(0, 8),
                                       ),
@@ -354,7 +349,7 @@ class _WelcomePageState extends State<WelcomePage>
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 24,
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.white.withValues(alpha: 0.9),
                                     letterSpacing: 1.2,
                                   ),
                                 ),
@@ -435,8 +430,8 @@ class _WelcomePageState extends State<WelcomePage>
           padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
-            color: Colors.white.withOpacity(0.2),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
+            color: Colors.white.withValues(alpha: 0.2),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black12,
@@ -464,10 +459,10 @@ class _WelcomePageState extends State<WelcomePage>
       child: Text(
         text,
         style: TextStyle(
-          color: Colors.white.withOpacity(0.9),
+          color: Colors.white.withValues(alpha: 0.9),
           fontSize: 16,
           decoration: TextDecoration.underline,
-          decorationColor: Colors.white.withOpacity(0.5),
+          decorationColor: Colors.white.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -487,7 +482,7 @@ class _WelcomePageState extends State<WelcomePage>
               width: 50 * scale,
               height: 50 * scale,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 shape: BoxShape.circle,
               ),
             ),
@@ -499,7 +494,7 @@ class _WelcomePageState extends State<WelcomePage>
               width: 40 * scale,
               height: 40 * scale,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 shape: BoxShape.circle,
               ),
             ),
@@ -511,7 +506,7 @@ class _WelcomePageState extends State<WelcomePage>
               width: 45 * scale,
               height: 45 * scale,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 shape: BoxShape.circle,
               ),
             ),
@@ -630,7 +625,7 @@ class _WelcomePageState extends State<WelcomePage>
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   blurRadius: 2,
                   spreadRadius: 1,
                 ),

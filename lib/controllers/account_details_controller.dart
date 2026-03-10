@@ -99,7 +99,7 @@ class AccountDetailsController extends GetxController {
               (file) => supabase.storage.from('images').getPublicUrl(file.name))
           .toList();
     } catch (e) {
-      print('Error loading user images: $e');
+      debugPrint('Error loading user images: $e');
     }
   }
 
@@ -119,7 +119,7 @@ class AccountDetailsController extends GetxController {
         lastBucketImage.value = publicUrl;
       }
     } catch (e) {
-      print('Error fetching last bucket image: $e');
+      debugPrint('Error fetching last bucket image: $e');
     }
   }
 
@@ -142,7 +142,7 @@ class AccountDetailsController extends GetxController {
           
       return publicUrl;
     } catch (e) {
-      print('Error fetching image from bucket: $e');
+      debugPrint('Error fetching image from bucket: $e');
       return '';
     }
   }
@@ -189,7 +189,7 @@ class AccountDetailsController extends GetxController {
             colorText: Colors.white);
       }
     } catch (e) {
-      print('Error uploading image: $e');
+      debugPrint('Error uploading image: $e');
       Get.snackbar('خطأ', 'حدث خطأ في تحميل الصورة',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,

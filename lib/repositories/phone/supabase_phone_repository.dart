@@ -1,5 +1,5 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import 'package:phone_system_app/models/account.dart';
 import 'package:phone_system_app/models/client.dart';
 import 'package:phone_system_app/models/phone_number.dart';
 import 'package:phone_system_app/repositories/crud_mixin.dart';
@@ -75,7 +75,7 @@ class SupabasePhoneRepository extends PhoneRepository
 
     try {
       final values = await _client.from(phoneTableName).select().match(mm);
-      print(values);
+      debugPrint(values.toString());
       phones = values.map((e) => PhoneNumber.fromJson(e)).toList();
     } catch (e) {
       Get.snackbar("مشكلة مع الارقام المعروضة", e.toString());
@@ -98,7 +98,7 @@ class SupabasePhoneRepository extends PhoneRepository
       }
       return null;
     } catch (e) {
-      print('Error checking phone number: $e');
+      debugPrint('Error checking phone number: $e');
       return null;
     }
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/system_type.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
@@ -16,7 +17,7 @@ class SystemTypeController extends GetxController {
       types.value =
           await BackendServices.instance.systemTypeRepository.getAllTypes(true);
     } catch (e) {
-      print('Error loading system types: $e');
+      debugPrint('Error loading system types: $e');
     }
   }
 }

@@ -89,14 +89,14 @@ class _DuesManagementState extends State<DuesManagement>
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(32),
                       bottomRight: Radius.circular(32),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 20,
                         offset: const Offset(0, 4),
                       ),
@@ -329,12 +329,12 @@ class _DuesManagementState extends State<DuesManagement>
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [color, color.withOpacity(0.8)],
+            colors: [color, color.withValues(alpha: 0.8)],
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -374,7 +374,7 @@ class _DuesManagementState extends State<DuesManagement>
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -523,13 +523,13 @@ class _DuesManagementState extends State<DuesManagement>
       padding: const EdgeInsets.all(12), // reduced from 16
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [gradient[0].withOpacity(0.1), gradient[1].withOpacity(0.05)],
+          colors: [gradient[0].withValues(alpha: 0.1), gradient[1].withValues(alpha: 0.05)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16), // reduced from 20
         border: Border.all(
-          color: gradient[0].withOpacity(0.1),
+          color: gradient[0].withValues(alpha: 0.1),
         ),
       ),
       child: Column(
@@ -579,7 +579,7 @@ class _DuesManagementState extends State<DuesManagement>
               Text(
                 unit,
                 style: TextStyle(
-                  color: gradient[0].withOpacity(0.8),
+                  color: gradient[0].withValues(alpha: 0.8),
                   fontWeight: FontWeight.w500,
                   fontSize: 12, // reduced from 14
                 ),
@@ -611,7 +611,7 @@ class ModernSearchField extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -689,7 +689,7 @@ class ModernClientPrintCard extends StatelessWidget {
             border: Border.all(color: const Color(0xFFE2E8F0)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -746,7 +746,7 @@ class ModernClientPrintCard extends StatelessWidget {
                               Container(
                                 decoration: BoxDecoration(
                                   color:
-                                      const Color(0xFF3B82F6).withOpacity(0.1),
+                                      const Color(0xFF3B82F6).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 padding: const EdgeInsets.symmetric(

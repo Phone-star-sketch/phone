@@ -1,4 +1,3 @@
-import 'backend_service_type.dart';
 import 'supabase_backend_services.dart';
 
 class BackendServices {

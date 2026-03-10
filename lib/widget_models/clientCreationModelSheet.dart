@@ -93,7 +93,7 @@ Future clientEditModelSheet(
           phoneNumberError.value = null;
         }
       } catch (e) {
-        print('Error checking phone number: $e');
+        debugPrint('Error checking phone number: $e');
         phoneNumberError.value = null;
       } finally {
         isCheckingPhone.value = false;
@@ -129,12 +129,12 @@ Future clientEditModelSheet(
 
         await BackendServices.instance.phoneRepository.create(phone);
 
-        if (phonePrice != null && phonePrice! > 0) {
+        if (phonePrice != null && phonePrice > 0) {
           final log = Log(
             id: -1,
             createdAt: DateTime.now(),
             clientId: clientId,
-            price: phonePrice!,
+            price: phonePrice,
             transactionType: TransactionType.addition,
             systemType: '',
             createdBy: accountController.currentAccount.name ?? '',
@@ -144,12 +144,12 @@ Future clientEditModelSheet(
           await BackendServices.instance.logRepository.create(log);
         }
 
-        print('Finished creating new client');
+        debugPrint('Finished creating new client');
       } else {
         final updatedClient = Client(
           id: client.id,
           createdAt: selectedDate,
-          totalCash: (client.totalCash ?? 0) + (phonePrice ?? 0),
+          totalCash: client.totalCash + (phonePrice ?? 0),
           name: nameField.text,
           nationalId: nationalIdField.text,
           address: addressField.text,
@@ -192,7 +192,7 @@ Future clientEditModelSheet(
       // Return success
       return true;
     } catch (e) {
-      print('Error saving client data: $e');
+      debugPrint('Error saving client data: $e');
       // Return failure
       return false;
     }
@@ -227,7 +227,7 @@ Future clientEditModelSheet(
             key: formKey,
             child: TextSelectionTheme(
               data: TextSelectionThemeData(
-                selectionColor: Colors.blue.withOpacity(0.3),
+                selectionColor: Colors.blue.withValues(alpha: 0.3),
                 cursorColor: Colors.blue,
                 selectionHandleColor: Colors.blue,
               ),

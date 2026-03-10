@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/models/client.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:phone_system_app/views/print_clients_receipts.dart';
-import 'package:flutter/services.dart';
 
 class CustomToolbar extends StatelessWidget {
   const CustomToolbar({

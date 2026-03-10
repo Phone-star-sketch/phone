@@ -205,7 +205,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
+                    color: Colors.blue.withValues(alpha: 0.3),
                     blurRadius: 15,
                     offset: const Offset(0, 8),
                   ),
@@ -220,7 +220,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
                       Text(
                         'التكلفة الإجمالية',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
@@ -243,7 +243,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
                             child: Text(
                               'جنيه',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -256,7 +256,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: Column(

@@ -76,7 +76,7 @@ class SupabaseProfitRepository extends ProfitRepository
       data.remove("id");
       await _client.from(profitTable).update(data).match({'id': item.id});
     } catch (e) {
-            print(data); 
+            debugPrint(data.toString()); 
 
       Get.snackbar("مشكلة اثناء تحديث الربح", e.toString());
     }
@@ -93,7 +93,7 @@ class SupabaseProfitRepository extends ProfitRepository
         return MonthlyProfit.fromJson(profitJsonObject);
       }).toList();
     } catch (e) {
-      print(dataList); 
+      debugPrint(dataList.toString()); 
       Get.showSnackbar(GetSnackBar(
         title: "حدثت مشلكة اثناء تحميل الارباح السابقة",
         message: e.toString(),

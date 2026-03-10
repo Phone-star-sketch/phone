@@ -93,12 +93,12 @@ class _AnimatedProfileAvatarState extends State<AnimatedProfileAvatar>
                             width: size,
                             height: size,
                             decoration: BoxDecoration(
-                              color: Color(0xFF3498DB).withOpacity(opacity),
+                              color: Color(0xFF3498DB).withValues(alpha: opacity),
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
                                   color: Color(0xFF3498DB)
-                                      .withOpacity(opacity * 0.5),
+                                      .withValues(alpha: opacity * 0.5),
                                   blurRadius: size,
                                   spreadRadius: size * 0.5,
                                 ),
@@ -124,14 +124,14 @@ class _AnimatedProfileAvatarState extends State<AnimatedProfileAvatar>
                               shape: BoxShape.circle,
                               border: Border.all(
                                 color: Color(0xFF3498DB)
-                                    .withOpacity(0.2 - (index * 0.05)),
+                                    .withValues(alpha: 0.2 - (index * 0.05)),
                                 width: 2,
                               ),
                               gradient: SweepGradient(
                                 colors: [
-                                  Color(0xFF3498DB).withOpacity(0.1),
-                                  Color(0xFF3498DB).withOpacity(0.3),
-                                  Color(0xFF3498DB).withOpacity(0.1),
+                                  Color(0xFF3498DB).withValues(alpha: 0.1),
+                                  Color(0xFF3498DB).withValues(alpha: 0.3),
+                                  Color(0xFF3498DB).withValues(alpha: 0.1),
                                 ],
                               ),
                             ),
@@ -158,7 +158,7 @@ class _AnimatedProfileAvatarState extends State<AnimatedProfileAvatar>
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Color(0xFF3498DB).withOpacity(0.5),
+                              color: Color(0xFF3498DB).withValues(alpha: 0.5),
                               blurRadius: 10,
                               spreadRadius: 2,
                             ),
@@ -174,7 +174,7 @@ class _AnimatedProfileAvatarState extends State<AnimatedProfileAvatar>
                                   width: double.infinity,
                                   height: double.infinity,
                                   errorBuilder: (context, error, stackTrace) {
-                                    print(
+                                    debugPrint(
                                         'Error loading network image: $error');
                                     return Image.asset(
                                       'assets/images/owner.png',

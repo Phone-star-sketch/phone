@@ -1,17 +1,11 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/client.dart';
-import 'package:phone_system_app/models/user.dart';
-import 'package:phone_system_app/utils/string_utils.dart';
-import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:phone_system_app/views/pages/follow.dart';
 import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 import 'dart:io';
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -84,13 +78,13 @@ class TransactionNotificationService {
     );
 
     _isInitialized = true;
-    print('🔔 Notification service initialized');
+    debugPrint('🔔 Notification service initialized');
   }
 
   Future<void> _requestPermissions() async {
     if (Platform.isAndroid) {
       final status = await Permission.notification.request();
-      print('🔔 Notification permission status: $status');
+      debugPrint('🔔 Notification permission status: $status');
     }
   }
 
@@ -105,7 +99,6 @@ class TransactionNotificationService {
 
     final Log log = logWithUser.log;
     final Client? client = logWithUser.client;
-    final AppUser? user = logWithUser.user;
 
     _badgeCount++;
     await AppBadgePlus.updateBadge(_badgeCount);
@@ -161,7 +154,7 @@ class TransactionNotificationService {
       payload: client?.id.toString(),
     );
 
-    print('🔔 Notification sent for transaction ID: ${log.id}');
+    debugPrint('🔔 Notification sent for transaction ID: ${log.id}');
   }
 
   Future<void> showBasicNotification({
@@ -216,7 +209,7 @@ class TransactionNotificationService {
       payload: payload,
     );
 
-    print('🔔 Basic notification sent: $title');
+    debugPrint('🔔 Basic notification sent: $title');
   }
 
   Color _getNotificationColor(TransactionType type) {
@@ -258,5 +251,5 @@ void notificationTapBackground(NotificationResponse response) {
       TransactionNotificationService.pendingClientId = clientId;
     }
   }
-  print('Notification tapped in background: ${response.payload}');
+  debugPrint('Notification tapped in background: ${response.payload}');
 }

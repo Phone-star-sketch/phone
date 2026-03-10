@@ -55,7 +55,7 @@ class FollowController extends GetxController {
 
     // التأكد من وجود AccountClientInfo controller
     if (!Get.isRegistered<AccountClientInfo>()) {
-      print('⚠️ AccountClientInfo not registered in FollowController');
+      debugPrint('⚠️ AccountClientInfo not registered in FollowController');
       return;
     }
 
@@ -73,7 +73,7 @@ class FollowController extends GetxController {
       // Finally setup real-time
       _setupRealtime();
     } catch (e) {
-      print('Error initializing data: $e');
+      debugPrint('Error initializing data: $e');
     }
   }
 
@@ -95,9 +95,9 @@ class FollowController extends GetxController {
               value: AccountClientInfo.to.currentAccount.id,
             ),
             callback: (payload) async {
-              print(
+              debugPrint(
                   '🔴 Realtime update received: ${payload.eventType} at ${DateTime.now()}');
-              print('🔴 Changed data: ${payload.newRecord}');
+              debugPrint('🔴 Changed data: ${payload.newRecord}');
 
               // Update timestamp
               lastUpdateTime.value = DateFormat.jm('ar').format(DateTime.now());
@@ -106,7 +106,7 @@ class FollowController extends GetxController {
               Get.snackbar(
                 'تحديث مباشر',
                 'تم استلام تحديث جديد',
-                backgroundColor: Colors.green.withOpacity(0.1),
+                backgroundColor: Colors.green.withValues(alpha: 0.1),
                 duration: Duration(seconds: 2),
               );
 
@@ -114,7 +114,7 @@ class FollowController extends GetxController {
               if (payload.eventType == PostgresChangeEvent.insert &&
                   payload.newRecord != null &&
                   payload.newRecord!['creator'] == 2) {
-                print(
+                debugPrint(
                     '🔴 Assistant transaction detected, showing immediate notification');
 
                 // Fetch the client information
@@ -157,15 +157,15 @@ class FollowController extends GetxController {
           .subscribe((status, error) {
         if (error != null) {
           connectionStatus.value = 'خطأ في الاتصال';
-          print('🔴 Realtime error: $error');
+          debugPrint('🔴 Realtime error: $error');
         } else {
           connectionStatus.value = 'متصل';
-          print('🔴 Realtime status: $status');
+          debugPrint('🔴 Realtime status: $status');
         }
       });
     } catch (e) {
       connectionStatus.value = 'فشل الاتصال';
-      print('🔴 Error setting up realtime: $e');
+      debugPrint('🔴 Error setting up realtime: $e');
     }
   }
 
@@ -222,10 +222,10 @@ class FollowController extends GetxController {
         }
       }
 
-      print("Real-time update: Found ${logs.length} logs");
+      debugPrint("Real-time update: Found ${logs.length} logs");
       Loaders.to.followLoading.value = false;
     } catch (e) {
-      print("Real-time update error: $e");
+      debugPrint("Real-time update error: $e");
       //Get.snackbar("مشكلة اثناء التحميل", e.toString());
       Loaders.to.followLoading.value = false;
     }
@@ -246,13 +246,13 @@ class FollowController extends GetxController {
       Get.snackbar(
         'اختبار',
         'تم إضافة معاملة تجريبية',
-        backgroundColor: Colors.blue.withOpacity(0.1),
+        backgroundColor: Colors.blue.withValues(alpha: 0.1),
       );
 
       // Refresh logs after insertion
       await updateLogs();
     } catch (e) {
-      print('🔴 Error inserting dummy log: $e');
+      debugPrint('🔴 Error inserting dummy log: $e');
       Get.snackbar('خطأ', 'فشل في إضافة البيانات التجريبية: $e');
     }
   }
@@ -573,7 +573,7 @@ class _LogWithUserCardWidgetState extends State<LogWithUserCardWidget>
                 gradient: LinearGradient(
                   colors: [
                     _gradientAnimation.value!,
-                    _gradientAnimation.value!.withOpacity(0.8),
+                    _gradientAnimation.value!.withValues(alpha: 0.8),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -581,7 +581,7 @@ class _LogWithUserCardWidgetState extends State<LogWithUserCardWidget>
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: _gradientAnimation.value!.withOpacity(0.2),
+                    color: _gradientAnimation.value!.withValues(alpha: 0.2),
                     blurRadius: 10,
                     spreadRadius: 2,
                   ),

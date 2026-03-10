@@ -3,7 +3,6 @@ import 'package:phone_system_app/models/model.dart';
 import 'package:phone_system_app/models/phone_number.dart';
 import 'package:phone_system_app/models/system.dart';
 import 'package:phone_system_app/views/pages/system_list.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class Client extends Model {
   static const String nameColumn = "name";

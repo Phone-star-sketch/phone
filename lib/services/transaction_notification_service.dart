@@ -7,13 +7,11 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/log.dart';
 import 'package:phone_system_app/models/client.dart';
-import 'package:phone_system_app/models/user.dart';
 import 'package:intl/intl.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:phone_system_app/views/pages/follow.dart';
 import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TransactionNotificationService {
@@ -50,7 +48,7 @@ class TransactionNotificationService {
     if (_isInitialized) return;
 
     try {
-      print('🔔 Starting notification service initialization');
+      debugPrint('🔔 Starting notification service initialization');
 
       // Initialize timezone data first
       tz.initializeTimeZones();
@@ -58,7 +56,7 @@ class TransactionNotificationService {
       // Request permissions
       final permissionStatus = await _requestPermissions();
       if (!permissionStatus) {
-        print('🔔 Warning: Notification permissions not granted');
+        debugPrint('🔔 Warning: Notification permissions not granted');
       }
 
       // Create notification channels for Android
@@ -87,9 +85,9 @@ class TransactionNotificationService {
         _initCompleter.complete(true);
       }
 
-      print('🔔 Notification service initialized successfully');
+      debugPrint('🔔 Notification service initialized successfully');
     } catch (e) {
-      print('🔔 Error initializing notification service: $e');
+      debugPrint('🔔 Error initializing notification service: $e');
       _isInitialized = false;
 
       if (!_initCompleter.isCompleted) {
@@ -117,10 +115,10 @@ class TransactionNotificationService {
               value: 2, // Assistant's user ID
             ),
             callback: (payload) async {
-              if (payload.newRecord != null) {
+              {
                 try {
                   // Create log from data
-                  final logData = Map<String, dynamic>.from(payload.newRecord!);
+                  final logData = Map<String, dynamic>.from(payload.newRecord);
                   final Log log = Log.fromJson(logData);
 
                   // Get client data if available
@@ -133,12 +131,9 @@ class TransactionNotificationService {
                           .eq('id', log.clientId as int)
                           .single();
 
-                      if (response != null) {
-                        client =
-                            Client.fromJson(response as Map<String, dynamic>);
-                      }
+                      client = Client.fromJson(response);
                     } catch (e) {
-                      print('🔔 Error fetching client data: $e');
+                      debugPrint('🔔 Error fetching client data: $e');
                     }
                   }
 
@@ -149,20 +144,20 @@ class TransactionNotificationService {
                   // Show notification
                   await showTransactionNotification(logWithUser);
                 } catch (e) {
-                  print('🔔 Error processing notification: $e');
+                  debugPrint('🔔 Error processing notification: $e');
                 }
               }
             },
           )
           .subscribe((status, error) {
         if (error != null) {
-          print('🔔 Realtime subscription error: $error');
+          debugPrint('🔔 Realtime subscription error: $error');
         } else {
-          print('🔔 Realtime subscription status: $status');
+          debugPrint('🔔 Realtime subscription status: $status');
         }
       });
     } catch (e) {
-      print('🔔 Error setting up realtime subscription: $e');
+      debugPrint('🔔 Error setting up realtime subscription: $e');
     }
   }
 
@@ -184,7 +179,7 @@ class TransactionNotificationService {
 
           if (result.isPermanentlyDenied) {
             // Suggest opening app settings
-            print(
+            debugPrint(
                 '🔔 Notification permission permanently denied. Please enable in settings.');
           }
         } else {
@@ -195,7 +190,7 @@ class TransactionNotificationService {
         isGranted = true;
       }
     } catch (e) {
-      print('🔔 Error requesting permissions: $e');
+      debugPrint('🔔 Error requesting permissions: $e');
       isGranted = false;
     }
 
@@ -237,7 +232,7 @@ class TransactionNotificationService {
     if (androidPlugin != null) {
       await androidPlugin.createNotificationChannel(mainChannel);
       await androidPlugin.createNotificationChannel(assistantChannel);
-      print('🔔 Android notification channels created');
+      debugPrint('🔔 Android notification channels created');
     }
   }
 
@@ -255,7 +250,7 @@ class TransactionNotificationService {
       onDidReceiveLocalNotification:
           (int id, String? title, String? body, String? payload) async {
         // For older iOS versions (deprecated but needed for backward compatibility)
-        print('🔔 Received local notification: $id, $title, $body, $payload');
+        debugPrint('🔔 Received local notification: $id, $title, $body, $payload');
       },
     );
 
@@ -268,7 +263,7 @@ class TransactionNotificationService {
 
   void _checkPendingClientId() {
     if (pendingClientId != null) {
-      print('🔔 Found pending client ID: $pendingClientId');
+      debugPrint('🔔 Found pending client ID: $pendingClientId');
       // Navigate to follow screen with the client ID
       Future.delayed(Duration(milliseconds: 500), () {
         Get.toNamed('/follow', arguments: {'clientId': pendingClientId});
@@ -279,7 +274,7 @@ class TransactionNotificationService {
 
   Future<void> _handleNotificationResponse(
       NotificationResponse response) async {
-    print('🔔 Notification tapped: ${response.payload}');
+    debugPrint('🔔 Notification tapped: ${response.payload}');
     if (response.payload != null) {
       final clientId = int.tryParse(response.payload!);
       if (clientId != null) {
@@ -291,10 +286,10 @@ class TransactionNotificationService {
   Future<void> showTransactionNotification(LogWidthUser logWithUser) async {
     // Ensure initialized or wait for initialization
     if (!_isInitialized) {
-      print('🔔 Waiting for notification service to initialize...');
+      debugPrint('🔔 Waiting for notification service to initialize...');
       bool initialized = await isInitialized;
       if (!initialized) {
-        print('🔔 Failed to initialize notification service');
+        debugPrint('🔔 Failed to initialize notification service');
         return;
       }
     }
@@ -304,7 +299,7 @@ class TransactionNotificationService {
 
     // Only show notifications for assistant transactions (createdBy = 2)
     if (log.createdBy != 2) {
-      print('🔔 Skipping notification - not from assistant');
+      debugPrint('🔔 Skipping notification - not from assistant');
       return;
     }
 
@@ -316,7 +311,7 @@ class TransactionNotificationService {
       try {
         await AppBadgePlus.updateBadge(_badgeCount);
       } catch (e) {
-        print('🔔 Badge update error: $e');
+        debugPrint('🔔 Badge update error: $e');
       }
 
       // Prepare notification content
@@ -349,9 +344,9 @@ class TransactionNotificationService {
         payload: client?.id.toString(),
       );
 
-      print('🔔 Notification sent successfully for transaction ID: ${log.id}');
+      debugPrint('🔔 Notification sent successfully for transaction ID: ${log.id}');
     } catch (e) {
-      print('🔔 Error showing notification: $e');
+      debugPrint('🔔 Error showing notification: $e');
       // Retry with simpler notification as fallback
       await _retryWithSimpleNotification(log, client);
     }
@@ -443,9 +438,9 @@ class TransactionNotificationService {
         payload: client?.id.toString(),
       );
 
-      print('🔔 Simple fallback notification sent successfully');
+      debugPrint('🔔 Simple fallback notification sent successfully');
     } catch (e) {
-      print('🔔 Even simple notification failed: $e');
+      debugPrint('🔔 Even simple notification failed: $e');
     }
   }
 
@@ -468,7 +463,7 @@ class TransactionNotificationService {
     try {
       await AppBadgePlus.updateBadge(0);
     } catch (e) {
-      print('🔔 Error clearing badge: $e');
+      debugPrint('🔔 Error clearing badge: $e');
     }
   }
 
@@ -519,9 +514,9 @@ class TransactionNotificationService {
         platformDetails,
       );
 
-      print('🔔 Test notification sent successfully');
+      debugPrint('🔔 Test notification sent successfully');
     } catch (e) {
-      print('🔔 Test notification failed: $e');
+      debugPrint('🔔 Test notification failed: $e');
     }
   }
 }
@@ -536,5 +531,5 @@ void notificationTapBackground(NotificationResponse response) {
       TransactionNotificationService.pendingClientId = clientId;
     }
   }
-  print('Notification tapped in background: ${response.payload}');
+  debugPrint('Notification tapped in background: ${response.payload}');
 }

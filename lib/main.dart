@@ -17,13 +17,13 @@ Future<void> main() async {
   if (kIsWeb) {
     FlutterError.onError = (FlutterErrorDetails details) {
       if (kDebugMode) {
-        print('Web error: ${details.exception}');
+        debugPrint('Web error: ${details.exception}');
       }
     };
 
     // Skip mobile-only initialization
     if (kDebugMode) {
-      print('Running on web - mobile services disabled');
+      debugPrint('Running on web - mobile services disabled');
     }
   } else {
     // Mobile initialization only when not on web
@@ -34,7 +34,7 @@ Future<void> main() async {
           overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom]);
     } catch (e) {
       if (kDebugMode) {
-        print('Mobile setup failed: $e');
+        debugPrint('Mobile setup failed: $e');
       }
     }
   }
@@ -44,7 +44,7 @@ Future<void> main() async {
     Get.put(WelcomeThemeController());
   } catch (e) {
     if (kDebugMode) {
-      print('Theme controller failed: $e');
+      debugPrint('Theme controller failed: $e');
     }
   }
 
@@ -55,7 +55,7 @@ Future<void> main() async {
       PaintingBinding.instance.imageCache.maximumSizeBytes = 50 << 20;
     } catch (e) {
       if (kDebugMode) {
-        print('Image cache setup failed: $e');
+        debugPrint('Image cache setup failed: $e');
       }
     }
   }
@@ -66,7 +66,7 @@ Future<void> main() async {
     Get.put(SupabaseSystemRepository());
   } catch (e) {
     if (kDebugMode) {
-      print('Services initialization failed: $e');
+      debugPrint('Services initialization failed: $e');
     }
   }
 
@@ -220,7 +220,7 @@ class MainApp extends StatelessWidget {
                   try {
                     WelcomeThemeController.to.setTheme(WelcomeTheme.ramadan);
                   } catch (e) {
-                    if (kDebugMode) print('Theme set error: $e');
+                    if (kDebugMode) debugPrint('Theme set error: $e');
                   }
                   Navigator.pop(context);
                 },
@@ -240,7 +240,7 @@ class MainApp extends StatelessWidget {
                   try {
                     WelcomeThemeController.to.setTheme(WelcomeTheme.eid);
                   } catch (e) {
-                    if (kDebugMode) print('Theme set error: $e');
+                    if (kDebugMode) debugPrint('Theme set error: $e');
                   }
                   Navigator.pop(context);
                 },
@@ -260,7 +260,7 @@ class MainApp extends StatelessWidget {
                   try {
                     WelcomeThemeController.to.setTheme(WelcomeTheme.general);
                   } catch (e) {
-                    if (kDebugMode) print('Theme set error: $e');
+                    if (kDebugMode) debugPrint('Theme set error: $e');
                   }
                   Navigator.pop(context);
                 },

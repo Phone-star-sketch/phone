@@ -49,7 +49,6 @@ class OptimizedExcelGenerator {
       // Filter valid clients
       final validClients = clients
           .where((client) =>
-              client.id != null &&
               client.name != null &&
               client.name!.isNotEmpty)
           .toList();
@@ -268,16 +267,7 @@ class OptimizedExcelGenerator {
         }
 
         // Amount due
-        double amountDue = 0.0;
-        if (client.totalCash != null) {
-          if (client.totalCash is int) {
-            amountDue = (client.totalCash as int).toDouble() * -1;
-          } else if (client.totalCash is double) {
-            amountDue = (client.totalCash as double) * -1;
-          } else if (client.totalCash is num) {
-            amountDue = (client.totalCash as num).toDouble() * -1;
-          }
-        }
+        double amountDue = client.totalCash * -1;
         final absoluteAmount = amountDue.abs();
         totalAmount += absoluteAmount;
         final formattedAmount = '${absoluteAmount.toStringAsFixed(0)} ';
@@ -347,17 +337,8 @@ class OptimizedExcelGenerator {
           phone = client.numbers![0].phoneNumber ?? 'غير متوفر';
         }
 
-        // Amount due - Improved calculation
-        double amountDue = 0.0;
-        if (client.totalCash != null) {
-          if (client.totalCash is int) {
-            amountDue = (client.totalCash as int).toDouble() * -1;
-          } else if (client.totalCash is double) {
-            amountDue = (client.totalCash as double) * -1;
-          } else if (client.totalCash is num) {
-            amountDue = (client.totalCash as num).toDouble() * -1;
-          }
-        }
+        // Amount due
+        double amountDue = client.totalCash * -1;
         final absoluteAmount = amountDue.abs();
         final formattedAmount = '${absoluteAmount.toStringAsFixed(0)} ';
 
@@ -495,7 +476,7 @@ class OptimizedExcelGenerator {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 10,
                   spreadRadius: 2,
                 ),
@@ -519,120 +500,6 @@ class OptimizedExcelGenerator {
       ),
       barrierDismissible: false,
     );
-  }
-
-  // Batch fetch all client notes in a single query
-  static Future<Map<dynamic, String>> _batchGetClientNotes(
-      List<dynamic> clientIds) async {
-    final Map<dynamic, String> notesMap = {};
-
-    if (clientIds.isEmpty) return notesMap;
-
-    try {
-      final supabase = Supabase.instance.client;
-      final result = await supabase
-          .from('client')
-          .select('id, notes')
-          .filter('id', 'in', clientIds.where((id) => id != null).toList())
-          .timeout(const Duration(seconds: 10));
-
-      for (final row in result) {
-        final id = row['id'];
-        final notes = row['notes']?.toString() ?? '';
-        notesMap[id] = notes.isEmpty ? 'لا توجد ملاحظات' : notes;
-      }
-
-      // Fill missing entries
-      for (final id in clientIds) {
-        if (id != null && !notesMap.containsKey(id)) {
-          notesMap[id] = 'لا توجد ملاحظات';
-        }
-      }
-    } catch (e) {
-      developer.log('Error batch getting notes: $e',
-          name: 'OptimizedExcelGenerator');
-      // Fill with default values on error
-      for (final id in clientIds) {
-        if (id != null) {
-          notesMap[id] = 'خطأ في تحميل الملاحظات';
-        }
-      }
-    }
-
-    return notesMap;
-  }
-
-  // Pre-process all client data into a simple format
-  static Future<List<List<dynamic>>> _preprocessClientData(
-      List<Client> clients, Map<dynamic, String> notesMap) async {
-    final List<List<dynamic>> processedData = [];
-
-    // Calculate totals for summary
-    double totalAmount = 0.0;
-
-    for (final client in clients) {
-      try {
-        // Client name
-        final name = client.name ?? 'غير محدد';
-
-        // Phone number
-        String phone = 'غير متوفر';
-        if (client.numbers?.isNotEmpty == true) {
-          phone = client.numbers![0].phoneNumber ?? 'غير متوفر';
-        }
-
-        // Amount due - Improved calculation
-        double amountDue = 0.0;
-        if (client.totalCash != null) {
-          if (client.totalCash is int) {
-            amountDue = (client.totalCash as int).toDouble() * -1;
-          } else if (client.totalCash is double) {
-            amountDue = (client.totalCash as double) * -1;
-          } else if (client.totalCash is num) {
-            amountDue = (client.totalCash as num).toDouble() * -1;
-          }
-        }
-        final absoluteAmount = amountDue.abs();
-        totalAmount += absoluteAmount;
-        final formattedAmount = '${absoluteAmount.toStringAsFixed(0)} ';
-
-        // Systems - Pre-process system names
-        String systems = '';
-        if (client.numbers?.isNotEmpty == true) {
-          final systemNames = <String>[];
-          for (final number in client.numbers!) {
-            if (number.systems?.isNotEmpty == true) {
-              for (final system in number.systems!) {
-                final systemName = system.type?.name ?? 'غير محدد';
-                if (!systemNames.contains(systemName)) {
-                  systemNames.add(systemName);
-                }
-              }
-            }
-          }
-          systems =
-              systemNames.isNotEmpty ? systemNames.join(', ') : 'لا توجد خدمات';
-        } else {
-          systems = 'لا توجد خدمات';
-        }
-
-        // Notes from pre-fetched map
-        final notes = notesMap[client.id] ?? 'لا توجد ملاحظات';
-
-        processedData.add([name, phone, formattedAmount, systems, notes]);
-      } catch (e) {
-        developer.log('Error preprocessing client ${client.name}: $e',
-            name: 'OptimizedExcelGenerator');
-        processedData
-            .add(['خطأ في البيانات', 'خطأ', 'خطأ', 'خطأ', 'خطأ في البيانات']);
-      }
-    }
-
-    // Add summary data at the end
-    processedData.add(
-        ['SUMMARY', clients.length.toString(), totalAmount.toStringAsFixed(0)]);
-
-    return processedData;
   }
 
   // Generate Excel directly for smaller datasets
@@ -1081,7 +948,7 @@ class OptimizedExcelGenerator {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 10,
                   spreadRadius: 2,
                 ),
@@ -1167,10 +1034,10 @@ class OptimizedExcelGenerator {
         title: color == Colors.red ? 'خطأ' : 'تنبيه',
         message: message,
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: color.withOpacity(0.1),
+        backgroundColor: color.withValues(alpha: 0.1),
         messageText: Text(
           message,
-          style: TextStyle(color: color.withOpacity(0.8)),
+          style: TextStyle(color: color.withValues(alpha: 0.8)),
         ),
         duration: const Duration(seconds: 3),
       ),

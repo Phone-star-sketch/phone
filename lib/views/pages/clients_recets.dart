@@ -9,7 +9,6 @@ import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/utils/error_handler.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/services.dart';
-import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer' as developer;
 import 'package:phone_system_app/services/excel_generator.dart';
@@ -89,8 +88,6 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
       child: Obx(() {
         final q = controller.query.value;
         final filteredData = _getFilteredClients(q);
-        final totalCash = _calculateTotalCash(filteredData);
-
         return FadeTransition(
           opacity: _fadeAnimation,
           child: SlideTransition(
@@ -100,14 +97,14 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
                 // Header Section
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFFFFF).withOpacity(0.9),
+                    color: const Color(0xFFFFFFFF).withValues(alpha: 0.9),
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(32),
                       bottomRight: Radius.circular(32),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 20,
                         offset: const Offset(0, 4),
                       ),
@@ -294,7 +291,7 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
                             itemBuilder: (context, index) {
                               final client = filteredData[index];
                               final isSelected = _selectedClientIds
-                                  .contains(client.id?.toString());
+                                  .contains(client.id.toString());
 
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16.0),
@@ -305,10 +302,10 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
                                     setState(() {
                                       if (selected) {
                                         _selectedClientIds
-                                            .add(client.id?.toString() ?? '');
+                                            .add(client.id.toString());
                                       } else {
                                         _selectedClientIds
-                                            .remove(client.id?.toString());
+                                            .remove(client.id.toString());
                                       }
                                     });
                                   },
@@ -349,14 +346,6 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
     }).toList();
   }
 
-  // Calculate total cash
-  num _calculateTotalCash(List<Client> clients) {
-    if (clients.isEmpty) return 0;
-    return clients
-        .map((e) => e.totalCash)
-        .reduce((value, element) => value + element);
-  }
-
   Widget _buildStatCard({
     required IconData icon,
     required String title,
@@ -368,13 +357,13 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [gradient[0].withOpacity(0.1), gradient[1].withOpacity(0.05)],
+          colors: [gradient[0].withValues(alpha: 0.1), gradient[1].withValues(alpha: 0.05)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: gradient[0].withOpacity(0.1),
+          color: gradient[0].withValues(alpha: 0.1),
         ),
       ),
       child: Column(
@@ -424,7 +413,7 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
               Text(
                 unit,
                 style: TextStyle(
-                  color: gradient[0].withOpacity(0.8),
+                  color: gradient[0].withValues(alpha: 0.8),
                   fontWeight: FontWeight.w500,
                   fontSize: 12,
                 ),
@@ -483,9 +472,7 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
       } else {
         _selectedClientIds.clear();
         for (final client in clients) {
-          if (client.id != null) {
-            _selectedClientIds.add(client.id.toString());
-          }
+          _selectedClientIds.add(client.id.toString());
         }
       }
     });
@@ -501,7 +488,7 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
   Future<void> _exportSelectedToExcel(List<Client> allClients) async {
     try {
       final selectedClients = allClients.where((client) {
-        return _selectedClientIds.contains(client.id?.toString());
+        return _selectedClientIds.contains(client.id.toString());
       }).toList();
 
       if (selectedClients.isEmpty) {
@@ -857,10 +844,10 @@ class _ClientReceiptCardState extends State<ClientReceiptCard>
         boxShadow: [
           BoxShadow(
             color: widget.isSelected
-                ? Colors.blue.withOpacity(0.2)
+                ? Colors.blue.withValues(alpha: 0.2)
                 : _isExpanded
-                    ? Colors.blue.withOpacity(0.1)
-                    : Colors.black.withOpacity(0.05),
+                    ? Colors.blue.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.05),
             blurRadius: _isExpanded ? 15 : 10,
             offset: const Offset(0, 5),
             spreadRadius: _isExpanded ? 2 : 0,
@@ -922,7 +909,7 @@ class _ClientReceiptCardState extends State<ClientReceiptCard>
                           borderRadius: BorderRadius.circular(15),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.blue.withOpacity(0.3),
+                              color: Colors.blue.withValues(alpha: 0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 4),
                             ),
@@ -1040,7 +1027,7 @@ class _ClientReceiptCardState extends State<ClientReceiptCard>
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      'مستحق: ${((widget.client.totalCash ?? 0) * -1).toStringAsFixed(0)} ج.م',
+                                      'مستحق: ${(widget.client.totalCash * -1).toStringAsFixed(0)} ج.م',
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
@@ -1353,7 +1340,7 @@ class ModernSearchField extends StatelessWidget {
         borderRadius: borderRadius,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),

@@ -82,7 +82,7 @@ class _AllClientsPageState extends State<AllClientsPage>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -104,7 +104,7 @@ class _AllClientsPageState extends State<AllClientsPage>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10b981).withOpacity(0.1),
+                  color: const Color(0xFF10b981).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -186,7 +186,7 @@ class _AllClientsPageState extends State<AllClientsPage>
         height: 36,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
         ),
         child: Icon(icon, color: color, size: 16),
       ),
@@ -413,14 +413,14 @@ class ModernClientCard extends StatefulWidget {
 
 class _ModernClientCardState extends State<ModernClientCard> {
   Color _getStatusColor() {
-    final cash = widget.client.totalCash ?? 0;
+    final cash = widget.client.totalCash;
     if (cash > 10) return const Color(0xFF10b981);
     if (cash >= 0) return const Color.fromARGB(255, 58, 195, 9);
     return const Color(0xFFef4444);
   }
 
   String _getStatusText() {
-    final cash = widget.client.totalCash ?? 0;
+    final cash = widget.client.totalCash;
     if (cash > 10) return 'لا يوجد مستحقات';
     if (cash >= 0) return 'لا يوجد عليه مستحقات';
     return 'عليه مستحقات';
@@ -428,7 +428,7 @@ class _ModernClientCardState extends State<ModernClientCard> {
 
   @override
   Widget build(BuildContext context) {
-    final cash = widget.client.totalCash ?? 0;
+    final cash = widget.client.totalCash;
     final isNegative = cash < 0;
 
     return GetBuilder<AccountClientInfo>(
@@ -463,7 +463,7 @@ class _ModernClientCardState extends State<ModernClientCard> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -482,7 +482,7 @@ class _ModernClientCardState extends State<ModernClientCard> {
                         height: 44,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          color: _getStatusColor().withOpacity(0.1),
+                          color: _getStatusColor().withValues(alpha: 0.1),
                         ),
                         child: Center(
                           child: Text(
@@ -604,7 +604,7 @@ class _ModernClientCardState extends State<ModernClientCard> {
                       bottomLeft: Radius.circular(14),
                       bottomRight: Radius.circular(14),
                     ),
-                    color: _getStatusColor().withOpacity(0.08),
+                    color: _getStatusColor().withValues(alpha: 0.08),
                   ),
                   child: Row(
                     children: [
@@ -656,7 +656,7 @@ class _ModernClientCardState extends State<ModernClientCard> {
         height: 32,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
         ),
         child: Icon(icon, color: color, size: 16),
       ),

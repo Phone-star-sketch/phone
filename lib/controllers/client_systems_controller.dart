@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/models/system.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
@@ -17,7 +18,7 @@ class ClientSystemController extends GetxController {
       allTypesId.value =
           await BackendServices.instance.systemRepository.getAll("type_id");
     } catch (e) {
-      print('Error loading system type IDs: $e');
+      debugPrint('Error loading system type IDs: $e');
     }
   }
 }

@@ -1,17 +1,12 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
-import 'package:phone_system_app/controllers/client_bottom_sheet_controller.dart';
 import 'package:phone_system_app/models/client.dart';
-import 'package:phone_system_app/models/phone_number.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/widget_models/clientCreationModelSheet.dart';
 import 'bottom_sheet_dialogs/show_client_info_sheet.dart';
-import 'package:phone_system_app/utils/string_utils.dart';
-import 'package:phone_system_app/utils/arabic_normalizer.dart'; // Add this line
 
 class ClientListView extends StatelessWidget {
   String? query;
@@ -39,8 +34,8 @@ class ClientListView extends StatelessWidget {
         ClientFilterUtils.filterClients(query ?? '', data);
 
     // Debug logs to verify filtering
-    print("Query: $query");
-    print(
+    debugPrint("Query: $query");
+    debugPrint(
         "Filtered Data: ${filteredData.map((client) => client.name).toList()}");
 
     return Scaffold(
@@ -350,7 +345,7 @@ class _ClientCardState extends State<ClientCard>
                                 BoxShadow(
                                   color: getWarningColorState(
                                           clientCash.toDouble())
-                                      .withOpacity(0.3),
+                                      .withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 3),
                                 ),
@@ -454,9 +449,9 @@ class ClientFilterUtils {
               .replaceAll(" ", ""));
 
       // Debug logs to verify normalization
-      print("Normalized Query: $normalizedQuery");
-      print("Normalized Name: $normalizedName");
-      print("Normalized Phone: $normalizedPhone");
+      debugPrint("Normalized Query: $normalizedQuery");
+      debugPrint("Normalized Name: $normalizedName");
+      debugPrint("Normalized Phone: $normalizedPhone");
 
       return normalizedName.contains(normalizedQuery) ||
           normalizedPhone.contains(normalizedQuery);

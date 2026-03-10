@@ -254,7 +254,7 @@ class _CreateSubscriptionPageState extends State<CreateSubscriptionPage>
       title,
       message,
       snackPosition: SnackPosition.TOP,
-      backgroundColor: color.withOpacity(0.1),
+      backgroundColor: color.withValues(alpha: 0.1),
       colorText: color,
       borderRadius: 12,
       margin: const EdgeInsets.all(16),
@@ -363,7 +363,7 @@ class _CreateSubscriptionPageState extends State<CreateSubscriptionPage>
             margin: const EdgeInsets.all(8),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFF6366F1).withOpacity(0.1),
+              color: const Color(0xFF6366F1).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: const Color(0xFF6366F1), size: 20),
@@ -421,8 +421,8 @@ class _CreateSubscriptionPageState extends State<CreateSubscriptionPage>
             boxShadow: [
               BoxShadow(
                 color: isSelected
-                    ? const Color(0xFF6366F1).withOpacity(0.3)
-                    : Colors.grey.withOpacity(0.1),
+                    ? const Color(0xFF6366F1).withValues(alpha: 0.3)
+                    : Colors.grey.withValues(alpha: 0.1),
                 blurRadius: isSelected ? 12 : 6,
                 offset: const Offset(0, 4),
               ),
@@ -437,8 +437,8 @@ class _CreateSubscriptionPageState extends State<CreateSubscriptionPage>
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? Colors.white.withOpacity(0.2)
-                      : const Color(0xFF6366F1).withOpacity(0.1),
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : const Color(0xFF6366F1).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -476,7 +476,7 @@ class _CreateSubscriptionPageState extends State<CreateSubscriptionPage>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
@@ -508,7 +508,7 @@ class _CreateSubscriptionPageState extends State<CreateSubscriptionPage>
             border: Border.all(color: Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withValues(alpha: 0.1),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -522,7 +522,7 @@ class _CreateSubscriptionPageState extends State<CreateSubscriptionPage>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1).withOpacity(0.1),
+                      color: const Color(0xFF6366F1).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -610,7 +610,7 @@ class _CreateSubscriptionPageState extends State<CreateSubscriptionPage>
                                 borderRadius: BorderRadius.circular(24),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.grey.withOpacity(0.1),
+                                    color: Colors.grey.withValues(alpha: 0.1),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -811,7 +811,7 @@ class _CreateSubscriptionPageState extends State<CreateSubscriptionPage>
                                 boxShadow: [
                                   BoxShadow(
                                     color: const Color(0xFF6366F1)
-                                        .withOpacity(0.3),
+                                        .withValues(alpha: 0.3),
                                     blurRadius: 12,
                                     offset: const Offset(0, 6),
                                   ),
@@ -825,7 +825,7 @@ class _CreateSubscriptionPageState extends State<CreateSubscriptionPage>
                                       Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.2),
+                                          color: Colors.white.withValues(alpha: 0.2),
                                           borderRadius:
                                               BorderRadius.circular(8),
                                         ),
@@ -878,7 +878,7 @@ class _CreateSubscriptionPageState extends State<CreateSubscriptionPage>
                                 boxShadow: [
                                   BoxShadow(
                                     color: const Color(0xFF6366F1)
-                                        .withOpacity(0.3),
+                                        .withValues(alpha: 0.3),
                                     blurRadius: 12,
                                     offset: const Offset(0, 6),
                                   ),

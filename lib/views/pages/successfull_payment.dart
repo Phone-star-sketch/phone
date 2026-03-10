@@ -161,7 +161,7 @@ class _SuccessOverlayState extends State<_SuccessOverlay>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF764ba2).withOpacity(0.4),
+                          color: const Color(0xFF764ba2).withValues(alpha: 0.4),
                           blurRadius: 30,
                           offset: const Offset(0, 12),
                         ),
@@ -182,7 +182,7 @@ class _SuccessOverlayState extends State<_SuccessOverlay>
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
+                                    color: Colors.white.withValues(alpha: 0.15),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(Icons.close_rounded,
@@ -211,7 +211,7 @@ class _SuccessOverlayState extends State<_SuccessOverlay>
                                   boxShadow: [
                                     BoxShadow(
                                       color: const Color(0xFF38ef7d)
-                                          .withOpacity(0.4),
+                                          .withValues(alpha: 0.4),
                                       blurRadius: 20,
                                       spreadRadius: 2,
                                     ),
@@ -244,7 +244,7 @@ class _SuccessOverlayState extends State<_SuccessOverlay>
                               'تمت معالجة عملية الدفع بنجاح',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: 0.8),
                                 decoration: TextDecoration.none,
                               ),
                               textAlign: TextAlign.center,
@@ -258,10 +258,10 @@ class _SuccessOverlayState extends State<_SuccessOverlay>
                               width: double.infinity,
                               padding: const EdgeInsets.all(18),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.12),
+                                color: Colors.white.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.18),
+                                  color: Colors.white.withValues(alpha: 0.18),
                                 ),
                               ),
                               child: Column(
@@ -304,7 +304,7 @@ class _SuccessOverlayState extends State<_SuccessOverlay>
                                     boxShadow: [
                                       BoxShadow(
                                         color: const Color(0xFF38ef7d)
-                                            .withOpacity(0.35),
+                                            .withValues(alpha: 0.35),
                                         blurRadius: 14,
                                         offset: const Offset(0, 4),
                                       ),
@@ -345,7 +345,7 @@ class _SuccessOverlayState extends State<_SuccessOverlay>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: Colors.white, size: 16),
@@ -358,7 +358,7 @@ class _SuccessOverlayState extends State<_SuccessOverlay>
                 Text(label,
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       decoration: TextDecoration.none,
                     )),
                 const SizedBox(height: 2),
@@ -385,7 +385,7 @@ class _SuccessOverlayState extends State<_SuccessOverlay>
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: [
             Colors.transparent,
-            Colors.white.withOpacity(0.2),
+            Colors.white.withValues(alpha: 0.2),
             Colors.transparent,
           ]),
         ),

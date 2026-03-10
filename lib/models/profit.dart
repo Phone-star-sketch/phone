@@ -1,5 +1,3 @@
-import 'package:get/get_connect/http/src/request/request.dart';
-import 'package:phone_system_app/models/account.dart';
 import 'package:phone_system_app/models/model.dart';
 
 class MonthlyProfit extends Model {

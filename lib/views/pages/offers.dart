@@ -81,14 +81,14 @@ class OfferManagement extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(32),
                 bottomRight: Radius.circular(32),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 20,
                   offset: const Offset(0, 4),
                 ),
@@ -111,7 +111,7 @@ class OfferManagement extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.orange.withOpacity(0.1),
+                              color: Colors.orange.withValues(alpha: 0.1),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -352,7 +352,7 @@ class _ExpiredSystemsPageState extends State<ExpiredSystemsPage> {
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.red.withOpacity(0.1),
+                                    color: Colors.red.withValues(alpha: 0.1),
                                     blurRadius: 8,
                                     offset: Offset(0, 2),
                                   ),
@@ -402,7 +402,7 @@ class _ExpiredSystemsPageState extends State<ExpiredSystemsPage> {
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.orange.withOpacity(0.1),
+                                    color: Colors.orange.withValues(alpha: 0.1),
                                     blurRadius: 8,
                                     offset: Offset(0, 2),
                                   ),
@@ -513,13 +513,13 @@ class _ExpiredSystemsPageState extends State<ExpiredSystemsPage> {
           Card(
             color: Colors.white,
             elevation: 3,
-            shadowColor: Colors.blue.withOpacity(0.2),
+            shadowColor: Colors.blue.withValues(alpha: 0.2),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
               side: BorderSide(
                 color: hasExpiredDate
-                    ? Colors.red.withOpacity(0.3)
-                    : Colors.orange.withOpacity(0.3),
+                    ? Colors.red.withValues(alpha: 0.3)
+                    : Colors.orange.withValues(alpha: 0.3),
                 width: 2,
               ),
             ),
@@ -548,7 +548,7 @@ class _ExpiredSystemsPageState extends State<ExpiredSystemsPage> {
                     boxShadow: [
                       BoxShadow(
                         color: (hasExpiredDate ? Colors.red : Colors.orange)
-                            .withOpacity(0.2),
+                            .withValues(alpha: 0.2),
                         blurRadius: 8,
                         offset: Offset(0, 2),
                       ),
@@ -663,7 +663,7 @@ class _ExpiredSystemsPageState extends State<ExpiredSystemsPage> {
                             snackPosition: SnackPosition.BOTTOM,
                             backgroundColor: Colors.red[100],
                           );
-                          print('Error updating expire date: $e');
+                          debugPrint('Error updating expire date: $e');
                         }
                       }
                     },
@@ -696,7 +696,7 @@ class _ExpiredSystemsPageState extends State<ExpiredSystemsPage> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
+                                color: Colors.black.withValues(alpha: 0.03),
                                 blurRadius: 10,
                                 spreadRadius: 0,
                                 offset: Offset(0, 2),
@@ -865,7 +865,7 @@ class _ExpiredSystemsPageState extends State<ExpiredSystemsPage> {
                 boxShadow: [
                   BoxShadow(
                     color: (hasExpiredDate ? Colors.red : Colors.orange)
-                        .withOpacity(0.3),
+                        .withValues(alpha: 0.3),
                     blurRadius: 4,
                     offset: Offset(0, 2),
                   ),

@@ -216,7 +216,7 @@ class PrintClientFullReport extends StatelessWidget {
 
   pw.Widget _buildClientInfoCard(pw.Font boldFont, pw.Font regularFont,
       PdfColor primaryColor, PdfColor successColor, PdfColor dangerColor) {
-    final cash = client.totalCash ?? 0;
+    final cash = client.totalCash;
     final statusColor =
         cash > 0 ? successColor : (cash < 0 ? dangerColor : PdfColors.grey600);
 
@@ -304,7 +304,7 @@ class PrintClientFullReport extends StatelessWidget {
         ...systems.map((system) => pw.TableRow(
               children: [
                 _buildTableCell(
-                    '${system.type?.price?.toStringAsFixed(0) ?? "0"} ج.م',
+                    '${system.type?.price.toStringAsFixed(0) ?? "0"} ج.م',
                     regularFont,
                     9,
                     PdfColors.black),
@@ -411,16 +411,16 @@ class PrintClientFullReport extends StatelessWidget {
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
             children: [
-              _buildSummaryItem('المضاف', '${totalAdded.toStringAsFixed(0)}',
+              _buildSummaryItem('المضاف', totalAdded.toStringAsFixed(0),
                   boldFont, regularFont, dangerColor),
-              _buildSummaryItem('المسدد', '${totalPaid.toStringAsFixed(0)}',
+              _buildSummaryItem('المسدد', totalPaid.toStringAsFixed(0),
                   boldFont, regularFont, successColor),
               _buildSummaryItem(
                   'الرصيد',
-                  '${(client.totalCash ?? 0).abs().toStringAsFixed(0)}',
+                  client.totalCash.abs().toStringAsFixed(0),
                   boldFont,
                   regularFont,
-                  (client.totalCash ?? 0) >= 0 ? successColor : dangerColor),
+                  client.totalCash >= 0 ? successColor : dangerColor),
             ],
           ),
         ],
@@ -493,7 +493,7 @@ class PrintClientFullReport extends StatelessWidget {
   List<Log> _getClientLogs() {
     try {
       if (Get.isRegistered<ClientBottomSheetController>()) {
-        return Get.find<ClientBottomSheetController>().getClientLogs() ?? [];
+        return Get.find<ClientBottomSheetController>().getClientLogs();
       }
     } catch (_) {}
     return client.logs ?? [];
@@ -502,7 +502,7 @@ class PrintClientFullReport extends StatelessWidget {
   List<System> _getClientSystems() {
     try {
       if (Get.isRegistered<ClientBottomSheetController>()) {
-        return Get.find<ClientBottomSheetController>().getClientSystems() ?? [];
+        return Get.find<ClientBottomSheetController>().getClientSystems();
       }
     } catch (_) {}
 

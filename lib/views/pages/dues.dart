@@ -154,7 +154,7 @@ class _DuesPageState extends State<DuesPage> {
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: IconButton(
@@ -175,7 +175,7 @@ class _DuesPageState extends State<DuesPage> {
                     ),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: IconButton(
@@ -299,7 +299,7 @@ class _DuesPageState extends State<DuesPage> {
                               boxShadow: [
                                 BoxShadow(
                                   color:
-                                      const Color(0xFF667EEA).withOpacity(0.3),
+                                      const Color(0xFF667EEA).withValues(alpha: 0.3),
                                   blurRadius: 12,
                                   offset: const Offset(0, 6),
                                 ),
@@ -365,7 +365,7 @@ class _DuesPageState extends State<DuesPage> {
         data: Theme.of(context).copyWith(
           textSelectionTheme: TextSelectionThemeData(
             cursorColor: const Color(0xFF667EEA),
-            selectionColor: const Color(0xFF667EEA).withOpacity(0.3),
+            selectionColor: const Color(0xFF667EEA).withValues(alpha: 0.3),
             selectionHandleColor: const Color(0xFF667EEA),
           ),
         ),

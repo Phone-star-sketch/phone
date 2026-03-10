@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
-import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/views/account_view.dart';
 import 'package:phone_system_app/views/pages/login_page.dart';
 import 'package:phone_system_app/controllers/account_details_controller.dart';
@@ -57,7 +56,7 @@ class _WelcomeOverlayState extends State<WelcomeOverlay>
       animation: _controller,
       builder: (context, child) {
         return Material(
-          color: Colors.black.withOpacity(0.5),
+          color: Colors.black.withValues(alpha: 0.5),
           child: Center(
             child: FadeTransition(
               opacity: _opacityAnimation,
@@ -70,7 +69,7 @@ class _WelcomeOverlayState extends State<WelcomeOverlay>
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.blue.withOpacity(0.3),
+                        color: Colors.blue.withValues(alpha: 0.3),
                         blurRadius: 20,
                         spreadRadius: 5,
                       ),

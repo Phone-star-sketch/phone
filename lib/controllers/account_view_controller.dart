@@ -24,9 +24,9 @@ class AccountViewController extends GetxController {
       final month = next.month;
       final year = next.year;
 
-      print("$month $year");
+      debugPrint("$month $year");
     } catch (e) {
-      print(e);
+      debugPrint(e.toString());
     }
   }
 
@@ -82,14 +82,14 @@ class AccountViewController extends GetxController {
         return; // Success, exit the retry loop
       } catch (e) {
         retryCount++;
-        print('Error fetching accounts (attempt $retryCount/$maxRetries): $e');
+        debugPrint('Error fetching accounts (attempt $retryCount/$maxRetries): $e');
 
         if (retryCount >= maxRetries) {
           isLoading.value = false;
           Get.snackbar(
             'خطأ في الاتصال',
             'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.',
-            backgroundColor: Get.theme.colorScheme.error.withOpacity(0.9),
+            backgroundColor: Get.theme.colorScheme.error.withValues(alpha: 0.9),
             colorText: Colors.white,
             duration: const Duration(seconds: 5),
             snackPosition: SnackPosition.BOTTOM,
@@ -131,11 +131,11 @@ class AccountViewController extends GetxController {
       final data = await BackendServices.instance.accountRepository.getAllAccounts();
       accounts.value = data;
     } catch (e) {
-      print('Error refreshing accounts: $e');
+      debugPrint('Error refreshing accounts: $e');
       Get.snackbar(
         'خطأ في التحديث',
         'فشل تحديث البيانات: ${e.toString()}',
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.8),
+        backgroundColor: Get.theme.colorScheme.error.withValues(alpha: 0.8),
         colorText: Colors.white,
         duration: const Duration(seconds: 4),
         snackPosition: SnackPosition.BOTTOM,

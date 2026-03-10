@@ -664,7 +664,7 @@ class _DuesShowPageState extends State<DuesShowPage>
         }
       }
     } catch (e) {
-      print('Error sharing to WhatsApp: $e');
+      debugPrint('Error sharing to WhatsApp: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -688,7 +688,7 @@ class _DuesShowPageState extends State<DuesShowPage>
         subject: title,
       );
     } catch (e) {
-      print('Error sharing: $e');
+      debugPrint('Error sharing: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -766,7 +766,7 @@ class _DuesShowPageState extends State<DuesShowPage>
     );
 
     try {
-      print('Generating PDF for selected dues...');
+      debugPrint('Generating PDF for selected dues...');
 
       // Filter selected dues and validate
       final selectedDues = _filteredDues
@@ -777,7 +777,7 @@ class _DuesShowPageState extends State<DuesShowPage>
         throw Exception('لا توجد مستحقات محددة صحيحة');
       }
 
-      print('Generating PDF for ${selectedDues.length} selected dues');
+      debugPrint('Generating PDF for ${selectedDues.length} selected dues');
 
       final monthName = DateFormat('MMMM yyyy', 'ar').format(DateTime.now());
 
@@ -791,7 +791,7 @@ class _DuesShowPageState extends State<DuesShowPage>
         autoOpen: false, // Don't auto-open, we'll show share dialog
       );
 
-      print('PDF saved successfully: ${file.path}');
+      debugPrint('PDF saved successfully: ${file.path}');
 
       // Close loading dialog
       if (mounted) Navigator.of(context).pop();
@@ -801,7 +801,7 @@ class _DuesShowPageState extends State<DuesShowPage>
         _showShareDialog(file, 'المستحقات المختارة');
       }
     } catch (error) {
-      print('PDF Generation Error: $error');
+      debugPrint('PDF Generation Error: $error');
 
       // Close loading dialog if still open
       if (mounted && Navigator.of(context).canPop()) {
@@ -867,7 +867,7 @@ class _DuesShowPageState extends State<DuesShowPage>
     );
 
     try {
-      print('Generating PDF for all dues...');
+      debugPrint('Generating PDF for all dues...');
 
       final monthName = DateFormat('MMMM yyyy', 'ar').format(DateTime.now());
 
@@ -881,7 +881,7 @@ class _DuesShowPageState extends State<DuesShowPage>
         autoOpen: false, // Don't auto-open, we'll show share dialog
       );
 
-      print('PDF saved successfully: ${file.path}');
+      debugPrint('PDF saved successfully: ${file.path}');
 
       // Close loading dialog
       if (mounted) Navigator.of(context).pop();
@@ -891,7 +891,7 @@ class _DuesShowPageState extends State<DuesShowPage>
         _showShareDialog(file, 'كشف المستحقات');
       }
     } catch (error) {
-      print('PDF Generation Error: $error');
+      debugPrint('PDF Generation Error: $error');
 
       // Close loading dialog if still open
       if (mounted && Navigator.of(context).canPop()) {
@@ -954,7 +954,7 @@ class _DuesShowPageState extends State<DuesShowPage>
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: IconButton(
@@ -978,7 +978,7 @@ class _DuesShowPageState extends State<DuesShowPage>
                     if (!_isSelectionMode) ...[
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
@@ -991,7 +991,7 @@ class _DuesShowPageState extends State<DuesShowPage>
                       const SizedBox(width: 8),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
@@ -1002,7 +1002,7 @@ class _DuesShowPageState extends State<DuesShowPage>
                     ] else ...[
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
@@ -1015,7 +1015,7 @@ class _DuesShowPageState extends State<DuesShowPage>
                       const SizedBox(width: 8),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
@@ -1034,7 +1034,7 @@ class _DuesShowPageState extends State<DuesShowPage>
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: TextField(
@@ -1056,11 +1056,11 @@ class _DuesShowPageState extends State<DuesShowPage>
                   margin: const EdgeInsets.symmetric(horizontal: 20),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -1170,24 +1170,24 @@ class _DuesShowPageState extends State<DuesShowPage>
             end: Alignment.bottomRight,
             colors: [
               Colors.white,
-              Colors.white.withOpacity(0.95),
+              Colors.white.withValues(alpha: 0.95),
             ],
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
             BoxShadow(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               blurRadius: 15,
               offset: const Offset(0, -2),
             ),
           ],
           border: Border.all(
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -1209,7 +1209,7 @@ class _DuesShowPageState extends State<DuesShowPage>
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF667EEA).withOpacity(0.3),
+                    color: const Color(0xFF667EEA).withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -1270,10 +1270,10 @@ class _DuesShowPageState extends State<DuesShowPage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF667EEA).withOpacity(0.1),
+                color: const Color(0xFF667EEA).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: const Color(0xFF667EEA).withOpacity(0.2),
+                  color: const Color(0xFF667EEA).withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -1368,7 +1368,7 @@ class _DuesShowPageState extends State<DuesShowPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -1387,10 +1387,10 @@ class _DuesShowPageState extends State<DuesShowPage>
               end: Alignment.bottomLeft,
               colors: [
                 _isSelectionMode && isSelected
-                    ? const Color(0xFF667EEA).withOpacity(0.1)
+                    ? const Color(0xFF667EEA).withValues(alpha: 0.1)
                     : Colors.white,
                 _isSelectionMode && isSelected
-                    ? const Color(0xFF667EEA).withOpacity(0.05)
+                    ? const Color(0xFF667EEA).withValues(alpha: 0.05)
                     : Colors.grey.shade50,
               ],
             ),
@@ -1583,10 +1583,10 @@ class _DuesShowPageState extends State<DuesShowPage>
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF667EEA).withOpacity(0.05),
+                    color: const Color(0xFF667EEA).withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(15),
                     border: Border.all(
-                      color: const Color(0xFF667EEA).withOpacity(0.1),
+                      color: const Color(0xFF667EEA).withValues(alpha: 0.1),
                     ),
                   ),
                   child: Row(
@@ -1637,7 +1637,7 @@ class _DuesShowPageState extends State<DuesShowPage>
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isEditing
-                          ? const Color(0xFF667EEA).withOpacity(0.3)
+                          ? const Color(0xFF667EEA).withValues(alpha: 0.3)
                           : Colors.grey.shade200,
                     ),
                   ),
@@ -1733,13 +1733,13 @@ class _DuesShowPageState extends State<DuesShowPage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF667EEA).withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFF667EEA).withValues(alpha: 0.3)),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(
           textSelectionTheme: TextSelectionThemeData(
             cursorColor: Color(0xFF667EEA),
-            selectionColor: Color(0xFF667EEA).withOpacity(0.3),
+            selectionColor: Color(0xFF667EEA).withValues(alpha: 0.3),
             selectionHandleColor: Color(0xFF667EEA),
           ),
         ),
@@ -1775,7 +1775,7 @@ class _DuesShowPageState extends State<DuesShowPage>
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: const Color(0xFF667EEA).withOpacity(0.3),
+                color: const Color(0xFF667EEA).withValues(alpha: 0.3),
                 width: 1,
               ),
             ),

@@ -60,13 +60,11 @@ class _InfoTablePageState extends State<InfoTablePage> {
             )
           ''').order('created_at', ascending: false);
 
-      if (response is List) {
-        setState(() {
-          infoData = List<Map<String, dynamic>>.from(response);
-          filteredData = infoData;
-          isLoading = false;
-        });
-      }
+      setState(() {
+        infoData = List<Map<String, dynamic>>.from(response);
+        filteredData = infoData;
+        isLoading = false;
+      });
     } catch (e) {
       setState(() {
         error = 'حدث خطأ أثناء تحميل البيانات';
@@ -168,7 +166,7 @@ class _InfoTablePageState extends State<InfoTablePage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -225,7 +223,7 @@ class _InfoTablePageState extends State<InfoTablePage> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: (color ?? const Color(0xFF3b82f6)).withOpacity(0.1),
+          color: (color ?? const Color(0xFF3b82f6)).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, color: color ?? const Color(0xFF3b82f6), size: 20),
@@ -243,7 +241,7 @@ class _InfoTablePageState extends State<InfoTablePage> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
             ),
           ],
@@ -302,7 +300,7 @@ class _InfoTablePageState extends State<InfoTablePage> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 8,
             ),
           ],
@@ -313,7 +311,7 @@ class _InfoTablePageState extends State<InfoTablePage> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color, size: 20),
@@ -474,7 +472,7 @@ class _InfoTablePageState extends State<InfoTablePage> {
         'نجاح',
         'تم تصدير البيانات بنجاح',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF10b981).withOpacity(0.1),
+        backgroundColor: const Color(0xFF10b981).withValues(alpha: 0.1),
         colorText: const Color(0xFF10b981),
       );
     } catch (e) {
@@ -550,7 +548,7 @@ class _ClientInfoCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -562,7 +560,7 @@ class _ClientInfoCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF3b82f6).withOpacity(0.05),
+              color: const Color(0xFF3b82f6).withValues(alpha: 0.05),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(16)),
             ),
@@ -572,7 +570,7 @@ class _ClientInfoCard extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3b82f6).withOpacity(0.1),
+                    color: const Color(0xFF3b82f6).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
@@ -636,7 +634,7 @@ class _ClientInfoCard extends StatelessWidget {
                         'تم نسخ رقم الهاتف',
                         snackPosition: SnackPosition.BOTTOM,
                         backgroundColor:
-                            const Color(0xFF10b981).withOpacity(0.1),
+                            const Color(0xFF10b981).withValues(alpha: 0.1),
                         colorText: const Color(0xFF10b981),
                         duration: const Duration(seconds: 2),
                       );
@@ -646,7 +644,7 @@ class _ClientInfoCard extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF3b82f6).withOpacity(0.1),
+                      color: const Color(0xFF3b82f6).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.copy_rounded,

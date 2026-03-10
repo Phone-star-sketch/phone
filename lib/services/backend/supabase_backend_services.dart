@@ -1,18 +1,11 @@
-import 'package:phone_system_app/models/account.dart';
-import 'package:phone_system_app/repositories/account/account_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:phone_system_app/repositories/account/supabase_account_repo.dart';
-import 'package:phone_system_app/repositories/client/client_repository.dart';
 import 'package:phone_system_app/repositories/client/supabase_client_repository.dart';
-import 'package:phone_system_app/repositories/log/log_repository.dart';
 import 'package:phone_system_app/repositories/log/log_supabase_repository.dart';
-import 'package:phone_system_app/repositories/phone/phone_repository.dart';
 import 'package:phone_system_app/repositories/phone/supabase_phone_repository.dart';
-import 'package:phone_system_app/repositories/profit/profit_repository.dart';
 import 'package:phone_system_app/repositories/profit/supabase_profit_repository.dart';
 import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
-import 'package:phone_system_app/repositories/system/system_repository.dart';
 import 'package:phone_system_app/repositories/system_type/supabase_system_type_repository.dart';
-import 'package:phone_system_app/repositories/system_type/system_type_repository.dart';
 import 'package:phone_system_app/repositories/user/supabase_user_repository.dart';
 import 'package:phone_system_app/repositories/user/user_repository.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
@@ -53,7 +46,7 @@ class SupabaseBackendServices extends BackendServiceType {
         },
       );
     } catch (e) {
-      print('Supabase initialization error: $e');
+      debugPrint('Supabase initialization error: $e');
       rethrow;
     }
 

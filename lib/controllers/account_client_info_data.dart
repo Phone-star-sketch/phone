@@ -197,7 +197,7 @@ class AccountClientInfo extends GetxController {
     final clients = clinets;
     final total = clinets.length;
 
-    print("the total number is ${clinets.length}");
+    debugPrint("the total number is ${clinets.length}");
 
     int count = 0;
 
@@ -215,7 +215,7 @@ class AccountClientInfo extends GetxController {
       c.totalCash = newBalance;
       BackendServices.instance.clientRepository.update(c);
       count += 1;
-      print("$count of $total");
+      debugPrint("$count of $total");
     }
   }
 
@@ -225,7 +225,7 @@ class AccountClientInfo extends GetxController {
       _isProcessingBulkOperation = true;
       Loaders.to.paymentIsLoading.value = true;
 
-      print(" the length is ${clinets.length}");
+      debugPrint(" the length is ${clinets.length}");
 
       countPaid.value = 0;
       countNotPaid.value = 0;
@@ -304,7 +304,7 @@ class AccountClientInfo extends GetxController {
           .getAllClientsByAccount(currentAccount);
       clinets.value = freshClients;
     } catch (e) {
-      print('Error refreshing clients after bulk operation: $e');
+      debugPrint('Error refreshing clients after bulk operation: $e');
     }
   }
 
@@ -320,7 +320,7 @@ class AccountClientInfo extends GetxController {
       clinets.value = newClients;
       isLoading.value = false;
     } catch (e) {
-      print('Error fetching clients: $e');
+      debugPrint('Error fetching clients: $e');
       isLoading.value = false;
 
       String errorMessage = 'حدث خطأ أثناء تحميل بيانات العملاء';
@@ -333,7 +333,7 @@ class AccountClientInfo extends GetxController {
       Get.snackbar(
         'خطأ',
         errorMessage,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.8),
+        backgroundColor: Get.theme.colorScheme.error.withValues(alpha: 0.8),
         colorText: Colors.white,
         duration: const Duration(seconds: 4),
         snackPosition: SnackPosition.BOTTOM,
@@ -346,9 +346,9 @@ class AccountClientInfo extends GetxController {
       final allClientsData =
           await BackendServices.instance.clientRepository.getAllClientsData();
       allClients.value = allClientsData;
-      print("Fetched ${allClientsData.length} total clients");
+      debugPrint("Fetched ${allClientsData.length} total clients");
     } catch (e) {
-      print('Error fetching all clients: $e');
+      debugPrint('Error fetching all clients: $e');
     }
   }
 

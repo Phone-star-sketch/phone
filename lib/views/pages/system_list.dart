@@ -1,13 +1,8 @@
 import 'dart:math';
-import 'dart:ui';
 
 import 'package:auto_size_text_field/auto_size_text_field.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/get_core.dart';
-import 'package:get/get_instance/get_instance.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:phone_system_app/ViewModels/system_list_vm.dart';
 import 'package:phone_system_app/models/system_type.dart';
@@ -217,7 +212,7 @@ class SystemListTab extends StatelessWidget {
                                           end: Alignment.bottomCenter,
                                           colors: [
                                             Colors.transparent,
-                                            Colors.black.withOpacity(0.3),
+                                            Colors.black.withValues(alpha: 0.3),
                                           ],
                                         ),
                                       ),
@@ -377,15 +372,7 @@ class SystemListTab extends StatelessWidget {
                                           margin: EdgeInsets.all(12),
                                         ));
                                       } catch (e) {
-                                        Get.showSnackbar(GetSnackBar(
-                                          message:
-                                              'حدث خطأ أثناء الحفظ: ${e.toString()}',
-                                          duration: const Duration(seconds: 3),
-                                          backgroundColor:
-                                              const Color(0xFFef4444),
-                                          borderRadius: 10,
-                                          margin: const EdgeInsets.all(12),
-                                        ));
+                                        rethrow;
                                       } finally {
                                         controller.isSaving.value = false;
                                       }
@@ -432,19 +419,14 @@ class SystemListTab extends StatelessWidget {
                                     final fileName =
                                         '${timestamp}_${image.name}';
 
-                                    // ✅ استخدام showDialog بدل Get.dialog
                                     BuildContext? uploadDialogContext;
                                     showDialog(
                                       context: context,
                                       barrierDismissible: false,
                                       builder: (ctx) {
                                         uploadDialogContext = ctx;
-                                        return const PopScope(
-                                          canPop: false,
-                                          child: Center(
-                                            child:
-                                                CircularProgressIndicator(),
-                                          ),
+                                        return const Center(
+                                          child: CircularProgressIndicator(),
                                         );
                                       },
                                     );
@@ -471,7 +453,6 @@ class SystemListTab extends StatelessWidget {
 
                                       controller.update();
 
-                                      // ✅ إغلاق loading dialog بـ context خاصه
                                       if (uploadDialogContext != null &&
                                           Navigator.of(uploadDialogContext!)
                                               .canPop()) {
@@ -486,16 +467,9 @@ class SystemListTab extends StatelessWidget {
                                         colorText: Colors.white,
                                       );
                                     } catch (uploadError) {
-                                      if (uploadDialogContext != null &&
-                                          Navigator.of(uploadDialogContext!)
-                                              .canPop()) {
-                                        Navigator.of(uploadDialogContext!)
-                                            .pop();
-                                      }
-                                      throw uploadError;
+                                      rethrow;
                                     }
                                   } catch (e) {
-                                    print('Error uploading image: $e');
                                     Get.snackbar(
                                       'Error',
                                       'Failed to upload image. Please try again.',
@@ -538,7 +512,7 @@ class SystemListTab extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               spreadRadius: 1,
               blurRadius: 3,
               offset: const Offset(0, 1),
@@ -555,7 +529,6 @@ class SystemListTab extends StatelessWidget {
     );
   }
 
-  // ✅ استخدام showDialog بدل Get.dialog
   void _showDeleteDialog(
       BuildContext context, SystemType currentSystem, int index) {
     showDialog(
@@ -583,8 +556,8 @@ class SystemListTab extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.of(dialogContext).pop(); // ✅ إغلاق dialog التأكيد
-              await _performDelete(context, currentSystem); // ✅ تمرير context
+              Navigator.of(dialogContext).pop();
+              await _performDelete(context, currentSystem);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFef4444),
@@ -602,32 +575,27 @@ class SystemListTab extends StatelessWidget {
     );
   }
 
-  // ✅ تمرير context وإدارة loading dialog بـ context صريح
   Future<void> _performDelete(
       BuildContext context, SystemType currentSystem) async {
     BuildContext? loadingDialogContext;
 
     try {
-      // ✅ Show loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (ctx) {
           loadingDialogContext = ctx;
-          return const PopScope(
-            canPop: false,
-            child: Center(
-              child: Card(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(color: Color(0xFF3b82f6)),
-                      SizedBox(height: 16),
-                      Text('جاري الحذف...'),
-                    ],
-                  ),
+          return const Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Color(0xFF3b82f6)),
+                    SizedBox(height: 16),
+                    Text('جاري الحذف...'),
+                  ],
                 ),
               ),
             ),
@@ -635,13 +603,11 @@ class SystemListTab extends StatelessWidget {
         },
       );
 
-      // Delete from database
       await BackendServices.instance.systemTypeRepository.delete(currentSystem);
 
       controller.editedCardIndex.value = -1;
       await controller.updateTypesSilently(true);
 
-      // ✅ إغلاق loading dialog بـ context خاصه
       if (loadingDialogContext != null &&
           Navigator.of(loadingDialogContext!).canPop()) {
         Navigator.of(loadingDialogContext!).pop();
@@ -655,7 +621,6 @@ class SystemListTab extends StatelessWidget {
         margin: EdgeInsets.all(12),
       ));
     } catch (e) {
-      // ✅ إغلاق loading dialog في حالة الخطأ
       if (loadingDialogContext != null &&
           Navigator.of(loadingDialogContext!).canPop()) {
         Navigator.of(loadingDialogContext!).pop();
@@ -678,9 +643,7 @@ class SystemListTab extends StatelessWidget {
       constraints:
           BoxConstraints.expand(width: MediaQuery.of(context).size.width * 0.7),
       builder: (context) {
-        return Container(
-          child: Column(),
-        );
+        return const Column();
       },
     );
   }
@@ -691,16 +654,16 @@ class SystemCardEditor extends StatelessWidget {
       {super.key, required this.currentSystem, required this.systemCategory});
   final SystemType currentSystem;
   final SystemCategory systemCategory;
-  SystemListViewModel controller = Get.put(SystemListViewModel());
+  final SystemListViewModel controller = Get.put(SystemListViewModel());
 
   @override
   Widget build(BuildContext context) {
     controller.systemName.text = currentSystem.name?.trim() ?? '';
     controller.systemDescription.text = currentSystem.description?.trim() ?? '';
-    controller.systemPrice.text = currentSystem.price?.toString() ?? '0';
+    controller.systemPrice.text = currentSystem.price.toString();
     controller.isRecurring.value = currentSystem.isRecurring;
 
-    return Container(
+    return SizedBox(
       height: systemCategory == SystemCategory.mobileInternet ? 110 : 85,
       child: Form(
         key: controller.formKey,

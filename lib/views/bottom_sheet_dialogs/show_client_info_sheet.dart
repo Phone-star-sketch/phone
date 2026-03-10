@@ -90,10 +90,10 @@ class _ModernClientSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentClient = controller.getClient() ?? client;
-    final systems = controller.getClientSystems() ?? [];
-    final logs = controller.getClientLogs() ?? [];
-    final cash = currentClient.totalCash ?? 0;
+    final currentClient = controller.getClient();
+    final systems = controller.getClientSystems();
+    final logs = controller.getClientLogs();
+    final cash = currentClient.totalCash;
     final statusColor = _getStatusColor(cash);
     final isManager =
         SupabaseAuthentication.myUser!.role != UserRoles.assistant.index;
@@ -123,14 +123,14 @@ class _ModernClientSheet extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [statusColor, statusColor.withOpacity(0.8)],
+                colors: [statusColor, statusColor.withValues(alpha: 0.8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: statusColor.withOpacity(0.3),
+                  color: statusColor.withValues(alpha: 0.3),
                   blurRadius: 15,
                   offset: const Offset(0, 8),
                 ),
@@ -230,9 +230,9 @@ class _ModernClientSheet extends StatelessWidget {
                       label: 'طباعة',
                       color: const Color(0xFF8b5cf6),
                       onTap: () {
-                        final clientLogs = controller.getClientLogs() ?? [];
+                        final clientLogs = controller.getClientLogs();
                         final clientSystems =
-                            controller.getClientSystems() ?? [];
+                            controller.getClientSystems();
                         showPrintClientReport(context, currentClient,
                             logs: clientLogs, systems: clientSystems);
                       },
@@ -274,7 +274,7 @@ class _ModernClientSheet extends StatelessWidget {
                       indicatorSize: TabBarIndicatorSize.tab,
                       dividerColor: Colors.transparent,
                       indicator: BoxDecoration(
-                        color: const Color(0xFF3b82f6).withOpacity(0.1),
+                        color: const Color(0xFF3b82f6).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       tabs: [
@@ -326,7 +326,7 @@ class _QuickActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -390,7 +390,7 @@ class _LogsTab extends StatelessWidget {
                   color: (isAddition
                           ? const Color(0xFF10b981)
                           : const Color(0xFFef4444))
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -529,7 +529,7 @@ class _InfoCard extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF3b82f6).withOpacity(0.1),
+                      color: const Color(0xFF3b82f6).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(item.icon,
@@ -753,7 +753,7 @@ class _SettingButton extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 20),
@@ -797,7 +797,7 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
             decoration: BoxDecoration(
               color:
                   (adding ? const Color(0xFFef4444) : const Color(0xFF10b981))
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -891,7 +891,7 @@ Future<void> showMoneyDialog(BuildContext context, Client client, bool adding,
                             e.toString(),
                             snackPosition: SnackPosition.BOTTOM,
                             backgroundColor:
-                                const Color(0xFFef4444).withOpacity(0.1),
+                                const Color(0xFFef4444).withValues(alpha: 0.1),
                             colorText: const Color(0xFFef4444),
                           );
                         }
@@ -952,7 +952,7 @@ Future<void> showDiscountDialog(BuildContext context, Client client) async {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFFf59e0b).withOpacity(0.1),
+              color: const Color(0xFFf59e0b).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(Icons.discount_rounded, color: Color(0xFFf59e0b)),
@@ -1058,7 +1058,7 @@ Future<void> showDiscountDialog(BuildContext context, Client client) async {
                     'خطأ',
                     e.toString(),
                     snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: const Color(0xFFef4444).withOpacity(0.1),
+                    backgroundColor: const Color(0xFFef4444).withValues(alpha: 0.1),
                     colorText: const Color(0xFFef4444),
                   );
                 }
@@ -1084,7 +1084,7 @@ Future<void> showDiscountDialog(BuildContext context, Client client) async {
       'نجاح',
       'تم إضافة الخصم بنجاح',
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF10b981).withOpacity(0.1),
+      backgroundColor: const Color(0xFF10b981).withValues(alpha: 0.1),
       colorText: const Color(0xFF10b981),
     );
   }
