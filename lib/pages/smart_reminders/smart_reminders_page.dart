@@ -4,6 +4,7 @@ import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/pages/smart_reminders/controllers/reminders_controller.dart';
 import 'package:phone_system_app/pages/smart_reminders/services/whatsapp_service.dart';
 import 'package:phone_system_app/pages/smart_reminders/widgets/reminder_client_card.dart';
+import 'package:phone_system_app/pages/smart_reminders/widgets/whatsapp_settings_page.dart';
 
 class SmartRemindersPage extends StatelessWidget {
   const SmartRemindersPage({super.key});
@@ -71,6 +72,11 @@ class SmartRemindersPage extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            onPressed: () => Get.to(() => const WhatsAppSettingsPage()),
+            icon: const Icon(Icons.settings_rounded, color: Color(0xFF6b7280)),
+            tooltip: 'إعدادات الرسائل',
           ),
           IconButton(
             onPressed: () => controller.loadData(),

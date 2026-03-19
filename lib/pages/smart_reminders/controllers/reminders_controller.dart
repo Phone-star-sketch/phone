@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:phone_system_app/controllers/account_client_info_data.dart';
 import 'package:phone_system_app/models/client.dart';
+import 'package:phone_system_app/pages/smart_reminders/services/whatsapp_service.dart';
 import 'package:phone_system_app/services/analytics_service.dart';
 import 'package:phone_system_app/utils/string_utils.dart';
 
@@ -48,6 +49,7 @@ class RemindersController extends GetxController {
   Future<void> loadData() async {
     isLoading.value = true;
     try {
+      await WhatsAppService.loadTemplates();
       await Future.wait([
         _loadDebtClients(),
         _loadExpiringClients(),
