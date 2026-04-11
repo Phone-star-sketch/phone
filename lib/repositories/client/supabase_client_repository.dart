@@ -308,6 +308,140 @@ class SupabaseClientRepository extends ClientRepository
     }
   }
 
+  /// Batch pay multiple clients' bills in parallel for performance.
+  /// Processes clients in chunks to avoid overwhelming the database.
+  Future<void> batchPaySystemsBills(
+      List<Client> clients, int month, int year,
+      {int chunkSize = 10}) async {
+    // Process in chunks to avoid too many concurrent requests
+    for (int i = 0; i < clients.length; i += chunkSize) {
+      final chunk = clients.skip(i).take(chunkSize).toList();
+
+      // Process each chunk in parallel
+      await Future.wait(chunk.map((client) async {
+        try {
+          double totalCash = client.totalCash;
+          double bills = client.systemsCost();
+
+          // Apply discount if it exists and hasn't expired
+          if (client.discountPercentage != null &&
+              client.discountEndDate != null &&
+              client.discountEndDate!.isAfter(DateTime.now())) {
+            double discountAmount = bills * (client.discountPercentage! / 100);
+            bills -= discountAmount;
+          }
+
+          double newCash = totalCash - bills;
+
+          // Update client balance
+          await _clinet
+              .from(clientTableName)
+              .update({Client.totalCashColumns: newCash})
+              .eq('id', client.id!)
+              .eq('account_id', client.accountId!);
+
+          // Create log entry
+          final logData = {
+            'month': month,
+            'creator': SupabaseAuthentication.myUser!.id,
+            'account_id': AccountClientInfo.to.currentAccount.id,
+            'year': year,
+            'client_id': client.id,
+            'phone_id': client.numbers![0].id,
+            'price': bills,
+            'paid': (totalCash >= bills)
+                ? bills
+                : (totalCash > 0)
+                    ? totalCash
+                    : 0,
+            'reminder': (totalCash >= bills)
+                ? 0
+                : (totalCash > 0)
+                    ? bills - totalCash
+                    : bills,
+            'system_type': client.systemsFullName(),
+            'transaction_type': TransactionType.transactionDone.index,
+            'created_at': DateTime.now().toIso8601String(),
+          };
+
+          await _clinet.from('log').insert(logData);
+        } catch (e) {
+          debugPrint('Error processing payment for client ${client.id}: $e');
+        }
+      }));
+
+      debugPrint(
+          'Processed chunk ${i ~/ chunkSize + 1} (${chunk.length} clients)');
+    }
+  }
+
+  /// Ultra-fast batch payment using server-side SQL function.
+  /// Processes ALL clients in a SINGLE database call - dramatically faster.
+  Future<Map<String, dynamic>> batchPaySystemsBillsUltraFast(
+      List<Client> clients, int month, int year) async {
+    final startTime = DateTime.now();
+    debugPrint(
+        'Starting ultra-fast batch payment for ${clients.length} clients...');
+
+    // Prepare payment data as JSONB array
+    final paymentData = clients.map((client) {
+      double totalCash = client.totalCash;
+      double bills = client.systemsCost();
+
+      // Apply discount if it exists and hasn't expired
+      if (client.discountPercentage != null &&
+          client.discountEndDate != null &&
+          client.discountEndDate!.isAfter(DateTime.now())) {
+        double discountAmount = bills * (client.discountPercentage! / 100);
+        bills -= discountAmount;
+      }
+
+      double newCash = totalCash - bills;
+
+      return {
+        'client_id': client.id,
+        'new_balance': newCash,
+        'bills': bills,
+        'phone_id': client.numbers![0].id,
+        'system_type': client.systemsFullName(),
+        'paid': (totalCash >= bills)
+            ? bills
+            : (totalCash > 0)
+                ? totalCash
+                : 0,
+        'reminder': (totalCash >= bills)
+            ? 0
+            : (totalCash > 0)
+                ? bills - totalCash
+                : bills,
+      };
+    }).toList();
+
+    try {
+      // Single RPC call to process ALL payments server-side
+      final result = await _clinet.rpc(
+        'batch_process_payments',
+        params: {
+          'p_account_id': AccountClientInfo.to.currentAccount.id,
+          'p_month': month,
+          'p_year': year,
+          'p_creator_id': SupabaseAuthentication.myUser!.id,
+          'p_client_payments': paymentData,
+        },
+      );
+
+      final endTime = DateTime.now();
+      final duration = endTime.difference(startTime);
+      debugPrint(
+          'Ultra-fast batch completed in ${duration.inMilliseconds}ms');
+
+      return Map<String, dynamic>.from(result as Map);
+    } catch (e) {
+      debugPrint('Error in ultra-fast batch payment: $e');
+      rethrow;
+    }
+  }
+
   Stream<List<Client>> getRealtimeClients(Account account) {
     // Throttle full data fetches to avoid overwhelming the database
     // Only fetch full nested data every 5 seconds max

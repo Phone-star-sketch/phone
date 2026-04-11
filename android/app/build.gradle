@@ -43,7 +43,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.foe.phone_system_app.beta"
+        applicationId "com.foe.phone_system_app"
         minSdkVersion 23
         targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()

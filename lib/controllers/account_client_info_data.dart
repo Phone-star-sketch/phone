@@ -225,7 +225,8 @@ class AccountClientInfo extends GetxController {
       _isProcessingBulkOperation = true;
       Loaders.to.paymentIsLoading.value = true;
 
-      debugPrint(" the length is ${clinets.length}");
+      debugPrint("Starting bulk payment for ${clinets.length} clients");
+      final startTime = DateTime.now();
 
       countPaid.value = 0;
       countNotPaid.value = 0;
@@ -236,9 +237,8 @@ class AccountClientInfo extends GetxController {
 
       final toBePaidClients = <Client>[];
 
+      // First pass: identify unpaid clients
       for (Client client in clinets) {
-        currentPayingClient = client.obs;
-
         final payment = client.logs!.firstWhereOrNull(
           (element) =>
               element.month! == month &&
@@ -251,48 +251,41 @@ class AccountClientInfo extends GetxController {
       }
 
       countPaid.value = clinets.length - toBePaidClients.length;
+      countNotPaid.value = toBePaidClients.length;
 
-      // Process payments without individual fetches
-      for (Client client in toBePaidClients) {
-        currentPayingClient = client.obs;
-        countPaid++;
+      debugPrint(
+          "Found ${toBePaidClients.length} clients to pay out of ${clinets.length}");
 
-        await BackendServices.instance.clientRepository
-            .paySystemsBills(client, month, year);
+      if (toBePaidClients.isNotEmpty) {
+        // Use ultra-fast server-side batch payment (single DB call)
+        final result = await BackendServices.instance.clientRepository
+            .batchPaySystemsBillsUltraFast(toBePaidClients, month, year);
 
-        // Update local balance without fetching - calculate new balance
-        final index = clinets.indexWhere((c) => c.id == client.id);
-        if (index != -1) {
-          double bills = client.systemsCost();
-
-          // Apply discount if it exists
-          if (client.discountPercentage != null &&
-              client.discountEndDate != null &&
-              client.discountEndDate!.isAfter(DateTime.now())) {
-            double discountAmount = bills * (client.discountPercentage! / 100);
-            bills -= discountAmount;
-          }
-
-          // Update local balance immediately
-          clinets[index].totalCash = clinets[index].totalCash - bills;
-        }
+        final successCount = result['success_count'] ?? 0;
+        final errorCount = result['error_count'] ?? 0;
+        debugPrint(
+            "Batch payment result: $successCount succeeded, $errorCount failed");
       }
 
       // Single refresh at the end instead of after each payment
-      clinets.refresh();
-
-      // Fetch fresh data once after all payments
       await _refreshClientsAfterBulkOperation();
+
+      final endTime = DateTime.now();
+      final duration = endTime.difference(startTime);
+      debugPrint(
+          "Automatic payment completed in ${duration.inSeconds} seconds for ${clinets.length} clients");
 
       Loaders.to.paymentIsLoading.value = false;
       _isProcessingBulkOperation = false;
     } catch (e) {
       _isProcessingBulkOperation = false;
       Loaders.to.paymentIsLoading.value = false;
+      debugPrint("Error during automatic payment: $e");
 
       Get.showSnackbar(GetSnackBar(
         message: e.toString(),
         title: "حدثت مشكلة اثناء الدفع الالي ",
+        duration: const Duration(seconds: 5),
       ));
     }
   }

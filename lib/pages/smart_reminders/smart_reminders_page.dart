@@ -137,13 +137,6 @@ class SmartRemindersPage extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           _buildKPI(
-            icon: Icons.timer_outlined,
-            label: 'قرب ينتهي',
-            value: '${controller.totalExpiringClients.value}',
-            color: const Color(0xFFf59e0b),
-          ),
-          const SizedBox(width: 10),
-          _buildKPI(
             icon: Icons.attach_money_rounded,
             label: 'إجمالي الدين',
             value: _formatAmount(controller.totalDebtAmount.value),
@@ -220,12 +213,6 @@ class SmartRemindersPage extends StatelessWidget {
               _buildTab(
                 controller,
                 index: 1,
-                label: 'اشتراكات منتهية',
-                icon: Icons.timer_off_rounded,
-              ),
-              _buildTab(
-                controller,
-                index: 2,
                 label: 'إرسال جماعي',
                 icon: Icons.send_rounded,
               ),
@@ -290,8 +277,6 @@ class SmartRemindersPage extends StatelessWidget {
         case 0:
           return _buildDebtList(controller);
         case 1:
-          return _buildExpiringList(controller);
-        case 2:
           return _buildBulkSend(controller);
         default:
           return const SizedBox();
@@ -318,104 +303,6 @@ class SmartRemindersPage extends StatelessWidget {
         showDebt: true,
       ),
     );
-  }
-
-  Widget _buildExpiringList(RemindersController controller) {
-    final expiring = controller.filteredExpiringClients;
-    if (expiring.isEmpty) {
-      return _buildEmptyState(
-          controller.searchQuery.value.isNotEmpty
-              ? 'لا يوجد نتائج للبحث'
-              : 'لا يوجد اشتراكات قريبة من الانتهاء 👍',
-          controller.searchQuery.value.isNotEmpty
-              ? Icons.search_off
-              : Icons.event_available);
-    }
-
-    // Match expiring data with actual client objects
-    final allClients = AccountClientInfo.to.clinets;
-
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 20),
-      itemCount: expiring.length,
-      itemBuilder: (context, index) {
-        final data = expiring[index];
-        final clientId = data['id'];
-        final matchedClient =
-            allClients.firstWhereOrNull((c) => c.id == clientId);
-
-        if (matchedClient == null) {
-          return _buildExpiringFallbackCard(data);
-        }
-
-        return ReminderClientCard(
-          client: matchedClient,
-          showDebt: false,
-        );
-      },
-    );
-  }
-
-  Widget _buildExpiringFallbackCard(Map<String, dynamic> data) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: const LinearGradient(
-                colors: [Color(0xFFf59e0b), Color(0xFFfbbf24)],
-              ),
-            ),
-            child: const Center(
-              child: Icon(Icons.timer, color: Colors.white, size: 22),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  data['name'] ?? 'عميل',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 15),
-                ),
-                if (data['expire_date'] != null)
-                  Text(
-                    'ينتهي: ${_formatDate(data['expire_date'])}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(dynamic date) {
-    try {
-      final d = DateTime.parse(date.toString());
-      return '${d.day}/${d.month}/${d.year}';
-    } catch (_) {
-      return date.toString();
-    }
   }
 
   Widget _buildBulkSend(RemindersController controller) {

@@ -24,6 +24,16 @@ abstract class ClientRepository {
 
   Future<void> paySystemsBills(Client client, int month, int year);
 
+  /// Batch pay multiple clients' bills in parallel for performance.
+  Future<void> batchPaySystemsBills(
+      List<Client> clients, int month, int year,
+      {int chunkSize = 10});
+
+  /// Ultra-fast batch payment using server-side SQL function.
+  /// Processes ALL clients in a SINGLE database call.
+  Future<Map<String, dynamic>> batchPaySystemsBillsUltraFast(
+      List<Client> clients, int month, int year);
+
   Future<List<Map<String, dynamic>>> getAllClientsData();
 
   Future<Client?> getClient(String clientId);
