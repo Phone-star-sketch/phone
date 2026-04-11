@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main, ramy/updates ]
+    branches: [ main, ramy/updates, ramy/newdesign ]
   workflow_dispatch:
 
 jobs:
@@ -36,35 +36,12 @@ jobs:
       run: flutter analyze --no-fatal-infos
       continue-on-error: true
     
-    - name: Build Beta APK
+    - name: Build APK
       run: flutter build apk --release --no-tree-shake-icons
-    
-    - name: Rename Beta APK
-      run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-beta-release.apk
-    
-    - name: Upload Beta APK
+
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-beta-release
-        path: build/app/outputs/flutter-apk/app-beta-release.apk
-        retention-days: 7
-    
-    # Build Production Version
-    - name: Restore Production Config
-      run: |
-        # Change package name back to production
-        sed -i 's/com.foe.phone_system_app.beta/com.foe.phone_system_app/g' android/app/build.gradle
-        sed -i 's/Phone System Beta/Phone System/g' android/app/src/main/AndroidManifest.xml
-    
-    - name: Clean build
-      run: flutter clean && flutter pub get
-    
-    - name: Build Production APK
-      run: flutter build apk --release --no-tree-shake-icons
-    
-    - name: Upload Production APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-production-release
+        name: app-release
         path: build/app/outputs/flutter-apk/app-release.apk
         retention-days: 7
