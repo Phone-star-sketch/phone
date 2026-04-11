@@ -52,20 +52,18 @@ class LetterOfWaiver extends StatefulWidget {
 
 class _LetterOfWaiverState extends State<LetterOfWaiver> {
   final _formKey = GlobalKey<FormState>();
+
+  // Controllers
   final TextEditingController _phoneNumberController = TextEditingController();
-  final TextEditingController _recipientNameController =
-      TextEditingController();
+  final TextEditingController _recipientNameController = TextEditingController();
   final TextEditingController _nationalIdController = TextEditingController();
   final TextEditingController _waivedPhoneController = TextEditingController();
+
   bool _isLoading = false;
 
-  // Autocomplete variables
-  List<PhoneData> _phonesSuggestions = [];
-  bool _isSearching = false;
-  Timer? _debounce;
-  final LayerLink _layerLink = LayerLink();
-  OverlayEntry? _overlayEntry;
-  final FocusNode _phoneNumberFocusNode = FocusNode();
+  // ─── Autocomplete keys to force rebuild when data changes ───
+  Key _phoneAutocompleteKey = UniqueKey();
+  Key _nameAutocompleteKey = UniqueKey();
 
   final List<Company> _companies = [
     Company(
@@ -83,55 +81,36 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
   int _selectedCompanyIndex = 0;
 
   @override
-  void initState() {
-    super.initState();
-    _phoneNumberController.addListener(_onPhoneNumberChanged);
-    _phoneNumberFocusNode.addListener(() {
-      if (!_phoneNumberFocusNode.hasFocus) {
-        _hideOverlay();
-      }
-    });
-  }
-
-  @override
   void dispose() {
-    _phoneNumberController.removeListener(_onPhoneNumberChanged);
     _phoneNumberController.dispose();
     _recipientNameController.dispose();
     _nationalIdController.dispose();
     _waivedPhoneController.dispose();
-    _phoneNumberFocusNode.dispose();
-    _debounce?.cancel();
-    _hideOverlay();
     super.dispose();
   }
 
-  void _onPhoneNumberChanged() {
-    // Don't update _waivedPhoneController here to avoid triggering listeners
-    // We'll update it only when selecting from dropdown
+  // ─── Shared fill logic called from both autocompletes ───
+  void _fillFromSelection(PhoneData data) {
+    setState(() {
+      _phoneNumberController.text = data.phoneNumber;
+      _waivedPhoneController.text = data.phoneNumber;
 
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
+      if (data.clientName != null && data.clientName!.isNotEmpty) {
+        _recipientNameController.text = data.clientName!;
+      }
+      if (data.nationalId != null && data.nationalId!.isNotEmpty) {
+        _nationalIdController.text = data.nationalId!;
+      }
 
-    final query = _phoneNumberController.text.trim();
-    if (query.isEmpty) {
-      _hideOverlay();
-      setState(() {
-        _phonesSuggestions = [];
-      });
-      return;
-    }
-
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      _searchPhones(query);
+      // Rebuild both autocomplete widgets so their text fields show new values
+      _phoneAutocompleteKey = UniqueKey();
+      _nameAutocompleteKey = UniqueKey();
     });
   }
 
-  Future<void> _searchPhones(String query) async {
-    if (query.isEmpty) return;
-
-    debugPrint('=== DEBUG: Searching for: $query ===');
-    setState(() => _isSearching = true);
-
+  // ─── Supabase search by phone ───
+  Future<Iterable<PhoneData>> _searchByPhone(String query) async {
+    if (query.isEmpty) return const [];
     try {
       final response = await Supabase.instance.client
           .from('phone')
@@ -139,246 +118,47 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
           .ilike('phone_number', '%$query%')
           .limit(10);
 
-      debugPrint('Response from Supabase: $response');
-
       final List<PhoneData> phones = [];
       for (var item in response) {
-        debugPrint('Processing item: $item');
         final clientData = item['client'];
-        debugPrint('Client data: $clientData');
-
-        final phoneData = PhoneData(
+        phones.add(PhoneData(
           phoneNumber: item['phone_number'] ?? '',
           clientName: clientData != null ? clientData['name'] : null,
           nationalId: clientData != null ? clientData['national_id'] : null,
-        );
-
-        debugPrint(
-            'Created PhoneData: phone=${phoneData.phoneNumber}, name=${phoneData.clientName}, id=${phoneData.nationalId}');
-        phones.add(phoneData);
+        ));
       }
-
-      debugPrint('Total phones found: ${phones.length}');
-
-      if (mounted) {
-        setState(() {
-          _phonesSuggestions = phones;
-          _isSearching = false;
-        });
-
-        if (phones.isNotEmpty && _phoneNumberFocusNode.hasFocus) {
-          _showOverlay();
-        } else {
-          _hideOverlay();
-        }
-      }
+      return phones;
     } catch (e) {
-      debugPrint('ERROR in _searchPhones: $e');
-      if (mounted) {
-        setState(() => _isSearching = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ في البحث: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      debugPrint('ERROR _searchByPhone: $e');
+      return const [];
     }
   }
 
-  void _selectPhone(PhoneData phoneData) {
-    debugPrint('=== DEBUG: _selectPhone called ===');
-    debugPrint('Phone Number: ${phoneData.phoneNumber}');
-    debugPrint('Client Name: ${phoneData.clientName}');
-    debugPrint('National ID: ${phoneData.nationalId}');
+  // ─── Supabase search by name ───
+  // Uses !inner join so we can filter on the related client table's name column
+  Future<Iterable<PhoneData>> _searchByName(String query) async {
+    if (query.isEmpty) return const [];
+    try {
+      final response = await Supabase.instance.client
+          .from('phone')
+          .select('phone_number, client:client_id!inner(name, national_id)')
+          .ilike('client.name', '%$query%')
+          .limit(10);
 
-    // Hide overlay and remove focus first
-    _hideOverlay();
-    FocusScope.of(context).unfocus();
-
-    // Update all fields in setState
-    setState(() {
-      // Update phone number fields
-      _phoneNumberController.text = phoneData.phoneNumber;
-      _waivedPhoneController.text = phoneData.phoneNumber;
-
-      // Update client name if available
-      if (phoneData.clientName != null && phoneData.clientName!.isNotEmpty) {
-        _recipientNameController.text = phoneData.clientName!;
-        debugPrint('✓ Set recipient name: ${phoneData.clientName}');
-      } else {
-        _recipientNameController.clear();
-        debugPrint('✗ Client name is null or empty');
+      final List<PhoneData> phones = [];
+      for (var item in response) {
+        final clientData = item['client'];
+        phones.add(PhoneData(
+          phoneNumber: item['phone_number'] ?? '',
+          clientName: clientData != null ? clientData['name'] : null,
+          nationalId: clientData != null ? clientData['national_id'] : null,
+        ));
       }
-
-      // Update national ID if available
-      if (phoneData.nationalId != null && phoneData.nationalId!.isNotEmpty) {
-        _nationalIdController.text = phoneData.nationalId!;
-        debugPrint('✓ Set national ID: ${phoneData.nationalId}');
-      } else {
-        _nationalIdController.clear();
-        debugPrint('✗ National ID is null or empty');
-      }
-    });
-
-    debugPrint('=== DEBUG: _selectPhone completed ===');
-  }
-
-  void _showOverlay() {
-    _hideOverlay();
-
-    debugPrint('=== DEBUG: _showOverlay called ===');
-    debugPrint('Suggestions count: ${_phonesSuggestions.length}');
-
-    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null) {
-      debugPrint('ERROR: RenderBox is null');
-      return;
+      return phones;
+    } catch (e) {
+      debugPrint('ERROR _searchByName: $e');
+      return const [];
     }
-
-    _overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        width: MediaQuery.of(context).size.width > 800
-            ? 900 - 56 - 40 // maxWidth - padding
-            : MediaQuery.of(context).size.width - 40 - 56,
-        child: CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          offset: const Offset(0, 75),
-          child: Material(
-            elevation: 8,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              constraints: const BoxConstraints(maxHeight: 300),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.blue[200]!, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withValues(alpha: 0.15),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: _phonesSuggestions.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(
-                        'لا توجد نتائج',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(8),
-                      shrinkWrap: true,
-                      itemCount: _phonesSuggestions.length,
-                      itemBuilder: (context, index) {
-                        final phone = _phonesSuggestions[index];
-                        return InkWell(
-                          onTap: () {
-                            debugPrint(
-                                '=== Tapped on phone: ${phone.phoneNumber} ===');
-                            _selectPhone(phone);
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            margin: const EdgeInsets.only(bottom: 4),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              color: Colors.blue[50]?.withValues(alpha: 0.5),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue[100],
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.phone_android_rounded,
-                                        color: Colors.blue[700],
-                                        size: 18,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        phone.phoneNumber,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blue[900],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (phone.clientName != null) ...[
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.person_rounded,
-                                          color: Colors.grey[600], size: 16),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          phone.clientName!,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey[700],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                                if (phone.nationalId != null) ...[
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.credit_card_rounded,
-                                          color: Colors.grey[600], size: 16),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        phone.nationalId!,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    Overlay.of(context).insert(_overlayEntry!);
-    debugPrint('=== DEBUG: Overlay inserted ===');
-  }
-
-  void _hideOverlay() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
   }
 
   @override
@@ -392,7 +172,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
           colors: [
-            const Color(0xFF1A237E), // Deep indigo
+            const Color(0xFF1A237E),
             const Color(0xFF283593),
             const Color(0xFF3949AB),
             Colors.indigo[300]!,
@@ -412,11 +192,8 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
               ),
               child: Column(
                 children: [
-                  // Modern Header with Animation
                   _buildModernHeader(),
                   const SizedBox(height: 20),
-
-                  // Main Content Card
                   _buildMainContentCard(isWideScreen),
                 ],
               ),
@@ -443,9 +220,6 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
       ),
       child: Column(
         children: [
-          // Icon with gradient background
-        
-          // Title
           Text(
             'خطاب تنازل',
             style: TextStyle(
@@ -455,7 +229,6 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
               letterSpacing: 0.5,
             ),
           ),
-          // Subtitle
           Text(
             'إنشاء خطاب تنازل رسمي بسهولة وسرعة',
             style: TextStyle(
@@ -487,7 +260,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
         borderRadius: BorderRadius.circular(28),
         child: Column(
           children: [
-            // Company Selection Section with gradient header
+            // Company section
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -529,7 +302,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
               ),
             ),
 
-            // Form Section
+            // Form section
             Padding(
               padding: const EdgeInsets.all(28.0),
               child: Form(
@@ -560,15 +333,16 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                       ],
                     ),
                     const SizedBox(height: 24),
+
+                    // ─── Phone search ───
                     _buildPhoneAutocompleteField(),
                     const SizedBox(height: 20),
-                    _buildModernFormField(
-                      _recipientNameController,
-                      'تفويض للسيد/السيدة',
-                      Icons.person_rounded,
-                      Colors.green,
-                    ),
+
+                    // ─── Name search ───
+                    _buildNameAutocompleteField(),
                     const SizedBox(height: 20),
+
+                    // National ID (filled automatically)
                     _buildModernFormField(
                       _nationalIdController,
                       'بطاقة رقم قومي',
@@ -576,6 +350,8 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                       Colors.orange,
                     ),
                     const SizedBox(height: 20),
+
+                    // Waived phone (filled automatically)
                     _buildModernFormField(
                       _waivedPhoneController,
                       'للتنازل عن خط رقم',
@@ -591,6 +367,279 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
           ],
         ),
       ),
+    );
+  }
+
+  // ════════════════════════════════════════════════════
+  //  PHONE AUTOCOMPLETE
+  // ════════════════════════════════════════════════════
+  Widget _buildPhoneAutocompleteField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Autocomplete<PhoneData>(
+        key: _phoneAutocompleteKey,
+        initialValue: TextEditingValue(text: _phoneNumberController.text),
+        optionsBuilder: (TextEditingValue textEditingValue) async {
+          return _searchByPhone(textEditingValue.text.trim());
+        },
+        displayStringForOption: (PhoneData option) => option.phoneNumber,
+        onSelected: (PhoneData selection) {
+          _fillFromSelection(selection);
+        },
+        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+          return TextFormField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[900],
+            ),
+            decoration: _buildInputDecoration(
+              label: 'المالك للخط رقم',
+              icon: Icons.phone_android_rounded,
+              color: Colors.blue,
+            ),
+            validator: (value) =>
+                value?.isEmpty == true ? 'برجاء إدخال رقم الهاتف' : null,
+          );
+        },
+        optionsViewBuilder: (context, onSelected, options) =>
+            _buildOptionsView(options, onSelected),
+      ),
+    );
+  }
+
+  // ════════════════════════════════════════════════════
+  //  NAME AUTOCOMPLETE
+  // ════════════════════════════════════════════════════
+  Widget _buildNameAutocompleteField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Autocomplete<PhoneData>(
+        key: _nameAutocompleteKey,
+        initialValue: TextEditingValue(text: _recipientNameController.text),
+        optionsBuilder: (TextEditingValue textEditingValue) async {
+          return _searchByName(textEditingValue.text.trim());
+        },
+        // Show the client name in the field
+        displayStringForOption: (PhoneData option) =>
+            option.clientName ?? option.phoneNumber,
+        onSelected: (PhoneData selection) {
+          _fillFromSelection(selection);
+        },
+        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+          return TextFormField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: TextInputType.name,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[900],
+            ),
+            decoration: _buildInputDecoration(
+              label: 'تفويض للسيد/السيدة',
+              icon: Icons.person_search_rounded,
+              color: Colors.green,
+            ),
+            validator: (value) =>
+                value?.isEmpty == true ? 'برجاء إدخال اسم المفوض' : null,
+          );
+        },
+        optionsViewBuilder: (context, onSelected, options) =>
+            _buildOptionsView(options, onSelected),
+      ),
+    );
+  }
+
+  // ─── Shared dropdown options view ───
+  Widget _buildOptionsView(
+    Iterable<PhoneData> options,
+    void Function(PhoneData) onSelected,
+  ) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Material(
+        elevation: 8,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          constraints: const BoxConstraints(maxHeight: 300, maxWidth: 500),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.blue[200]!, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blue.withValues(alpha: 0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: options.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'لا توجد نتائج',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(8),
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  itemBuilder: (context, index) {
+                    final phone = options.elementAt(index);
+                    return InkWell(
+                      onTap: () => onSelected(phone),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.blue[50]?.withValues(alpha: 0.5),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Phone number row
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.phone_android_rounded,
+                                      color: Colors.blue[700], size: 18),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    phone.phoneNumber,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue[900],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            // Name row
+                            if (phone.clientName != null) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(Icons.person_rounded,
+                                      color: Colors.grey[600], size: 16),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      phone.clientName!,
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[700]),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            // National ID row
+                            if (phone.nationalId != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(Icons.credit_card_rounded,
+                                      color: Colors.grey[600], size: 16),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    phone.nationalId!,
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey[600]),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Shared InputDecoration builder ───
+  InputDecoration _buildInputDecoration({
+    required String label,
+    required IconData icon,
+    required MaterialColor color,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle:
+          TextStyle(color: color[700], fontWeight: FontWeight.w500),
+      prefixIcon: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color[100],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: color[700], size: 22),
+      ),
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: color[200]!, width: 2),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: color[200]!, width: 2),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: color[600]!, width: 2.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Colors.red, width: 2.5),
+      ),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
     );
   }
 
@@ -631,8 +680,8 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                       color: Colors.indigo[100],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child:
-                        Icon(Icons.store, color: Colors.indigo[700], size: 18),
+                    child: Icon(Icons.store,
+                        color: Colors.indigo[700], size: 18),
                   ),
                   const SizedBox(width: 12),
                   Expanded(child: Text(_companies[0].name)),
@@ -649,8 +698,8 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                       color: Colors.purple[100],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child:
-                        Icon(Icons.store, color: Colors.purple[700], size: 18),
+                    child: Icon(Icons.store,
+                        color: Colors.purple[700], size: 18),
                   ),
                   const SizedBox(width: 12),
                   Expanded(child: Text(_companies[1].name)),
@@ -686,19 +735,11 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
       ),
       child: Column(
         children: [
-          _buildInfoRow(
-            Icons.business_rounded,
-            'اسم الشركة',
-            selectedCompany.name,
-            Colors.indigo,
-          ),
+          _buildInfoRow(Icons.business_rounded, 'اسم الشركة',
+              selectedCompany.name, Colors.indigo),
           const SizedBox(height: 12),
-          _buildInfoRow(
-            Icons.person_rounded,
-            'المالك',
-            selectedCompany.ownerName,
-            Colors.purple,
-          ),
+          _buildInfoRow(Icons.person_rounded, 'المالك',
+              selectedCompany.ownerName, Colors.purple),
           const SizedBox(height: 12),
           _buildInfoRow(
             Icons.receipt_long_rounded,
@@ -707,251 +748,6 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
             Colors.orange,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPhoneAutocompleteField() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Autocomplete<PhoneData>(
-        optionsBuilder: (TextEditingValue textEditingValue) async {
-          if (textEditingValue.text.isEmpty) {
-            return const Iterable<PhoneData>.empty();
-          }
-
-          debugPrint('=== Autocomplete searching for: ${textEditingValue.text} ===');
-
-          try {
-            final response = await Supabase.instance.client
-                .from('phone')
-                .select('phone_number, client:client_id(name, national_id)')
-                .ilike('phone_number', '%${textEditingValue.text}%')
-                .limit(10);
-
-            debugPrint('Response: $response');
-
-            final List<PhoneData> phones = [];
-            for (var item in response) {
-              final clientData = item['client'];
-              phones.add(PhoneData(
-                phoneNumber: item['phone_number'] ?? '',
-                clientName: clientData != null ? clientData['name'] : null,
-                nationalId:
-                    clientData != null ? clientData['national_id'] : null,
-              ));
-            }
-
-            debugPrint('Found ${phones.length} phones');
-            return phones;
-          } catch (e) {
-            debugPrint('ERROR: $e');
-            return const Iterable<PhoneData>.empty();
-          }
-        },
-        displayStringForOption: (PhoneData option) => option.phoneNumber,
-        onSelected: (PhoneData selection) {
-          debugPrint('=== Selected: ${selection.phoneNumber} ===');
-          setState(() {
-            _phoneNumberController.text = selection.phoneNumber;
-            _waivedPhoneController.text = selection.phoneNumber;
-
-            if (selection.clientName != null &&
-                selection.clientName!.isNotEmpty) {
-              _recipientNameController.text = selection.clientName!;
-              debugPrint('✓ Set name: ${selection.clientName}');
-            }
-
-            if (selection.nationalId != null &&
-                selection.nationalId!.isNotEmpty) {
-              _nationalIdController.text = selection.nationalId!;
-              debugPrint('✓ Set ID: ${selection.nationalId}');
-            }
-          });
-        },
-        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-          // Initialize with current value only once
-          if (controller.text.isEmpty && _phoneNumberController.text.isNotEmpty) {
-            controller.text = _phoneNumberController.text;
-          }
-
-          return TextFormField(
-            controller: controller,
-            focusNode: focusNode,
-            keyboardType: TextInputType.phone,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-            ],
-            onChanged: (value) {
-              // Update other controllers when user types
-              _phoneNumberController.text = value;
-              _waivedPhoneController.text = value;
-            },
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[900],
-            ),
-            decoration: InputDecoration(
-              labelText: 'المالك للخط رقم',
-              labelStyle: TextStyle(
-                color: Colors.blue[700],
-                fontWeight: FontWeight.w500,
-              ),
-              prefixIcon: Container(
-                margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue[100],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(Icons.phone_android_rounded,
-                    color: Colors.blue[700], size: 22),
-              ),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.blue[200]!, width: 2),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.blue[200]!, width: 2),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.blue[600]!, width: 2.5),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Colors.red, width: 2),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Colors.red, width: 2.5),
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            ),
-            validator: (value) =>
-                value?.isEmpty == true ? 'برجاء إدخال رقم الهاتف' : null,
-          );
-        },
-        optionsViewBuilder: (context, onSelected, options) {
-          return Align(
-            alignment: Alignment.topLeft,
-            child: Material(
-              elevation: 8,
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                constraints:
-                    const BoxConstraints(maxHeight: 300, maxWidth: 400),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.blue[200]!, width: 2),
-                ),
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(8),
-                  shrinkWrap: true,
-                  itemCount: options.length,
-                  itemBuilder: (context, index) {
-                    final phone = options.elementAt(index);
-                    return InkWell(
-                      onTap: () => onSelected(phone),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.only(bottom: 4),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: Colors.blue[50]?.withValues(alpha: 0.5),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue[100],
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.phone_android_rounded,
-                                    color: Colors.blue[700],
-                                    size: 18,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    phone.phoneNumber,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue[900],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (phone.clientName != null) ...[
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(Icons.person_rounded,
-                                      color: Colors.grey[600], size: 16),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      phone.clientName!,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                            if (phone.nationalId != null) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(Icons.credit_card_rounded,
-                                      color: Colors.grey[600], size: 16),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    phone.nationalId!,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          );
-        },
       ),
     );
   }
@@ -976,19 +772,17 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[900],
-                ),
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[900]),
               ),
             ],
           ),
@@ -1001,10 +795,8 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
     TextEditingController controller,
     String label,
     IconData icon,
-    MaterialColor color, {
-    FocusNode? focusNode,
-    bool isSearching = false,
-  }) {
+    MaterialColor color,
+  ) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -1018,65 +810,12 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
       ),
       child: TextFormField(
         controller: controller,
-        focusNode: focusNode,
         style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: Colors.grey[900],
-        ),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(
-            color: color[700],
-            fontWeight: FontWeight.w500,
-          ),
-          prefixIcon: Container(
-            margin: const EdgeInsets.all(12),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color[100],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color[700], size: 22),
-          ),
-          suffixIcon: isSearching
-              ? Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(color[600]!),
-                    ),
-                  ),
-                )
-              : null,
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: color[200]!, width: 2),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: color[200]!, width: 2),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: color[600]!, width: 2.5),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Colors.red, width: 2),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Colors.red, width: 2.5),
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        ),
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[900]),
+        decoration: _buildInputDecoration(
+            label: label, icon: icon, color: color),
         validator: (value) =>
             value?.isEmpty == true ? 'برجاء إدخال $label' : null,
       ),
@@ -1108,8 +847,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
+              borderRadius: BorderRadius.circular(18)),
         ),
         onPressed: _isLoading
             ? null
@@ -1119,9 +857,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   try {
                     await _generatePDF();
                   } finally {
-                    if (mounted) {
-                      setState(() => _isLoading = false);
-                    }
+                    if (mounted) setState(() => _isLoading = false);
                   }
                 }
               },
@@ -1133,18 +869,15 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 3,
-                    ),
+                        color: Colors.white, strokeWidth: 3),
                   ),
                   const SizedBox(width: 16),
                   Text(
                     'جاري الإنشاء...',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white.withValues(alpha: 0.9)),
                   ),
                 ],
               )
@@ -1157,21 +890,17 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                       color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
-                      Icons.picture_as_pdf_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
+                    child: const Icon(Icons.picture_as_pdf_rounded,
+                        color: Colors.white, size: 24),
                   ),
                   const SizedBox(width: 16),
                   const Text(
                     'إنشاء خطاب التنازل',
                     style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.5),
                   ),
                 ],
               ),
@@ -1179,6 +908,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
     );
   }
 
+  // ─── Helpers ───
   String convertToArabicNumbers(String input) {
     const english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
@@ -1207,12 +937,11 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
           return pw.Directionality(
             textDirection: pw.TextDirection.rtl,
             child: pw.Padding(
-              padding:
-                  const pw.EdgeInsets.symmetric(horizontal: 25, vertical: 30),
+              padding: const pw.EdgeInsets.symmetric(
+                  horizontal: 25, vertical: 30),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                 children: [
-                  // Header
                   pw.Align(
                     alignment: pw.Alignment.centerRight,
                     child: pw.Container(
@@ -1234,16 +963,15 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                       child: pw.Text('تحية طيبه وبعد ،،،',
                           style: pw.TextStyle(font: font, fontSize: 15))),
                   pw.SizedBox(height: 20),
-
-                  // Body
                   pw.RichText(
                     textDirection: pw.TextDirection.rtl,
                     text: pw.TextSpan(
-                      style:
-                          pw.TextStyle(font: font, fontSize: 14, height: 1.5),
+                      style: pw.TextStyle(
+                          font: font, fontSize: 14, height: 1.5),
                       children: [
                         const pw.TextSpan(
-                            text: 'يرجي التكرم الإحاطة بالعلم بأننا شركة : '),
+                            text:
+                                'يرجي التكرم الإحاطة بالعلم بأننا شركة : '),
                         pw.TextSpan(
                             text: fixArabicText(selectedCompany.name),
                             style: pw.TextStyle(font: fontBold)),
@@ -1254,10 +982,11 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.RichText(
                     textDirection: pw.TextDirection.rtl,
                     text: pw.TextSpan(
-                      style:
-                          pw.TextStyle(font: font, fontSize: 14, height: 1.5),
+                      style: pw.TextStyle(
+                          font: font, fontSize: 14, height: 1.5),
                       children: [
-                        const pw.TextSpan(text: 'المشهرة بسجل ضريبي رقم : '),
+                        const pw.TextSpan(
+                            text: 'المشهرة بسجل ضريبي رقم : '),
                         pw.TextSpan(
                             text: convertToArabicNumbers(
                                 selectedCompany.taxNumber),
@@ -1269,10 +998,11 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.RichText(
                     textDirection: pw.TextDirection.rtl,
                     text: pw.TextSpan(
-                      style:
-                          pw.TextStyle(font: font, fontSize: 14, height: 1.5),
+                      style: pw.TextStyle(
+                          font: font, fontSize: 14, height: 1.5),
                       children: [
-                        const pw.TextSpan(text: 'و المالكـة للخــط رقم : '),
+                        const pw.TextSpan(
+                            text: 'و المالكـة للخــط رقم : '),
                         pw.TextSpan(
                             text: convertToArabicNumbers(
                                 _phoneNumberController.text),
@@ -1284,13 +1014,14 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.RichText(
                     textDirection: pw.TextDirection.rtl,
                     text: pw.TextSpan(
-                      style:
-                          pw.TextStyle(font: font, fontSize: 14, height: 1.5),
+                      style: pw.TextStyle(
+                          font: font, fontSize: 14, height: 1.5),
                       children: [
                         const pw.TextSpan(
                             text: 'بأننا قد فوضنا السيد / السيدة : '),
                         pw.TextSpan(
-                            text: fixArabicText(_recipientNameController.text),
+                            text: fixArabicText(
+                                _recipientNameController.text),
                             style: pw.TextStyle(font: fontBold)),
                       ],
                     ),
@@ -1299,8 +1030,8 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.RichText(
                     textDirection: pw.TextDirection.rtl,
                     text: pw.TextSpan(
-                      style:
-                          pw.TextStyle(font: font, fontSize: 14, height: 1.5),
+                      style: pw.TextStyle(
+                          font: font, fontSize: 14, height: 1.5),
                       children: [
                         const pw.TextSpan(text: 'بطاقة رقم قومي : '),
                         pw.TextSpan(
@@ -1314,10 +1045,11 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.RichText(
                     textDirection: pw.TextDirection.rtl,
                     text: pw.TextSpan(
-                      style:
-                          pw.TextStyle(font: font, fontSize: 14, height: 1.5),
+                      style: pw.TextStyle(
+                          font: font, fontSize: 14, height: 1.5),
                       children: [
-                        const pw.TextSpan(text: 'للتنازل عن الخط رقم : '),
+                        const pw.TextSpan(
+                            text: 'للتنازل عن الخط رقم : '),
                         pw.TextSpan(
                             text: convertToArabicNumbers(
                                 _waivedPhoneController.text),
@@ -1326,59 +1058,57 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                     ),
                   ),
                   pw.SizedBox(height: 20),
-
-                  // Declaration
                   pw.Text(
                     'لنفسه و كمـا تقرر الشركة بأنها قـد قامت بسداد جميع المستحقات المتعلقة بالخط المذكور عاليه قبل تاريخ هذا الإقرار كما نقر بموافقتنا علي الأعمال السابق ذكرها وأنه لا يجوز لنا الرجوع في اى عمـل مــن الأعمال المتضمنة في هذا الإقرار.',
-                    style: pw.TextStyle(font: font, fontSize: 13, height: 1.6),
+                    style: pw.TextStyle(
+                        font: font, fontSize: 13, height: 1.6),
                     textAlign: pw.TextAlign.justify,
                   ),
                   pw.SizedBox(height: 30),
-
-                  // Signatures
                   pw.Text('إسم المفوض الأصلي :',
                       style: pw.TextStyle(font: fontBold, fontSize: 14),
                       textAlign: pw.TextAlign.right),
                   pw.SizedBox(height: 15),
                   pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment:
+                        pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Expanded(
                         child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                              pw.CrossAxisAlignment.start,
                           children: [
-                            pw.Text('توقيع المفوض بموجب هذا الإقرار ،،،',
-                                style: pw.TextStyle(font: font, fontSize: 12)),
+                            pw.Text(
+                                'توقيع المفوض بموجب هذا الإقرار ،،،',
+                                style: pw.TextStyle(
+                                    font: font, fontSize: 12)),
                             pw.SizedBox(height: 20),
-                            // pw.Container(
-                            //     height: 1,
-                            //     width: 120,
-                            //     color: PdfColors.grey600),
                           ],
                         ),
                       ),
                       pw.SizedBox(width: 20),
                       pw.Expanded(
                         child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.end,
+                          crossAxisAlignment:
+                              pw.CrossAxisAlignment.end,
                           children: [
                             pw.RichText(
                               textDirection: pw.TextDirection.rtl,
                               text: pw.TextSpan(
-                                style: pw.TextStyle(font: font, fontSize: 12),
+                                style: pw.TextStyle(
+                                    font: font, fontSize: 12),
                                 children: [
-                                  const pw.TextSpan(text: 'التوقيع : '),
+                                  const pw.TextSpan(
+                                      text: 'التوقيع : '),
                                   pw.TextSpan(
-                                      text: 'إسلام محمد عبد الرسول النني',
-                                      style: pw.TextStyle(font: fontBold)),
+                                      text:
+                                          'إسلام محمد عبد الرسول النني',
+                                      style: pw.TextStyle(
+                                          font: fontBold)),
                                 ],
                               ),
                             ),
                             pw.SizedBox(height: 20),
-                            // pw.Container(
-                            //     height: 1,
-                            //     width: 120,
-                            //     color: PdfColors.grey600),
                           ],
                         ),
                       ),
@@ -1404,13 +1134,14 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                     child: pw.Container(
                       padding: const pw.EdgeInsets.all(8),
                       decoration: pw.BoxDecoration(
-                        border:
-                            pw.Border.all(color: PdfColors.grey600, width: 1.5),
-                        borderRadius:
-                            const pw.BorderRadius.all(pw.Radius.circular(6)),
+                        border: pw.Border.all(
+                            color: PdfColors.grey600, width: 1.5),
+                        borderRadius: const pw.BorderRadius.all(
+                            pw.Radius.circular(6)),
                       ),
                       child: pw.Text('خاتم الشركه المفوضة',
-                          style: pw.TextStyle(font: fontBold, fontSize: 12)),
+                          style:
+                              pw.TextStyle(font: fontBold, fontSize: 12)),
                     ),
                   ),
                 ],
@@ -1427,7 +1158,8 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
     if (kIsWeb) {
       await Printing.sharePdf(
           bytes: pdfData,
-          filename: 'خطاب_تنازل_${selectedCompany.name}_$dateStr.pdf');
+          filename:
+              'خطاب_تنازل_${selectedCompany.name}_$dateStr.pdf');
     } else {
       final directory = await getApplicationDocumentsDirectory();
       final String filePath =
