@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "835604267886",
-    "project_id": "phone-system-c6a7c",
-    "storage_bucket": "phone-system-c6a7c.appspot.com"
+    "project_number": "402358191581",
+    "project_id": "phone-system-app",
+    "storage_bucket": "phone-system-app.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:835604267886:android:1b03b9fd2fca1801d6377f",
+        "mobilesdk_app_id": "1:402358191581:android:0ca88c820fd07e5e656234",
         "android_client_info": {
           "package_name": "com.foe.phone_system_app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAX40eKkdp6SI93xqI73FpQYRFO8epXcQA"
+          "current_key": "AIzaSyBR8LdxyFQ_8_IoVHZJM13fYED9i8S2bIs"
         }
       ],
       "services": {

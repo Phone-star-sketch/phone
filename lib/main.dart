@@ -1,10 +1,13 @@
 import 'dart:ui';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
+import 'package:phone_system_app/services/fcm_service.dart';
+import 'package:phone_system_app/services/transaction_notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/theme/welcome_theme_selector.dart';
@@ -67,6 +70,19 @@ Future<void> main() async {
   } catch (e) {
     if (kDebugMode) {
       debugPrint('Services initialization failed: $e');
+    }
+  }
+
+  // Initialize notification service (mobile only)
+  if (!kIsWeb) {
+    try {
+      await Firebase.initializeApp();
+      await FcmService.instance.initialize();
+      await TransactionNotificationService.instance.initialize();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Notification service failed: $e');
+      }
     }
   }
 

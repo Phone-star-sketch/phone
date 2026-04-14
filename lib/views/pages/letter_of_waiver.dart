@@ -55,15 +55,16 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
 
   // Controllers
   final TextEditingController _phoneNumberController = TextEditingController();
-  final TextEditingController _recipientNameController = TextEditingController();
+  final TextEditingController _recipientNameController =
+      TextEditingController();
   final TextEditingController _nationalIdController = TextEditingController();
   final TextEditingController _waivedPhoneController = TextEditingController();
 
-  bool _isLoading = false;
+  // Autocomplete internal controllers (captured from fieldViewBuilder)
+  TextEditingController? _phoneAutocompleteCtrl;
+  TextEditingController? _nameAutocompleteCtrl;
 
-  // ─── Autocomplete keys to force rebuild when data changes ───
-  Key _phoneAutocompleteKey = UniqueKey();
-  Key _nameAutocompleteKey = UniqueKey();
+  bool _isLoading = false;
 
   final List<Company> _companies = [
     Company(
@@ -91,21 +92,19 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
 
   // ─── Shared fill logic called from both autocompletes ───
   void _fillFromSelection(PhoneData data) {
-    setState(() {
-      _phoneNumberController.text = data.phoneNumber;
-      _waivedPhoneController.text = data.phoneNumber;
+    _phoneNumberController.text = data.phoneNumber;
+    _waivedPhoneController.text = data.phoneNumber;
 
-      if (data.clientName != null && data.clientName!.isNotEmpty) {
-        _recipientNameController.text = data.clientName!;
-      }
-      if (data.nationalId != null && data.nationalId!.isNotEmpty) {
-        _nationalIdController.text = data.nationalId!;
-      }
+    if (data.clientName != null && data.clientName!.isNotEmpty) {
+      _recipientNameController.text = data.clientName!;
+    }
+    if (data.nationalId != null && data.nationalId!.isNotEmpty) {
+      _nationalIdController.text = data.nationalId!;
+    }
 
-      // Rebuild both autocomplete widgets so their text fields show new values
-      _phoneAutocompleteKey = UniqueKey();
-      _nameAutocompleteKey = UniqueKey();
-    });
+    // Also update the Autocomplete display fields
+    _phoneAutocompleteCtrl?.text = data.phoneNumber;
+    _nameAutocompleteCtrl?.text = data.clientName ?? data.phoneNumber;
   }
 
   // ─── Supabase search by phone ───
@@ -386,8 +385,6 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
         ],
       ),
       child: Autocomplete<PhoneData>(
-        key: _phoneAutocompleteKey,
-        initialValue: TextEditingValue(text: _phoneNumberController.text),
         optionsBuilder: (TextEditingValue textEditingValue) async {
           return _searchByPhone(textEditingValue.text.trim());
         },
@@ -396,6 +393,10 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
           _fillFromSelection(selection);
         },
         fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+          // Capture the internal controller once
+          if (_phoneAutocompleteCtrl == null) {
+            _phoneAutocompleteCtrl = controller;
+          }
           return TextFormField(
             controller: controller,
             focusNode: focusNode,
@@ -437,8 +438,6 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
         ],
       ),
       child: Autocomplete<PhoneData>(
-        key: _nameAutocompleteKey,
-        initialValue: TextEditingValue(text: _recipientNameController.text),
         optionsBuilder: (TextEditingValue textEditingValue) async {
           return _searchByName(textEditingValue.text.trim());
         },
@@ -449,6 +448,10 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
           _fillFromSelection(selection);
         },
         fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+          // Capture the internal controller once
+          if (_nameAutocompleteCtrl == null) {
+            _nameAutocompleteCtrl = controller;
+          }
           return TextFormField(
             controller: controller,
             focusNode: focusNode,
@@ -580,8 +583,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                                   Text(
                                     phone.nationalId!,
                                     style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey[600]),
+                                        fontSize: 13, color: Colors.grey[600]),
                                   ),
                                 ],
                               ),
@@ -605,8 +607,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
   }) {
     return InputDecoration(
       labelText: label,
-      labelStyle:
-          TextStyle(color: color[700], fontWeight: FontWeight.w500),
+      labelStyle: TextStyle(color: color[700], fontWeight: FontWeight.w500),
       prefixIcon: Container(
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.all(8),
@@ -638,8 +639,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
         borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: Colors.red, width: 2.5),
       ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
     );
   }
 
@@ -680,8 +680,8 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                       color: Colors.indigo[100],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.store,
-                        color: Colors.indigo[700], size: 18),
+                    child:
+                        Icon(Icons.store, color: Colors.indigo[700], size: 18),
                   ),
                   const SizedBox(width: 12),
                   Expanded(child: Text(_companies[0].name)),
@@ -698,8 +698,8 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                       color: Colors.purple[100],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.store,
-                        color: Colors.purple[700], size: 18),
+                    child:
+                        Icon(Icons.store, color: Colors.purple[700], size: 18),
                   ),
                   const SizedBox(width: 12),
                   Expanded(child: Text(_companies[1].name)),
@@ -811,11 +811,9 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
       child: TextFormField(
         controller: controller,
         style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[900]),
-        decoration: _buildInputDecoration(
-            label: label, icon: icon, color: color),
+            fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[900]),
+        decoration:
+            _buildInputDecoration(label: label, icon: icon, color: color),
         validator: (value) =>
             value?.isEmpty == true ? 'برجاء إدخال $label' : null,
       ),
@@ -846,8 +844,8 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),
         onPressed: _isLoading
             ? null
@@ -937,8 +935,8 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
           return pw.Directionality(
             textDirection: pw.TextDirection.rtl,
             child: pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 25, vertical: 30),
+              padding:
+                  const pw.EdgeInsets.symmetric(horizontal: 25, vertical: 30),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                 children: [
@@ -966,12 +964,11 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.RichText(
                     textDirection: pw.TextDirection.rtl,
                     text: pw.TextSpan(
-                      style: pw.TextStyle(
-                          font: font, fontSize: 14, height: 1.5),
+                      style:
+                          pw.TextStyle(font: font, fontSize: 14, height: 1.5),
                       children: [
                         const pw.TextSpan(
-                            text:
-                                'يرجي التكرم الإحاطة بالعلم بأننا شركة : '),
+                            text: 'يرجي التكرم الإحاطة بالعلم بأننا شركة : '),
                         pw.TextSpan(
                             text: fixArabicText(selectedCompany.name),
                             style: pw.TextStyle(font: fontBold)),
@@ -982,11 +979,10 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.RichText(
                     textDirection: pw.TextDirection.rtl,
                     text: pw.TextSpan(
-                      style: pw.TextStyle(
-                          font: font, fontSize: 14, height: 1.5),
+                      style:
+                          pw.TextStyle(font: font, fontSize: 14, height: 1.5),
                       children: [
-                        const pw.TextSpan(
-                            text: 'المشهرة بسجل ضريبي رقم : '),
+                        const pw.TextSpan(text: 'المشهرة بسجل ضريبي رقم : '),
                         pw.TextSpan(
                             text: convertToArabicNumbers(
                                 selectedCompany.taxNumber),
@@ -998,11 +994,10 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.RichText(
                     textDirection: pw.TextDirection.rtl,
                     text: pw.TextSpan(
-                      style: pw.TextStyle(
-                          font: font, fontSize: 14, height: 1.5),
+                      style:
+                          pw.TextStyle(font: font, fontSize: 14, height: 1.5),
                       children: [
-                        const pw.TextSpan(
-                            text: 'و المالكـة للخــط رقم : '),
+                        const pw.TextSpan(text: 'و المالكـة للخــط رقم : '),
                         pw.TextSpan(
                             text: convertToArabicNumbers(
                                 _phoneNumberController.text),
@@ -1014,14 +1009,13 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.RichText(
                     textDirection: pw.TextDirection.rtl,
                     text: pw.TextSpan(
-                      style: pw.TextStyle(
-                          font: font, fontSize: 14, height: 1.5),
+                      style:
+                          pw.TextStyle(font: font, fontSize: 14, height: 1.5),
                       children: [
                         const pw.TextSpan(
                             text: 'بأننا قد فوضنا السيد / السيدة : '),
                         pw.TextSpan(
-                            text: fixArabicText(
-                                _recipientNameController.text),
+                            text: fixArabicText(_recipientNameController.text),
                             style: pw.TextStyle(font: fontBold)),
                       ],
                     ),
@@ -1030,8 +1024,8 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.RichText(
                     textDirection: pw.TextDirection.rtl,
                     text: pw.TextSpan(
-                      style: pw.TextStyle(
-                          font: font, fontSize: 14, height: 1.5),
+                      style:
+                          pw.TextStyle(font: font, fontSize: 14, height: 1.5),
                       children: [
                         const pw.TextSpan(text: 'بطاقة رقم قومي : '),
                         pw.TextSpan(
@@ -1045,11 +1039,10 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.RichText(
                     textDirection: pw.TextDirection.rtl,
                     text: pw.TextSpan(
-                      style: pw.TextStyle(
-                          font: font, fontSize: 14, height: 1.5),
+                      style:
+                          pw.TextStyle(font: font, fontSize: 14, height: 1.5),
                       children: [
-                        const pw.TextSpan(
-                            text: 'للتنازل عن الخط رقم : '),
+                        const pw.TextSpan(text: 'للتنازل عن الخط رقم : '),
                         pw.TextSpan(
                             text: convertToArabicNumbers(
                                 _waivedPhoneController.text),
@@ -1060,8 +1053,7 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                   pw.SizedBox(height: 20),
                   pw.Text(
                     'لنفسه و كمـا تقرر الشركة بأنها قـد قامت بسداد جميع المستحقات المتعلقة بالخط المذكور عاليه قبل تاريخ هذا الإقرار كما نقر بموافقتنا علي الأعمال السابق ذكرها وأنه لا يجوز لنا الرجوع في اى عمـل مــن الأعمال المتضمنة في هذا الإقرار.',
-                    style: pw.TextStyle(
-                        font: font, fontSize: 13, height: 1.6),
+                    style: pw.TextStyle(font: font, fontSize: 13, height: 1.6),
                     textAlign: pw.TextAlign.justify,
                   ),
                   pw.SizedBox(height: 30),
@@ -1070,18 +1062,14 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                       textAlign: pw.TextAlign.right),
                   pw.SizedBox(height: 15),
                   pw.Row(
-                    mainAxisAlignment:
-                        pw.MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Expanded(
                         child: pw.Column(
-                          crossAxisAlignment:
-                              pw.CrossAxisAlignment.start,
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            pw.Text(
-                                'توقيع المفوض بموجب هذا الإقرار ،،،',
-                                style: pw.TextStyle(
-                                    font: font, fontSize: 12)),
+                            pw.Text('توقيع المفوض بموجب هذا الإقرار ،،،',
+                                style: pw.TextStyle(font: font, fontSize: 12)),
                             pw.SizedBox(height: 20),
                           ],
                         ),
@@ -1089,22 +1077,17 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                       pw.SizedBox(width: 20),
                       pw.Expanded(
                         child: pw.Column(
-                          crossAxisAlignment:
-                              pw.CrossAxisAlignment.end,
+                          crossAxisAlignment: pw.CrossAxisAlignment.end,
                           children: [
                             pw.RichText(
                               textDirection: pw.TextDirection.rtl,
                               text: pw.TextSpan(
-                                style: pw.TextStyle(
-                                    font: font, fontSize: 12),
+                                style: pw.TextStyle(font: font, fontSize: 12),
                                 children: [
-                                  const pw.TextSpan(
-                                      text: 'التوقيع : '),
+                                  const pw.TextSpan(text: 'التوقيع : '),
                                   pw.TextSpan(
-                                      text:
-                                          'إسلام محمد عبد الرسول النني',
-                                      style: pw.TextStyle(
-                                          font: fontBold)),
+                                      text: 'إسلام محمد عبد الرسول النني',
+                                      style: pw.TextStyle(font: fontBold)),
                                 ],
                               ),
                             ),
@@ -1134,14 +1117,13 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
                     child: pw.Container(
                       padding: const pw.EdgeInsets.all(8),
                       decoration: pw.BoxDecoration(
-                        border: pw.Border.all(
-                            color: PdfColors.grey600, width: 1.5),
-                        borderRadius: const pw.BorderRadius.all(
-                            pw.Radius.circular(6)),
+                        border:
+                            pw.Border.all(color: PdfColors.grey600, width: 1.5),
+                        borderRadius:
+                            const pw.BorderRadius.all(pw.Radius.circular(6)),
                       ),
                       child: pw.Text('خاتم الشركه المفوضة',
-                          style:
-                              pw.TextStyle(font: fontBold, fontSize: 12)),
+                          style: pw.TextStyle(font: fontBold, fontSize: 12)),
                     ),
                   ),
                 ],
@@ -1154,16 +1136,17 @@ class _LetterOfWaiverState extends State<LetterOfWaiver> {
 
     final Uint8List pdfData = await pdf.save();
     final dateStr = DateFormat('yyyy_MM_dd').format(DateTime.now());
+    final recipientName = _nameAutocompleteCtrl?.text.isNotEmpty == true
+        ? _nameAutocompleteCtrl!.text
+        : _recipientNameController.text;
 
     if (kIsWeb) {
       await Printing.sharePdf(
-          bytes: pdfData,
-          filename:
-              'خطاب_تنازل_${selectedCompany.name}_$dateStr.pdf');
+          bytes: pdfData, filename: 'خطاب_تنازل_${recipientName}_$dateStr.pdf');
     } else {
       final directory = await getApplicationDocumentsDirectory();
       final String filePath =
-          '${directory.path}/خطاب_تنازل_${selectedCompany.name}_$dateStr.pdf';
+          '${directory.path}/خطاب_تنازل_${recipientName}_$dateStr.pdf';
       final File file = File(filePath);
       await file.writeAsBytes(pdfData);
       await OpenFile.open(filePath);
