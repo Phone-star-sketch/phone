@@ -109,25 +109,32 @@ class SupabaseClientRepository extends ClientRepository
             "تم إضافة المديونية: ${amount.abs().toStringAsFixed(0)} جنيه";
       }
 
-      final log = Log(
-        id: 0,
-        accountId: AccountClientInfo.to.currentAccount.id,
-        clientId: client.id,
-        phoneId: client.numbers![0].id,
-        createdBy: SupabaseAuthentication.myUser!.id,
-        price: amount,
-        systemType: logMessage,
-        transactionType: (amount > 0)
-            ? TransactionType.moneyAdded
-            : TransactionType.moneyDeducted,
-        createdAt: DateTime.now(),
-      );
+      final transactionType = (amount > 0)
+          ? TransactionType.moneyAdded.index
+          : TransactionType.moneyDeducted.index;
 
-      // Run update and log creation in parallel to cut latency in half
-      await Future.wait([
-        update(client),
-        BackendServices.instance.logRepository.create(log),
-      ]);
+      // Use batch_process_payments RPC (SECURITY DEFINER) to bypass PostgREST cache issue
+      final payment = {
+        'client_id': client.id,
+        'new_balance': client.totalCash,
+        'bills': amount.abs(),
+        'phone_id': client.numbers![0].id,
+        'system_type': logMessage,
+        'paid': 0,
+        'reminder': 0,
+        'transaction_type': transactionType,
+      };
+
+      await _clinet.rpc('batch_process_payments', params: {
+        'p_account_id': AccountClientInfo.to.currentAccount.id,
+        'p_month': 0,
+        'p_year': 0,
+        'p_creator_id': SupabaseAuthentication.myUser!.id,
+        'p_client_payments': [payment],
+      });
+
+      // Notify Edge Function for FCM push (fire and forget)
+      _notifyPushNotification(payment);
     } catch (e) {
       Get.snackbar("Clinet Error", e.toString());
     }
@@ -259,37 +266,37 @@ class SupabaseClientRepository extends ClientRepository
 
       double newCash = totalCash - bills;
 
-      final data = client.toJson();
-      data[Client.totalCashColumns] = newCash;
-
-      await BackendServices.instance.clientRepository
-          .update(Client.fromJson(data));
-
-      final log = Log(
-        id: 0,
-        month: month,
-        createdBy: SupabaseAuthentication.myUser!.id,
-        accountId: AccountClientInfo.to.currentAccount.id,
-        year: year,
-        clientId: client.id,
-        phoneId: client.numbers![0].id,
-        price: bills,
-        paid: (totalCash >= bills)
+      // Use batch_process_payments RPC (SECURITY DEFINER) to bypass PostgREST cache issue
+      // This RPC also updates the client balance, so no separate update needed
+      final payment = {
+        'client_id': client.id,
+        'new_balance': newCash,
+        'bills': bills,
+        'phone_id': client.numbers![0].id,
+        'system_type': client.systemsFullName(),
+        'paid': (totalCash >= bills)
             ? bills
             : (totalCash > 0)
                 ? totalCash
                 : 0,
-        reminder: (totalCash >= bills)
+        'reminder': (totalCash >= bills)
             ? 0
             : (totalCash > 0)
                 ? bills - totalCash
                 : bills,
-        systemType: client.systemsFullName(),
-        transactionType: TransactionType.transactionDone,
-        createdAt: DateTime.now(),
-      );
+        'transaction_type': TransactionType.transactionDone.index,
+      };
 
-      await BackendServices.instance.logRepository.create(log);
+      await _clinet.rpc('batch_process_payments', params: {
+        'p_account_id': AccountClientInfo.to.currentAccount.id,
+        'p_month': month,
+        'p_year': year,
+        'p_creator_id': SupabaseAuthentication.myUser!.id,
+        'p_client_payments': [payment],
+      });
+
+      // Notify Edge Function for FCM push (fire and forget)
+      _notifyPushNotification(payment);
 
       // Remove temp systems
       final tempSystems = client.numbers![0].systems;
@@ -544,6 +551,34 @@ class SupabaseClientRepository extends ClientRepository
     } catch (e) {
       debugPrint('Error fetching client by phone number: $e');
       return null;
+    }
+  }
+
+  /// Fire-and-forget call to Edge Function for FCM push notifications.
+  /// Does not block the main transaction flow.
+  void _notifyPushNotification(Map<String, dynamic> payment) {
+    try {
+      final payload = {
+        'type': 'INSERT',
+        'table': 'log',
+        'record': {
+          'client_id': payment['client_id'],
+          'creator': SupabaseAuthentication.myUser!.id,
+          'price': payment['bills'],
+          'transaction_type': payment['transaction_type'],
+          'system_type': payment['system_type'],
+          'account_id': AccountClientInfo.to.currentAccount.id,
+          'phone_id': payment['phone_id'],
+        },
+      };
+      _clinet.functions.invoke(
+        'notify-on-log',
+        body: payload,
+      ).catchError((e) {
+        debugPrint('🔔 Push notification error: $e');
+      });
+    } catch (e) {
+      debugPrint('🔔 Push notification setup error: $e');
     }
   }
 }

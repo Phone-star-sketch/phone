@@ -108,10 +108,10 @@ class TransactionNotificationService {
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
             schema: 'public',
-            table: 'logs',
+            table: 'log',
             filter: PostgresChangeFilter(
               type: PostgresChangeFilterType.eq,
-              column: 'created_by',
+              column: 'creator',
               value: 2, // Assistant's user ID
             ),
             callback: (payload) async {

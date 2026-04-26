@@ -14,24 +14,28 @@ class SupabaseLogRepository extends LogRepository with CrudOperations<Log> {
 
   @override
   Future<Object> create(Log item) async {
-    final data = item.toJson();
-    data.remove('id');
-
     Object id = -1;
     try {
-      await _client
-          .from(logTableName)
-          .insert(data)
-          .select("id")
-          .single()
-          .then((value) {
-        id = value['id'] as Object;
+      final response = await _client.rpc('insert_log', params: {
+        'p_account_id': item.accountId,
+        'p_client_id': item.clientId,
+        'p_phone_id': item.phoneId,
+        'p_creator': item.createdBy,
+        'p_price': item.price,
+        'p_paid': item.paid ?? 0,
+        'p_reminder': item.reminder ?? 0,
+        'p_system_type': item.systemType ?? '',
+        'p_transaction_type': item.transactionType?.index ?? 0,
+        'p_month': item.month ?? 0,
+        'p_year': item.year ?? 0,
       });
+      id = response as Object;
     } catch (e) {
       Get.showSnackbar(GetSnackBar(
         title: "Error with creating a Log",
         message: e.toString(),
       ));
+      rethrow;
     }
     return id;
   }

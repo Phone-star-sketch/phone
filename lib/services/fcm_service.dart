@@ -1,3 +1,4 @@
+import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -7,6 +8,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('🔔 FCM Background: ${message.notification?.title}');
+  // Increment badge on background notification
+  try {
+    await AppBadgePlus.updateBadge(1);
+  } catch (e) {
+    debugPrint('🔔 Background badge error: $e');
+  }
 }
 
 class FcmService {
@@ -15,6 +22,31 @@ class FcmService {
 
   final _messaging = FirebaseMessaging.instance;
   final _localNotifications = FlutterLocalNotificationsPlugin();
+  int _badgeCount = 0;
+
+  int get badgeCount => _badgeCount;
+
+  Future<void> incrementBadge() async {
+    _badgeCount++;
+    if (!kIsWeb) {
+      try {
+        await AppBadgePlus.updateBadge(_badgeCount);
+      } catch (e) {
+        debugPrint('🔔 Badge error: $e');
+      }
+    }
+  }
+
+  Future<void> clearBadge() async {
+    _badgeCount = 0;
+    if (!kIsWeb) {
+      try {
+        await AppBadgePlus.updateBadge(0);
+      } catch (e) {
+        debugPrint('🔔 Badge clear error: $e');
+      }
+    }
+  }
 
   Future<void> initialize() async {
     if (kIsWeb) return;
@@ -44,7 +76,7 @@ class FcmService {
     // Background handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-    // Foreground messages → show as local notification
+    // Foreground messages → show as local notification + badge
     FirebaseMessaging.onMessage.listen((message) {
       final notification = message.notification;
       if (notification == null) return;
@@ -61,6 +93,7 @@ class FcmService {
           ),
         ),
       );
+      incrementBadge();
     });
 
     // Get token and save it

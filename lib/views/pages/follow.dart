@@ -15,6 +15,7 @@ import 'package:phone_system_app/utils/string_utils.dart';
 import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_sheet.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:phone_system_app/services/fcm_service.dart';
 import 'package:phone_system_app/services/transaction_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart' as prefs;
 
@@ -47,6 +48,8 @@ class FollowController extends GetxController {
   void onInit() {
     super.onInit();
     _initController();
+    // Clear badge when user opens Follow page
+    FcmService.instance.clearBadge();
   }
 
   Future<void> _initController() async {
@@ -88,7 +91,7 @@ class FollowController extends GetxController {
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
             schema: 'public',
-            table: 'logs',
+            table: 'log',
             filter: PostgresChangeFilter(
               type: PostgresChangeFilterType.eq,
               column: 'account_id',
