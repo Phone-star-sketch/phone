@@ -179,6 +179,30 @@ class FollowController extends GetxController {
       Get.snackbar('خطأ', 'فشل في إضافة البيانات التجريبية: $e');
     }
   }
+
+  Future<void> testFcmToken() async {
+    try {
+      Get.snackbar(
+        'اختبار FCM',
+        'جاري اختبار تسجيل التوكن...',
+        backgroundColor: Colors.orange.withValues(alpha: 0.1),
+        duration: Duration(seconds: 2),
+      );
+
+      final result = await FcmService.instance.testTokenRegistration();
+
+      Get.snackbar(
+        'نتيجة الاختبار',
+        result,
+        backgroundColor: result.contains('✅')
+            ? Colors.green.withValues(alpha: 0.1)
+            : Colors.red.withValues(alpha: 0.1),
+        duration: Duration(seconds: 5),
+      );
+    } catch (e) {
+      Get.snackbar('خطأ', 'فشل الاختبار: $e');
+    }
+  }
 }
 
 class Follow extends StatelessWidget {
@@ -214,7 +238,7 @@ class Follow extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (SupabaseAuthentication.myUser!.role ==
-                              UserRoles.admin.index)
+                              UserRoles.admin.index) ...[
                             IconButton(
                               onPressed: () => controller.insertDummyLog(),
                               icon: Icon(Icons.add_circle, size: 20),
@@ -223,6 +247,16 @@ class Follow extends StatelessWidget {
                               padding: EdgeInsets.zero,
                               constraints: BoxConstraints(),
                             ),
+                            SizedBox(width: 4),
+                            IconButton(
+                              onPressed: () => controller.testFcmToken(),
+                              icon: Icon(Icons.notifications_active, size: 20),
+                              tooltip: 'اختبار FCM Token',
+                              color: Colors.orange,
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints(),
+                            ),
+                          ],
                           SizedBox(width: 4),
                           Icon(
                             controller.connectionStatus.value == 'متصل'
