@@ -98,58 +98,27 @@ class FollowController extends GetxController {
               value: AccountClientInfo.to.currentAccount.id,
             ),
             callback: (payload) async {
-              debugPrint(
-                  '🔴 Realtime update received: ${payload.eventType} at ${DateTime.now()}');
-              debugPrint('🔴 Changed data: ${payload.newRecord}');
+              debugPrint('🔴 Realtime payload received: ${payload.eventType}');
+              debugPrint('🔴 Payload data: ${payload.newRecord}');
+              debugPrint('🔴 Realtime payload received: ${payload.eventType}');
+              debugPrint('🔴 Payload data: ${payload.newRecord}');
 
               // Update timestamp
               lastUpdateTime.value = DateFormat.jm('ar').format(DateTime.now());
 
-              // Show update notification
-              Get.snackbar(
-                'تحديث مباشر',
-                'تم استلام تحديث جديد',
-                backgroundColor: Colors.green.withValues(alpha: 0.1),
-                duration: Duration(seconds: 2),
-              );
-
               // Check if this is an assistant transaction (creator = 2)
-              if (payload.eventType == PostgresChangeEvent.insert &&
-                  payload.newRecord != null &&
-                  payload.newRecord!['creator'] == 2) {
+              final isAssistantTransaction =
+                  payload.eventType == PostgresChangeEvent.insert &&
+                      payload.newRecord != null &&
+                      payload.newRecord!['creator'] == 2;
+
+              debugPrint(
+                  '🔴 Is assistant transaction: $isAssistantTransaction');
+              debugPrint('🔴 Creator ID: ${payload.newRecord?['creator']}');
+
+              if (isAssistantTransaction) {
                 debugPrint(
-                    '🔴 Assistant transaction detected, showing immediate notification');
-
-                // Fetch the client information
-                await AccountClientInfo.to.fetchClients();
-
-                // Create a log object from the payload
-                final newLog =
-                    Log.fromJson(Map<String, dynamic>.from(payload.newRecord!));
-
-                // Find client information if available
-                Client? client;
-                if (newLog.clientId != null) {
-                  client = AccountClientInfo.to.clinets.firstWhereOrNull(
-                    (element) => element.id == newLog.clientId,
-                  );
-                }
-
-                // Create a LogWidthUser object
-                final logWithUser = LogWidthUser(log: newLog);
-                logWithUser.client = client;
-
-                // Show notification immediately (this will also send to background service)
-                await TransactionNotificationService.instance
-                    .showTransactionNotification(logWithUser);
-
-                // Store the new transaction ID
-                final prefs.SharedPreferences sharedPrefs =
-                    await prefs.SharedPreferences.getInstance();
-                await sharedPrefs.setInt(
-                    LAST_NOTIFICATION_KEY, newLog.id as int);
-
-                // Explicitly send to background service to ensure it works when app is closed
+                    '🔴 ✅ Assistant transaction detected - will show notification');
               }
 
               // Update logs list

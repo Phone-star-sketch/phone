@@ -317,8 +317,7 @@ class SupabaseClientRepository extends ClientRepository
 
   /// Batch pay multiple clients' bills in parallel for performance.
   /// Processes clients in chunks to avoid overwhelming the database.
-  Future<void> batchPaySystemsBills(
-      List<Client> clients, int month, int year,
+  Future<void> batchPaySystemsBills(List<Client> clients, int month, int year,
       {int chunkSize = 10}) async {
     // Process in chunks to avoid too many concurrent requests
     for (int i = 0; i < clients.length; i += chunkSize) {
@@ -439,8 +438,7 @@ class SupabaseClientRepository extends ClientRepository
 
       final endTime = DateTime.now();
       final duration = endTime.difference(startTime);
-      debugPrint(
-          'Ultra-fast batch completed in ${duration.inMilliseconds}ms');
+      debugPrint('Ultra-fast batch completed in ${duration.inMilliseconds}ms');
 
       return Map<String, dynamic>.from(result as Map);
     } catch (e) {
@@ -557,39 +555,43 @@ class SupabaseClientRepository extends ClientRepository
   /// Fire-and-forget call to Edge Function for FCM push notifications.
   /// Does not block the main transaction flow.
   void _notifyPushNotification(Map<String, dynamic> payment) {
-    try {
-      debugPrint('🔔 Preparing push notification payload...');
-      final payload = {
-        'type': 'INSERT',
-        'table': 'log',
-        'record': {
-          'client_id': payment['client_id'],
-          'creator': SupabaseAuthentication.myUser!.id,
-          'price': payment['bills'],
-          'transaction_type': payment['transaction_type'],
-          'system_type': payment['system_type'],
-          'account_id': AccountClientInfo.to.currentAccount.id,
-          'phone_id': payment['phone_id'],
-        },
-      };
-      
-      debugPrint('🔔 Invoking Edge Function with payload: $payload');
-      
-      final response = await _clinet.functions.invoke(
-        'notify-on-log',
-        body: payload,
-      );
-      
-      debugPrint('🔔 Edge Function response: ${response.data}');
-      
-      if (response.status != 200) {
-        debugPrint('🔔 ❌ Edge Function failed with status: ${response.status}');
-      } else {
-        debugPrint('🔔 ✅ Push notification sent successfully');
+    // Run async operation without blocking
+    Future.microtask(() async {
+      try {
+        debugPrint('🔔 Preparing push notification payload...');
+        final payload = {
+          'type': 'INSERT',
+          'table': 'log',
+          'record': {
+            'client_id': payment['client_id'],
+            'creator': SupabaseAuthentication.myUser!.id,
+            'price': payment['bills'],
+            'transaction_type': payment['transaction_type'],
+            'system_type': payment['system_type'],
+            'account_id': AccountClientInfo.to.currentAccount.id,
+            'phone_id': payment['phone_id'],
+          },
+        };
+
+        debugPrint('🔔 Invoking Edge Function with payload: $payload');
+
+        final response = await _clinet.functions.invoke(
+          'notify-on-log',
+          body: payload,
+        );
+
+        debugPrint('🔔 Edge Function response: ${response.data}');
+
+        if (response.status != 200) {
+          debugPrint(
+              '🔔 ❌ Edge Function failed with status: ${response.status}');
+        } else {
+          debugPrint('🔔 ✅ Push notification sent successfully');
+        }
+      } catch (e, stackTrace) {
+        debugPrint('🔔 ❌ Push notification error: $e');
+        debugPrint('🔔 Stack trace: $stackTrace');
       }
-    } catch (e, stackTrace) {
-      debugPrint('🔔 ❌ Push notification error: $e');
-      debugPrint('🔔 Stack trace: $stackTrace');
-    }
+    });
   }
 }
