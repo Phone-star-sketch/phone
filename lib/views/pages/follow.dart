@@ -238,7 +238,9 @@ class Follow extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (SupabaseAuthentication.myUser!.role ==
-                              UserRoles.admin.index) ...[
+                                  UserRoles.admin.index ||
+                              SupabaseAuthentication.myUser!.role ==
+                                  UserRoles.manager.index) ...[
                             IconButton(
                               onPressed: () => controller.insertDummyLog(),
                               icon: Icon(Icons.add_circle, size: 20),
