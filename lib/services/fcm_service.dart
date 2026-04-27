@@ -195,4 +195,54 @@ class FcmService {
       debugPrint('🔔 FCM: Force refresh error: $e');
     }
   }
+
+  /// Test method to manually trigger token registration
+  Future<String> testTokenRegistration() async {
+    try {
+      debugPrint('🧪 FCM TEST: Starting manual token registration test...');
+
+      // Check Firebase initialization
+      debugPrint('🧪 FCM TEST: Checking Firebase...');
+
+      // Check Supabase initialization
+      if (!Supabase.instance.isInitialized) {
+        return '❌ Supabase not initialized';
+      }
+      debugPrint('🧪 FCM TEST: ✅ Supabase initialized');
+
+      // Get token
+      debugPrint('🧪 FCM TEST: Getting FCM token...');
+      final token = await _messaging.getToken();
+
+      if (token == null) {
+        return '❌ FCM token is null';
+      }
+
+      debugPrint('🧪 FCM TEST: ✅ Token obtained: ${token.substring(0, 30)}...');
+
+      // Try to save
+      debugPrint('🧪 FCM TEST: Attempting to save to database...');
+      await Supabase.instance.client.from('fcm_tokens').upsert(
+        {'token': token, 'device': 'manager'},
+        onConflict: 'device',
+      );
+
+      debugPrint('🧪 FCM TEST: ✅ Token saved successfully!');
+
+      // Verify it was saved
+      final result = await Supabase.instance.client
+          .from('fcm_tokens')
+          .select()
+          .eq('device', 'manager')
+          .single();
+
+      debugPrint('🧪 FCM TEST: ✅ Verification: $result');
+
+      return '✅ Success! Token: ${token.substring(0, 30)}...';
+    } catch (e, st) {
+      debugPrint('🧪 FCM TEST: ❌ Error: $e');
+      debugPrint('🧪 FCM TEST: Stack: $st');
+      return '❌ Error: $e';
+    }
+  }
 }
