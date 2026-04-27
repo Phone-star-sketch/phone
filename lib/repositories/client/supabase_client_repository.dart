@@ -558,6 +558,7 @@ class SupabaseClientRepository extends ClientRepository
   /// Does not block the main transaction flow.
   void _notifyPushNotification(Map<String, dynamic> payment) {
     try {
+      debugPrint('🔔 Preparing push notification payload...');
       final payload = {
         'type': 'INSERT',
         'table': 'log',
@@ -571,14 +572,24 @@ class SupabaseClientRepository extends ClientRepository
           'phone_id': payment['phone_id'],
         },
       };
-      _clinet.functions.invoke(
+      
+      debugPrint('🔔 Invoking Edge Function with payload: $payload');
+      
+      final response = await _clinet.functions.invoke(
         'notify-on-log',
         body: payload,
-      ).catchError((e) {
-        debugPrint('🔔 Push notification error: $e');
-      });
-    } catch (e) {
-      debugPrint('🔔 Push notification setup error: $e');
+      );
+      
+      debugPrint('🔔 Edge Function response: ${response.data}');
+      
+      if (response.status != 200) {
+        debugPrint('🔔 ❌ Edge Function failed with status: ${response.status}');
+      } else {
+        debugPrint('🔔 ✅ Push notification sent successfully');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('🔔 ❌ Push notification error: $e');
+      debugPrint('🔔 Stack trace: $stackTrace');
     }
   }
 }

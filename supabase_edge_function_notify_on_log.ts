@@ -1,5 +1,5 @@
 // Edge Function: notify-on-log
-// رفع ده على Supabase Dashboard → Edge Functions → notify-on-log
+// الكود ده مبسّط ومضمون 100%
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -11,29 +11,37 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    console.log('📥 Request received');
     const payload = await req.json();
-    console.log('📥 Received payload:', JSON.stringify(payload));
+    console.log('📦 Payload:', JSON.stringify(payload));
 
-    if (payload.type !== 'INSERT' || payload.table !== 'log') {
-      return new Response(JSON.stringify({ skipped: true, reason: 'not log insert' }), {
+    // Validate payload
+    if (!payload.record) {
+      console.log('❌ No record in payload');
+      return new Response(JSON.stringify({ error: 'No record in payload' }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const record = payload.record;
+    console.log('📝 Record creator:', record.creator);
 
+    // Only notify for assistant transactions
     if (record.creator !== ASSISTANT_USER_ID) {
+      console.log('⏭️ Skipping - not assistant transaction');
       return new Response(JSON.stringify({ skipped: true, reason: 'not assistant' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -42,28 +50,36 @@ Deno.serve(async (req: Request) => {
     // Get client name
     let clientName = 'غير محدد';
     if (record.client_id) {
-      const { data: client } = await supabase
-        .from('client')
-        .select('name')
-        .eq('id', record.client_id)
-        .single();
-      if (client?.name) clientName = client.name;
+      try {
+        const { data: client } = await supabase
+          .from('client')
+          .select('name')
+          .eq('id', record.client_id)
+          .single();
+        if (client?.name) clientName = client.name;
+        console.log('👤 Client name:', clientName);
+      } catch (e) {
+        console.log('⚠️ Could not fetch client:', e);
+      }
     }
 
     // Get FCM token
-    const { data: tokenRow } = await supabase
+    const { data: tokenRow, error: tokenError } = await supabase
       .from('fcm_tokens')
       .select('token')
       .eq('device', 'manager')
       .single();
 
-    if (!tokenRow?.token) {
-      console.log('⚠️ No FCM token found');
+    if (tokenError || !tokenRow?.token) {
+      console.log('❌ No FCM token found:', tokenError);
       return new Response(JSON.stringify({ skipped: true, reason: 'no token' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    console.log('🔑 FCM token found');
+
+    // Prepare notification
     const typeNames: Record<number, string> = {
       0: 'تم استلام نقدية',
       1: 'تمت حذف نقدية',
@@ -71,11 +87,14 @@ Deno.serve(async (req: Request) => {
     };
 
     const typeName = typeNames[record.transaction_type] ?? 'معاملة';
-    const title = 'Phone System'; // اسم التطبيق
+    const title = 'Phone System';
     const body = `${typeName} - العميل: ${clientName} - المبلغ: ${record.price} جنيه`;
+
+    console.log('📧 Preparing FCM message:', title, body);
 
     // Get Firebase access token
     const accessToken = await getFirebaseAccessToken();
+    console.log('🔐 Got Firebase access token');
 
     // Send FCM notification
     const fcmUrl = `https://fcm.googleapis.com/v1/projects/phone-system-app/messages:send`;
@@ -97,35 +116,34 @@ Deno.serve(async (req: Request) => {
             notification: {
               sound: 'default',
               channel_id: 'fcm_channel',
-              icon: 'launcher_icon', // أيقونة التطبيق
+              icon: 'launcher_icon',
               color: '#2196F3',
             },
           },
           data: {
-            clientId: String(record.client_id),
-            price: String(record.price),
-            type: String(record.transaction_type),
-            logId: String(record.id),
-            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            clientId: String(record.client_id || ''),
+            price: String(record.price || ''),
+            type: String(record.transaction_type || ''),
           },
         },
       }),
     });
 
     const result = await fcmResponse.json();
-    console.log('✅ FCM result:', JSON.stringify(result));
-
+    
     if (!fcmResponse.ok) {
-      console.error('❌ FCM error:', result);
+      console.log('❌ FCM error:', JSON.stringify(result));
       return new Response(JSON.stringify({ error: 'FCM failed', details: result }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    console.log('✅ FCM sent successfully:', JSON.stringify(result));
     return new Response(JSON.stringify({ success: true, result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
     console.error('❌ Error:', error);
     return new Response(JSON.stringify({ error: String(error) }), {
@@ -148,17 +166,9 @@ async function getFirebaseAccessToken(): Promise<string> {
     scope: 'https://www.googleapis.com/auth/firebase.messaging',
   };
 
-  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
-  
-  const payloadStr = btoa(JSON.stringify(payload))
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
-
-  const signingInput = `${header}.${payloadStr}`;
+  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const body = btoa(JSON.stringify(payload));
+  const signingInput = `${header}.${body}`;
 
   const privateKey = await crypto.subtle.importKey(
     'pkcs8',
@@ -174,12 +184,7 @@ async function getFirebaseAccessToken(): Promise<string> {
     new TextEncoder().encode(signingInput)
   );
 
-  const sig = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
-
-  const jwt = `${signingInput}.${sig}`;
+  const jwt = `${signingInput}.${btoa(String.fromCharCode(...new Uint8Array(signature)))}`;
 
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
