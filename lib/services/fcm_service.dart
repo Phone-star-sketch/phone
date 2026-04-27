@@ -98,12 +98,20 @@ class FcmService {
       // Foreground messages → show as local notification + badge
       FirebaseMessaging.onMessage.listen((message) {
         debugPrint('🔔 FCM: Foreground message received');
+        debugPrint('🔔 FCM: Notification: ${message.notification?.toMap()}');
+        debugPrint('🔔 FCM: Data: ${message.data}');
+
         final notification = message.notification;
-        if (notification == null) return;
+        if (notification == null) {
+          debugPrint('🔔 FCM: No notification payload, skipping');
+          return;
+        }
+
+        debugPrint('🔔 FCM: Showing local notification');
         _localNotifications.show(
           notification.hashCode,
-          notification.title,
-          notification.body,
+          notification.title ?? 'Phone System',
+          notification.body ?? 'معاملة جديدة',
           const NotificationDetails(
             android: AndroidNotificationDetails(
               'fcm_channel',
@@ -112,10 +120,13 @@ class FcmService {
               importance: Importance.max,
               priority: Priority.high,
               icon: '@mipmap/launcher_icon',
+              playSound: true,
+              enableVibration: true,
             ),
           ),
         );
         incrementBadge();
+        debugPrint('🔔 FCM: Local notification shown successfully');
       });
 
       // Get token with retry logic

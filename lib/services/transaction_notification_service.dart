@@ -74,8 +74,8 @@ class TransactionNotificationService {
         onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
       );
 
-      // Set up real-time subscription
-      _setupRealtimeSubscription();
+      // NOTE: Realtime subscription disabled - FCM handles all notifications
+      // _setupRealtimeSubscription();
 
       // Check if there are any pending client IDs from background taps
       _checkPendingClientId();
@@ -104,7 +104,7 @@ class TransactionNotificationService {
       final client = Supabase.instance.client;
 
       _subscription = client
-          .channel('logs-channel')
+          .channel('logs-channel-local')
           .onPostgresChanges(
             event: PostgresChangeEvent.all,
             schema: 'public',
@@ -117,6 +117,11 @@ class TransactionNotificationService {
             callback: (payload) async {
               {
                 try {
+                  debugPrint('🔔 Local: Realtime event received');
+
+                  // Only show local notifications when app is in foreground
+                  // FCM will handle background/terminated states
+
                   // Create log from data
                   final logData = Map<String, dynamic>.from(payload.newRecord);
                   final Log log = Log.fromJson(logData);
@@ -133,7 +138,7 @@ class TransactionNotificationService {
 
                       client = Client.fromJson(response);
                     } catch (e) {
-                      debugPrint('🔔 Error fetching client data: $e');
+                      debugPrint('🔔 Local: Error fetching client data: $e');
                     }
                   }
 
@@ -141,23 +146,24 @@ class TransactionNotificationService {
                   final logWithUser = LogWidthUser(log: log);
                   logWithUser.client = client;
 
-                  // Show notification
+                  // Show notification only in foreground
+                  debugPrint('🔔 Local: Showing foreground notification');
                   await showTransactionNotification(logWithUser);
                 } catch (e) {
-                  debugPrint('🔔 Error processing notification: $e');
+                  debugPrint('🔔 Local: Error processing notification: $e');
                 }
               }
             },
           )
           .subscribe((status, error) {
         if (error != null) {
-          debugPrint('🔔 Realtime subscription error: $error');
+          debugPrint('🔔 Local: Realtime subscription error: $error');
         } else {
-          debugPrint('🔔 Realtime subscription status: $status');
+          debugPrint('🔔 Local: Realtime subscription status: $status');
         }
       });
     } catch (e) {
-      debugPrint('🔔 Error setting up realtime subscription: $e');
+      debugPrint('🔔 Local: Error setting up realtime subscription: $e');
     }
   }
 
@@ -250,7 +256,8 @@ class TransactionNotificationService {
       onDidReceiveLocalNotification:
           (int id, String? title, String? body, String? payload) async {
         // For older iOS versions (deprecated but needed for backward compatibility)
-        debugPrint('🔔 Received local notification: $id, $title, $body, $payload');
+        debugPrint(
+            '🔔 Received local notification: $id, $title, $body, $payload');
       },
     );
 
@@ -344,7 +351,8 @@ class TransactionNotificationService {
         payload: client?.id.toString(),
       );
 
-      debugPrint('🔔 Notification sent successfully for transaction ID: ${log.id}');
+      debugPrint(
+          '🔔 Notification sent successfully for transaction ID: ${log.id}');
     } catch (e) {
       debugPrint('🔔 Error showing notification: $e');
       // Retry with simpler notification as fallback

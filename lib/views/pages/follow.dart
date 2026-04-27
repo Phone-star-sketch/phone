@@ -16,8 +16,6 @@ import 'package:phone_system_app/views/bottom_sheet_dialogs/show_client_info_she
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:phone_system_app/services/fcm_service.dart';
-import 'package:phone_system_app/services/transaction_notification_service.dart';
-import 'package:shared_preferences/shared_preferences.dart' as prefs;
 
 class LogWidthUser {
   Log log;
@@ -41,8 +39,6 @@ class FollowController extends GetxController {
   RealtimeChannel? _subscription;
   RxString connectionStatus = 'غير متصل'.obs;
   RxString lastUpdateTime = ''.obs;
-  final Set<int> _shownNotifications = {};
-  static const String LAST_NOTIFICATION_KEY = 'last_notified_transaction_id';
 
   @override
   void onInit() {
@@ -53,8 +49,8 @@ class FollowController extends GetxController {
   }
 
   Future<void> _initController() async {
-    // Initialize notification service
-    await TransactionNotificationService.instance.initialize();
+    // Clear badge when user opens Follow page
+    FcmService.instance.clearBadge();
 
     // التأكد من وجود AccountClientInfo controller
     if (!Get.isRegistered<AccountClientInfo>()) {
@@ -98,30 +94,12 @@ class FollowController extends GetxController {
               value: AccountClientInfo.to.currentAccount.id,
             ),
             callback: (payload) async {
-              debugPrint('🔴 Realtime payload received: ${payload.eventType}');
-              debugPrint('🔴 Payload data: ${payload.newRecord}');
-              debugPrint('🔴 Realtime payload received: ${payload.eventType}');
-              debugPrint('🔴 Payload data: ${payload.newRecord}');
+              debugPrint('🔴 UI: Realtime event - ${payload.eventType}');
 
               // Update timestamp
               lastUpdateTime.value = DateFormat.jm('ar').format(DateTime.now());
 
-              // Check if this is an assistant transaction (creator = 2)
-              final isAssistantTransaction =
-                  payload.eventType == PostgresChangeEvent.insert &&
-                      payload.newRecord != null &&
-                      payload.newRecord!['creator'] == 2;
-
-              debugPrint(
-                  '🔴 Is assistant transaction: $isAssistantTransaction');
-              debugPrint('🔴 Creator ID: ${payload.newRecord?['creator']}');
-
-              if (isAssistantTransaction) {
-                debugPrint(
-                    '🔴 ✅ Assistant transaction detected - will show notification');
-              }
-
-              // Update logs list
+              // Update logs list (UI only - notifications handled by FCM)
               await AccountClientInfo.to.fetchClients();
               await updateLogs();
             },
@@ -144,7 +122,7 @@ class FollowController extends GetxController {
   @override
   void onClose() {
     // Clear notifications when leaving the page
-    TransactionNotificationService.instance.clearBadge();
+    FcmService.instance.clearBadge();
     _subscription?.unsubscribe();
     super.onClose();
   }
@@ -167,34 +145,7 @@ class FollowController extends GetxController {
           )
           .toList();
 
-      // Get assistant transactions and sort by date
-      final assistantTransactions = logs
-          .where((log) => log.log.createdBy == 2)
-          .toList()
-        ..sort((a, b) => b.log.createdAt!.compareTo(a.log.createdAt!));
-
-      if (assistantTransactions.isNotEmpty) {
-        // Get the latest transaction
-        final latestTransaction = assistantTransactions.first;
-
-        // Get the last notified transaction ID
-        final prefs.SharedPreferences sharedPrefs =
-            await prefs.SharedPreferences.getInstance();
-        final int? lastNotifiedId = sharedPrefs.getInt(LAST_NOTIFICATION_KEY);
-
-        // Show notification only if this is a new transaction
-        if (lastNotifiedId == null ||
-            latestTransaction.log.id != lastNotifiedId) {
-          await TransactionNotificationService.instance
-              .showTransactionNotification(latestTransaction);
-
-          // Store the new transaction ID
-          await sharedPrefs.setInt(
-              LAST_NOTIFICATION_KEY, latestTransaction.log.id as int);
-        }
-      }
-
-      debugPrint("Real-time update: Found ${logs.length} logs");
+      debugPrint("🔴 UI: Loaded ${logs.length} logs");
       Loaders.to.followLoading.value = false;
     } catch (e) {
       debugPrint("Real-time update error: $e");
