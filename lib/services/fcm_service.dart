@@ -4,11 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Background message handler - must be top-level function
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('🔔 FCM Background: ${message.notification?.title}');
-  // Increment badge on background notification
   try {
     await AppBadgePlus.updateBadge(1);
   } catch (e) {
@@ -57,20 +55,19 @@ class FcmService {
     try {
       debugPrint('🔔 FCM: Starting initialization...');
 
-      // Request permission
       final settings = await _messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
       );
-      debugPrint('🔔 FCM: Permission status: ${settings.authorizationStatus}');
+      debugPrint('🔔 FCM: Permission: ${settings.authorizationStatus}');
 
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
-        debugPrint('🔔 FCM: Permission denied by user');
+        debugPrint('🔔 FCM: Permission denied');
         return;
       }
 
-      // Create notification channel for foreground messages
+      // Create notification channel
       const channel = AndroidNotificationChannel(
         'fcm_channel',
         'FCM Notifications',
@@ -83,31 +80,21 @@ class FcmService {
           .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(channel);
-      debugPrint('🔔 FCM: Notification channel created');
 
       await _localNotifications.initialize(
         const InitializationSettings(
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
         ),
       );
-      debugPrint('🔔 FCM: Local notifications initialized');
 
-      // Background handler
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-      // Foreground messages → show as local notification + badge
+      // Foreground messages
       FirebaseMessaging.onMessage.listen((message) {
-        debugPrint('🔔 FCM: Foreground message received');
-        debugPrint('🔔 FCM: Notification: ${message.notification?.toMap()}');
-        debugPrint('🔔 FCM: Data: ${message.data}');
-
+        debugPrint('🔔 FCM Foreground: ${message.notification?.title}');
         final notification = message.notification;
-        if (notification == null) {
-          debugPrint('🔔 FCM: No notification payload, skipping');
-          return;
-        }
+        if (notification == null) return;
 
-        debugPrint('🔔 FCM: Showing local notification');
         _localNotifications.show(
           notification.hashCode,
           notification.title ?? 'Phone System',
@@ -116,7 +103,6 @@ class FcmService {
             android: AndroidNotificationDetails(
               'fcm_channel',
               'FCM Notifications',
-              channelDescription: 'معاملات المساعد',
               importance: Importance.max,
               priority: Priority.high,
               icon: '@mipmap/launcher_icon',
@@ -126,79 +112,87 @@ class FcmService {
           ),
         );
         incrementBadge();
-        debugPrint('🔔 FCM: Local notification shown successfully');
       });
 
-      // Get token with retry logic
+      // ✅ الخطوة الأساسية: احفظ التوكن عند كل فتح للتطبيق
       await _getAndSaveToken();
 
-      // Refresh token
+      // ✅ تحديث تلقائي لو Firebase جدد التوكن
       _messaging.onTokenRefresh.listen((token) {
-        debugPrint('🔔 FCM: Token refreshed');
+        debugPrint('🔔 FCM: Token refreshed — saving new token');
         _saveToken(token);
       });
 
-      debugPrint('🔔 FCM: Initialization complete');
-    } catch (e, stackTrace) {
-      debugPrint('🔔 FCM: Initialization error: $e');
-      debugPrint('🔔 FCM: Stack trace: $stackTrace');
+      debugPrint('🔔 FCM: Initialization complete ✅');
+    } catch (e, st) {
+      debugPrint('🔔 FCM: Init error: $e\n$st');
     }
   }
 
   Future<void> _getAndSaveToken() async {
     try {
-      // Wait a bit for Firebase to be fully ready
+      // ✅ deleteInstanceID أو حذف التوكن القديم مش ضروري —
+      // getToken() بترجع التوكن الحالي أو بتعمل واحد جديد تلقائياً
       await Future.delayed(const Duration(seconds: 2));
 
       final token = await _messaging.getToken();
       if (token != null) {
-        debugPrint('🔔 FCM Token: $token');
+        debugPrint('🔔 FCM Token obtained: ${token.substring(0, 20)}...');
         await _saveToken(token);
       } else {
-        debugPrint('🔔 FCM: Token is null, retrying in 5 seconds...');
-        // Retry after 5 seconds
+        debugPrint('🔔 FCM: Token null — retrying in 5s...');
         await Future.delayed(const Duration(seconds: 5));
         final retryToken = await _messaging.getToken();
         if (retryToken != null) {
-          debugPrint('🔔 FCM Token (retry): $retryToken');
           await _saveToken(retryToken);
         } else {
-          debugPrint('🔔 FCM: Token still null after retry');
+          debugPrint('🔔 FCM: Token still null after retry ❌');
         }
       }
-    } catch (e, stackTrace) {
-      debugPrint('🔔 FCM: Error getting token: $e');
-      debugPrint('🔔 FCM: Stack trace: $stackTrace');
+    } catch (e, st) {
+      debugPrint('🔔 FCM: Error getting token: $e\n$st');
     }
   }
 
   Future<void> _saveToken(String token) async {
     try {
-      debugPrint('🔔 FCM: Attempting to save token...');
-
-      // Wait a bit to ensure Supabase is ready
+      debugPrint('🔔 FCM: Saving token to Supabase...');
       await Future.delayed(const Duration(seconds: 1));
 
       await Supabase.instance.client.from('fcm_tokens').upsert(
         {'token': token, 'device': 'manager'},
         onConflict: 'device',
       );
-      debugPrint('🔔 FCM: Token saved successfully');
-    } catch (e, stackTrace) {
-      debugPrint('🔔 FCM: Error saving token: $e');
-      debugPrint('🔔 FCM: Stack trace: $stackTrace');
-
-      // Retry once after 5 seconds
+      debugPrint('🔔 FCM: Token saved ✅');
+    } catch (e) {
+      debugPrint('🔔 FCM: Save failed: $e — retrying in 5s');
       try {
         await Future.delayed(const Duration(seconds: 5));
         await Supabase.instance.client.from('fcm_tokens').upsert(
           {'token': token, 'device': 'manager'},
           onConflict: 'device',
         );
-        debugPrint('🔔 FCM: Token saved successfully (retry)');
+        debugPrint('🔔 FCM: Token saved on retry ✅');
       } catch (retryError) {
-        debugPrint('🔔 FCM: Retry failed: $retryError');
+        debugPrint('🔔 FCM: Retry also failed: $retryError');
       }
+    }
+  }
+
+  /// استدعيها يدوياً لو احتجت تعمل force refresh للتوكن
+  Future<void> forceRefreshToken() async {
+    try {
+      debugPrint('🔔 FCM: Force refreshing token...');
+      await _messaging.deleteToken();
+      debugPrint('🔔 FCM: Old token deleted');
+      await Future.delayed(const Duration(seconds: 2));
+      final newToken = await _messaging.getToken();
+      if (newToken != null) {
+        await _saveToken(newToken);
+        debugPrint('🔔 FCM: New token registered ✅');
+      }
+    } catch (e) {
+      debugPrint('🔔 FCM: Force refresh error: $e');
     }
   }
 }
