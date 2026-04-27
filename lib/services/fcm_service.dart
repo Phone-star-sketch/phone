@@ -205,10 +205,12 @@ class FcmService {
       debugPrint('🧪 FCM TEST: Checking Firebase...');
 
       // Check Supabase initialization
-      if (!Supabase.instance.isInitialized) {
-        return '❌ Supabase not initialized';
+      try {
+        final _ = Supabase.instance.client;
+        debugPrint('🧪 FCM TEST: ✅ Supabase initialized');
+      } catch (e) {
+        return '❌ Supabase not initialized: $e';
       }
-      debugPrint('🧪 FCM TEST: ✅ Supabase initialized');
 
       // Get token
       debugPrint('🧪 FCM TEST: Getting FCM token...');
