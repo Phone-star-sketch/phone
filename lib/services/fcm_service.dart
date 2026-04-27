@@ -108,8 +108,10 @@ class FcmService {
             android: AndroidNotificationDetails(
               'fcm_channel',
               'FCM Notifications',
+              channelDescription: 'معاملات المساعد',
               importance: Importance.max,
               priority: Priority.high,
+              icon: '@mipmap/launcher_icon',
             ),
           ),
         );
