@@ -74,7 +74,6 @@ class FcmService {
         importance: Importance.max,
         enableVibration: true,
         playSound: true,
-        showBadge: true, // ✅ Enable badge on notification channel
       );
 
       await _localNotifications
@@ -109,7 +108,6 @@ class FcmService {
               icon: '@mipmap/launcher_icon',
               playSound: true,
               enableVibration: true,
-              showBadge: true, // ✅ Enable badge on notification
             ),
           ),
         );
