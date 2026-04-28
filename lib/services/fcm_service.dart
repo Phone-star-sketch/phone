@@ -146,50 +146,60 @@ class FcmService {
 
   Future<void> _getAndSaveToken() async {
     try {
-      // ✅ deleteInstanceID أو حذف التوكن القديم مش ضروري —
-      // getToken() بترجع التوكن الحالي أو بتعمل واحد جديد تلقائياً
+      debugPrint('🔔 FCM: Starting automatic token registration...');
+
+      // Wait a bit for Firebase to initialize fully
       await Future.delayed(const Duration(seconds: 2));
 
       final token = await _messaging.getToken();
       if (token != null) {
-        debugPrint('🔔 FCM Token obtained: ${token.substring(0, 20)}...');
+        debugPrint(
+            '🔔 FCM: ✅ Token obtained automatically: ${token.substring(0, 20)}...');
         await _saveToken(token);
+        debugPrint(
+            '🔔 FCM: ✅ Token saved automatically - no button press needed!');
       } else {
-        debugPrint('🔔 FCM: Token null — retrying in 5s...');
+        debugPrint('🔔 FCM: ⚠️ Token null on first try - retrying in 5s...');
         await Future.delayed(const Duration(seconds: 5));
         final retryToken = await _messaging.getToken();
         if (retryToken != null) {
+          debugPrint(
+              '🔔 FCM: ✅ Token obtained on retry: ${retryToken.substring(0, 20)}...');
           await _saveToken(retryToken);
+          debugPrint(
+              '🔔 FCM: ✅ Token saved on retry - automatic registration complete!');
         } else {
-          debugPrint('🔔 FCM: Token still null after retry ❌');
+          debugPrint(
+              '🔔 FCM: ❌ Token still null after retry - check Firebase setup');
         }
       }
     } catch (e, st) {
-      debugPrint('🔔 FCM: Error getting token: $e\n$st');
+      debugPrint('🔔 FCM: ❌ Error in automatic token registration: $e\n$st');
     }
   }
 
   Future<void> _saveToken(String token) async {
     try {
-      debugPrint('🔔 FCM: Saving token to Supabase...');
+      debugPrint('🔔 FCM: Saving token to Supabase database...');
       await Future.delayed(const Duration(seconds: 1));
 
       await Supabase.instance.client.from('fcm_tokens').upsert(
         {'token': token, 'device': 'manager'},
         onConflict: 'device',
       );
-      debugPrint('🔔 FCM: Token saved ✅');
+      debugPrint(
+          '🔔 FCM: ✅✅✅ Token saved successfully! Notifications will work now.');
     } catch (e) {
-      debugPrint('🔔 FCM: Save failed: $e — retrying in 5s');
+      debugPrint('🔔 FCM: ⚠️ Save failed: $e — retrying in 5s');
       try {
         await Future.delayed(const Duration(seconds: 5));
         await Supabase.instance.client.from('fcm_tokens').upsert(
           {'token': token, 'device': 'manager'},
           onConflict: 'device',
         );
-        debugPrint('🔔 FCM: Token saved on retry ✅');
+        debugPrint('🔔 FCM: ✅ Token saved on retry - notifications ready!');
       } catch (retryError) {
-        debugPrint('🔔 FCM: Retry also failed: $retryError');
+        debugPrint('🔔 FCM: ❌ Retry also failed: $retryError');
       }
     }
   }

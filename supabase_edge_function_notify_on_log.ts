@@ -135,10 +135,7 @@ Deno.serve(async (req: Request) => {
     const fcmPayload = {
       message: {
         token: tokenRow.token,
-        notification: {
-          title: title,
-          body: body,
-        },
+        notification: { title, body },
         android: {
           priority: 'high',
           notification: {
