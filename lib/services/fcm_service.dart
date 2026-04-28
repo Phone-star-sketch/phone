@@ -26,9 +26,11 @@ class FcmService {
 
   Future<void> incrementBadge() async {
     _badgeCount++;
+    debugPrint('🔔 FCM: Incrementing badge to $_badgeCount');
     if (!kIsWeb) {
       try {
         await AppBadgePlus.updateBadge(_badgeCount);
+        debugPrint('🔔 FCM: ✅ Badge updated on app icon: $_badgeCount');
       } catch (e) {
         debugPrint('🔔 Badge error: $e');
       }
@@ -37,9 +39,11 @@ class FcmService {
 
   Future<void> clearBadge() async {
     _badgeCount = 0;
+    debugPrint('🔔 FCM: Clearing badge');
     if (!kIsWeb) {
       try {
         await AppBadgePlus.updateBadge(0);
+        debugPrint('🔔 FCM: ✅ Badge cleared from app icon');
       } catch (e) {
         debugPrint('🔔 Badge clear error: $e');
       }
@@ -55,10 +59,12 @@ class FcmService {
     try {
       debugPrint('🔔 FCM: Starting initialization...');
 
+      // ✅ Request permissions first
       final settings = await _messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
+        provisional: false,
       );
       debugPrint('🔔 FCM: Permission: ${settings.authorizationStatus}');
 
@@ -67,51 +73,91 @@ class FcmService {
         return;
       }
 
-      // Create notification channel
+      // ✅ Initialize local notifications FIRST
+      const androidSettings =
+          AndroidInitializationSettings('@mipmap/launcher_icon');
+      const initSettings = InitializationSettings(android: androidSettings);
+
+      final initialized = await _localNotifications.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: (details) {
+          debugPrint('🔔 FCM: Notification tapped: ${details.payload}');
+        },
+      );
+
+      if (initialized == true) {
+        debugPrint('🔔 FCM: ✅ Local notifications initialized');
+      } else {
+        debugPrint(
+            '🔔 FCM: ⚠️ Local notifications initialization returned null/false');
+      }
+
+      // ✅ Create notification channel
       const channel = AndroidNotificationChannel(
         'fcm_channel',
         'FCM Notifications',
+        description: 'Phone System transaction notifications',
         importance: Importance.max,
         enableVibration: true,
         playSound: true,
       );
 
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(channel);
+      final androidPlugin =
+          _localNotifications.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
 
-      await _localNotifications.initialize(
-        const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        ),
-      );
+      if (androidPlugin != null) {
+        await androidPlugin.createNotificationChannel(channel);
+        debugPrint('🔔 FCM: ✅ Notification channel created');
+      } else {
+        debugPrint('🔔 FCM: ⚠️ Android plugin is null');
+      }
 
+      // ✅ Set background message handler
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-      // Foreground messages
+      // ✅ Foreground messages - SHOW NOTIFICATION
       FirebaseMessaging.onMessage.listen((message) {
         debugPrint('🔔 FCM Foreground: ${message.notification?.title}');
-        final notification = message.notification;
-        if (notification == null) return;
+        debugPrint('🔔 FCM Foreground body: ${message.notification?.body}');
 
-        _localNotifications.show(
-          notification.hashCode,
-          notification.title ?? 'Phone System',
-          notification.body ?? 'معاملة جديدة',
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'fcm_channel',
-              'FCM Notifications',
-              importance: Importance.max,
-              priority: Priority.high,
-              icon: '@mipmap/launcher_icon',
-              playSound: true,
-              enableVibration: true,
-            ),
-          ),
-        );
+        final notification = message.notification;
+        if (notification == null) {
+          debugPrint('🔔 FCM: ⚠️ Notification is null');
+          return;
+        }
+
+        // ✅ Increment badge BEFORE showing notification
         incrementBadge();
+        debugPrint('🔔 FCM: Badge count now: $_badgeCount');
+
+        // ✅ Show notification using local notifications
+        try {
+          _localNotifications.show(
+            notification.hashCode,
+            notification.title ?? 'Phone System',
+            notification.body ?? 'معاملة جديدة',
+            NotificationDetails(
+              android: AndroidNotificationDetails(
+                'fcm_channel',
+                'FCM Notifications',
+                channelDescription: 'Phone System transaction notifications',
+                importance: Importance.max,
+                priority: Priority.high,
+                icon: '@mipmap/launcher_icon',
+                playSound: true,
+                enableVibration: true,
+                number: _badgeCount, // ✅ Show badge count in notification
+                styleInformation: BigTextStyleInformation(
+                  notification.body ?? 'معاملة جديدة',
+                ),
+              ),
+            ),
+          );
+          debugPrint('🔔 FCM: ✅ Notification shown in foreground');
+        } catch (e) {
+          debugPrint('🔔 FCM: ❌ Error showing notification: $e');
+        }
       });
 
       // ✅ Handle notification taps (when app is in background/terminated)
