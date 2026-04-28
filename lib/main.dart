@@ -77,7 +77,8 @@ Future<void> main() async {
   // Initialize notification service (mobile only)
   if (!kIsWeb) {
     try {
-      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+      await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform);
       await FcmService.instance.initialize();
       await TransactionNotificationService.instance.initialize();
     } catch (e) {
@@ -85,9 +86,45 @@ Future<void> main() async {
         debugPrint('Notification service failed: $e');
       }
     }
+
+    // ✅ Check for Shorebird updates automatically
+    _checkForShorebirdUpdate();
   }
 
   runApp(const MainApp());
+}
+
+/// Check for Shorebird updates and download silently in background
+Future<void> _checkForShorebirdUpdate() async {
+  try {
+    // Note: shorebird_code_push package will be added when you run `shorebird init`
+    // For now, this is a placeholder that will work once Shorebird is initialized
+
+    // Uncomment after running `shorebird init`:
+    /*
+    final shorebirdCodePush = ShorebirdCodePush();
+    
+    final isUpdateAvailable = 
+        await shorebirdCodePush.isNewPatchAvailableForDownload();
+    
+    if (isUpdateAvailable) {
+      debugPrint('🔄 Shorebird: Update available - downloading...');
+      await shorebirdCodePush.downloadUpdateIfAvailable();
+      debugPrint('🔄 Shorebird: Update downloaded - will apply on next restart');
+    } else {
+      debugPrint('🔄 Shorebird: App is up to date');
+    }
+    */
+
+    if (kDebugMode) {
+      debugPrint(
+          '🔄 Shorebird: Ready for updates (run `shorebird init` to enable)');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('🔄 Shorebird: Error checking for updates: $e');
+    }
+  }
 }
 
 class MainApp extends StatelessWidget {
