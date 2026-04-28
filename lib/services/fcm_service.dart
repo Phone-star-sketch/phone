@@ -74,6 +74,7 @@ class FcmService {
         importance: Importance.max,
         enableVibration: true,
         playSound: true,
+        showBadge: true, // ✅ Enable badge on notification channel
       );
 
       await _localNotifications
@@ -108,11 +109,25 @@ class FcmService {
               icon: '@mipmap/launcher_icon',
               playSound: true,
               enableVibration: true,
+              showBadge: true, // ✅ Enable badge on notification
             ),
           ),
         );
         incrementBadge();
       });
+
+      // ✅ Handle notification taps (when app is in background/terminated)
+      FirebaseMessaging.onMessageOpenedApp.listen((message) {
+        debugPrint('🔔 FCM: Notification tapped (background)');
+        // Badge will be cleared when user opens Follow page
+      });
+
+      // ✅ Check if app was opened from a notification (terminated state)
+      final initialMessage = await _messaging.getInitialMessage();
+      if (initialMessage != null) {
+        debugPrint('🔔 FCM: App opened from notification (terminated)');
+        // Badge will be cleared when user opens Follow page
+      }
 
       // ✅ الخطوة الأساسية: احفظ التوكن عند كل فتح للتطبيق
       await _getAndSaveToken();

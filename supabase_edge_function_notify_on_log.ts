@@ -147,6 +147,7 @@ Deno.serve(async (req: Request) => {
             icon: 'launcher_icon',
             color: '#2196F3',
             notification_priority: 'PRIORITY_MAX',
+            notification_count: 1, // ✅ This increments the badge
           },
         },
         data: {
@@ -154,6 +155,7 @@ Deno.serve(async (req: Request) => {
           price: String(record.price || ''),
           type: String(record.transaction_type || ''),
           click_action: 'FLUTTER_NOTIFICATION_CLICK',
+          badge: '1', // ✅ Badge count for iOS/Android
         },
       },
     };
