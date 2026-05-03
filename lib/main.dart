@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:phone_system_app/firebase_options.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'package:phone_system_app/services/transaction_notification_service.dart'
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/theme/welcome_theme_selector.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 @pragma('vm:entry-point')
 Future<void> main() async {
@@ -74,21 +76,71 @@ Future<void> main() async {
     }
   }
 
-  // Initialize notification service (mobile only)
-  if (!kIsWeb) {
-    try {
+  // Initialize notification service
+  try {
+    if (kIsWeb) {
+      // Web: Initialize Firebase only (no FCM)
       await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform);
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      debugPrint('✅ Firebase initialized for Web');
+    } else {
+      // Mobile: Initialize Firebase + FCM + Notifications
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       await FcmService.instance.initialize();
       await TransactionNotificationService.instance.initialize();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Notification service failed: $e');
-      }
-    }
 
-    // ✅ Check for Shorebird updates automatically
-    _checkForShorebirdUpdate();
+      // ✅ Auto-register FCM token on app start
+      try {
+        final token = await FirebaseMessaging.instance.getToken();
+        if (token != null) {
+          debugPrint('🔔 FCM Token obtained: ${token.substring(0, 20)}...');
+
+          // Register token in database automatically
+          final supabase = Supabase.instance.client;
+          await supabase.from('fcm_tokens').upsert({
+            'device': 'manager',
+            'token': token,
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+
+          debugPrint('✅ FCM Token registered automatically in database');
+        } else {
+          debugPrint('⚠️ FCM Token is null');
+        }
+
+        // ✅ Listen for token refresh (when token changes)
+        FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+          debugPrint('🔔 FCM Token refreshed: ${newToken.substring(0, 20)}...');
+
+          try {
+            final supabase = Supabase.instance.client;
+            await supabase.from('fcm_tokens').upsert({
+              'device': 'manager',
+              'token': newToken,
+              'updated_at': DateTime.now().toIso8601String(),
+            });
+
+            debugPrint('✅ New FCM Token registered in database');
+          } catch (e) {
+            debugPrint('❌ Error registering refreshed token: $e');
+          }
+        });
+      } catch (e) {
+        debugPrint('❌ Error auto-registering FCM token: $e');
+      }
+
+      debugPrint('✅ Firebase, FCM, and Notifications initialized for Mobile');
+
+      // ✅ Check for Shorebird updates automatically
+      _checkForShorebirdUpdate();
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('❌ Initialization failed: $e');
+    }
   }
 
   runApp(const MainApp());

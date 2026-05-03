@@ -54,8 +54,17 @@ class FollowController extends GetxController {
 
     // التأكد من وجود AccountClientInfo controller
     if (!Get.isRegistered<AccountClientInfo>()) {
-      debugPrint('⚠️ AccountClientInfo not registered in FollowController');
-      return;
+      debugPrint(
+          '⚠️ AccountClientInfo not registered in FollowController - waiting...');
+      // Wait a bit and check again (in case it's being initialized)
+      await Future.delayed(Duration(milliseconds: 500));
+
+      if (!Get.isRegistered<AccountClientInfo>()) {
+        debugPrint(
+            '⚠️ AccountClientInfo still not registered - skipping initialization');
+        Loaders.to.followLoading.value = false;
+        return;
+      }
     }
 
     await _initializeData();
@@ -77,6 +86,13 @@ class FollowController extends GetxController {
   }
 
   void _setupRealtime() {
+    // Check if AccountClientInfo is available
+    if (!Get.isRegistered<AccountClientInfo>()) {
+      debugPrint('⚠️ AccountClientInfo not available - cannot setup realtime');
+      connectionStatus.value = 'غير متاح';
+      return;
+    }
+
     try {
       final client = Supabase.instance.client;
 
@@ -128,6 +144,13 @@ class FollowController extends GetxController {
   }
 
   Future<void> updateLogs() async {
+    // Check if AccountClientInfo is available
+    if (!Get.isRegistered<AccountClientInfo>()) {
+      debugPrint('⚠️ AccountClientInfo not available - cannot load logs');
+      Loaders.to.followLoading.value = false;
+      return;
+    }
+
     Loaders.to.followLoading.value = true;
 
     try {
@@ -155,6 +178,12 @@ class FollowController extends GetxController {
   }
 
   Future<void> insertDummyLog() async {
+    // Check if AccountClientInfo is available
+    if (!Get.isRegistered<AccountClientInfo>()) {
+      Get.snackbar('خطأ', 'الرجاء الدخول إلى حساب أولاً');
+      return;
+    }
+
     try {
       final firstClient =
           AccountClientInfo.to.clinets.firstWhereOrNull((c) => c.id != null);
@@ -210,6 +239,28 @@ class Follow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check if AccountClientInfo is available
+    if (!Get.isRegistered<AccountClientInfo>()) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.account_circle_outlined, size: 80, color: Colors.grey),
+            SizedBox(height: 20),
+            Text(
+              'الرجاء الدخول إلى حساب أولاً',
+              style: TextStyle(fontSize: 18, color: Colors.grey[700]),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'اختر حساب من الصفحة الرئيسية',
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      );
+    }
+
     return DefaultTabController(
       length: 2,
       child: Obx(() {
@@ -246,15 +297,6 @@ class Follow extends StatelessWidget {
                               icon: Icon(Icons.add_circle, size: 20),
                               tooltip: 'إضافة معاملة تجريبية',
                               color: Colors.blue,
-                              padding: EdgeInsets.zero,
-                              constraints: BoxConstraints(),
-                            ),
-                            SizedBox(width: 4),
-                            IconButton(
-                              onPressed: () => controller.testFcmToken(),
-                              icon: Icon(Icons.notifications_active, size: 20),
-                              tooltip: 'اختبار FCM Token',
-                              color: Colors.orange,
                               padding: EdgeInsets.zero,
                               constraints: BoxConstraints(),
                             ),

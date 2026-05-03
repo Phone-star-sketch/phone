@@ -135,24 +135,38 @@ Deno.serve(async (req: Request) => {
     const fcmPayload = {
       message: {
         token: tokenRow.token,
-        notification: { title, body },
+        // ✅ Notification payload (handled by system when app is background/terminated)
+        notification: { 
+          title, 
+          body 
+        },
+        // ✅ Android-specific configuration
         android: {
-          priority: 'high',
+          priority: 'high', // ✅ High priority to wake device
           notification: {
             sound: 'default',
             channel_id: 'fcm_channel',
             icon: 'launcher_icon',
             color: '#2196F3',
             notification_priority: 'PRIORITY_MAX',
-            notification_count: 1, // ✅ This increments the badge
+            notification_count: 1,
+            // ✅ Visibility on lock screen
+            visibility: 'PUBLIC',
+            // ✅ Default vibration pattern
+            default_vibrate_timings: true,
+            // ✅ Default sound
+            default_sound: true,
           },
         },
+        // ✅ Data payload (available in all app states)
         data: {
           clientId: String(record.client_id || ''),
+          clientName: clientName,
           price: String(record.price || ''),
           type: String(record.transaction_type || ''),
+          userName: userName,
           click_action: 'FLUTTER_NOTIFICATION_CLICK',
-          badge: '1', // ✅ Badge count for iOS/Android
+          badge: '1',
         },
       },
     };
