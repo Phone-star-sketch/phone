@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:phone_system_app/firebase_options.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/services/fcm_service.dart';
@@ -147,45 +148,16 @@ Future<void> main() async {
 }
 
 /// Check for Shorebird updates and download silently in background
+/// Check for Shorebird updates and download silently in background
 Future<void> _checkForShorebirdUpdate() async {
   try {
     // Import the service dynamically to avoid issues
     final updateService = Get.put(UpdateController());
-    
+
     // Check silently in background
     await updateService.checkAndDownloadSilently();
   } catch (e) {
     debugPrint('🔄 Shorebird: Error in background check: $e');
-  }
-}
-  try {
-    // Note: shorebird_code_push package will be added when you run `shorebird init`
-    // For now, this is a placeholder that will work once Shorebird is initialized
-
-    // Uncomment after running `shorebird init`:
-    /*
-    final shorebirdCodePush = ShorebirdCodePush();
-    
-    final isUpdateAvailable = 
-        await shorebirdCodePush.isNewPatchAvailableForDownload();
-    
-    if (isUpdateAvailable) {
-      debugPrint('🔄 Shorebird: Update available - downloading...');
-      await shorebirdCodePush.downloadUpdateIfAvailable();
-      debugPrint('🔄 Shorebird: Update downloaded - will apply on next restart');
-    } else {
-      debugPrint('🔄 Shorebird: App is up to date');
-    }
-    */
-
-    if (kDebugMode) {
-      debugPrint(
-          '🔄 Shorebird: Ready for updates (run `shorebird init` to enable)');
-    }
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint('🔄 Shorebird: Error checking for updates: $e');
-    }
   }
 }
 
