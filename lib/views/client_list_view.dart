@@ -388,6 +388,8 @@ class _ClientCardState extends State<ClientCard>
   }
 }
 
+
+
 class EmptyStateWidget extends StatelessWidget {
   final String? query;
 
