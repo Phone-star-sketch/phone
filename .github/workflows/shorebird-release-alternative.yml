@@ -1,10 +1,14 @@
-name: Shorebird Release
+name: Shorebird Release (Alternative)
+
+# هذا workflow بديل يستخدم manual installation
+# استخدمه إذا فشل الـ workflow الرئيسي بسبب مشاكل الشبكة
 
 on:
+  workflow_dispatch:  # يمكن تشغيله يدوياً
   push:
     tags:
-      - 'v*'  # للـ releases الكاملة
-      - 'patch-*'  # للـ patches
+      - 'v*-alt'  # استخدم -alt للتمييز
+      - 'patch-*-alt'
 
 jobs:
   build:
@@ -22,29 +26,42 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'  # Shorebird يدعم 3.24.0
+          flutter-version: '3.24.0'
       
-      - name: Setup Shorebird
-        uses: shorebirdtech/setup-shorebird@v1
-        with:
-          cache: true
-        # Retry on network failures
-        continue-on-error: true
-        id: shorebird_setup_attempt1
+      # Configure git for better network handling
+      - name: Configure Git
+        run: |
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 0
+          git config --global http.lowSpeedTime 999999
+          git config --global core.compression 0
       
-      - name: Retry Setup Shorebird (if first attempt failed)
-        if: steps.shorebird_setup_attempt1.outcome == 'failure'
-        uses: shorebirdtech/setup-shorebird@v1
-        with:
-          cache: true
-        continue-on-error: true
-        id: shorebird_setup_attempt2
+      # Manual Shorebird installation with retry
+      - name: Install Shorebird (with retry)
+        run: |
+          max_attempts=3
+          attempt=1
+          
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt of $max_attempts..."
+            
+            if curl --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh -sSf | bash; then
+              echo "✅ Shorebird installed successfully!"
+              break
+            else
+              echo "❌ Attempt $attempt failed"
+              if [ $attempt -eq $max_attempts ]; then
+                echo "Failed after $max_attempts attempts"
+                exit 1
+              fi
+              attempt=$((attempt + 1))
+              echo "Waiting 10 seconds before retry..."
+              sleep 10
+            fi
+          done
       
-      - name: Final Retry Setup Shorebird (if second attempt failed)
-        if: steps.shorebird_setup_attempt2.outcome == 'failure'
-        uses: shorebirdtech/setup-shorebird@v1
-        with:
-          cache: true
+      - name: Add Shorebird to PATH
+        run: echo "$HOME/.shorebird/bin" >> $GITHUB_PATH
       
       - name: Verify Shorebird Installation
         run: shorebird --version
