@@ -81,9 +81,17 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
           echo "$HOME/.shorebird/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.shorebird/bin:$PATH"
+      
+      - name: Verify Shorebird Installation
+        run: |
+          export PATH="$HOME/.shorebird/bin:$PATH"
+          shorebird --version
       
       - name: Shorebird Login
-        run: shorebird login:ci
+        run: |
+          export PATH="$HOME/.shorebird/bin:$PATH"
+          shorebird login:ci
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       
@@ -103,12 +111,16 @@ jobs:
       # Full release
       - name: Shorebird Release
         if: steps.build_type.outputs.type == 'release'
-        run: shorebird release android --force
+        run: |
+          export PATH="$HOME/.shorebird/bin:$PATH"
+          shorebird release android --force
       
       # Patch
       - name: Shorebird Patch
         if: steps.build_type.outputs.type == 'patch'
-        run: shorebird patch android --force
+        run: |
+          export PATH="$HOME/.shorebird/bin:$PATH"
+          shorebird patch android --force
       
       # Upload APK (only for full releases)
       - name: Upload APK
