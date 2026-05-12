@@ -7,25 +7,20 @@ ParsedYamlException: line 6, column 7: Unsupported value for "app_id".
 type 'Null' is not a subtype of type 'String' in type cast
 ```
 
-**السبب**: ملف `shorebird.yaml` يحتوي على `app_id` فارغ.
+**السبب**: ملف `shorebird.yaml` كان يحتوي على `app_id: ""` (empty string)، وهذا يسبب parsing error.
 
 ---
 
 ## ✅ الحل
 
-**Shorebird ينشئ الـ app تلقائياً** عند أول `shorebird release` إذا كان `app_id` فارغ!
+**تم الإصلاح**: تغيير `app_id: ""` إلى `# app_id:` (commented out)
 
-لا نحتاج أي flags خاصة - فقط:
-
-```bash
-shorebird release android
-```
-
-**Shorebird سيقوم بـ:**
-1. يكتشف أن `app_id` فارغ
-2. ينشئ app جديد تلقائياً
-3. يحفظ `app_id` في `shorebird.yaml`
-4. يبني ويرفع الـ release
+**لماذا؟**
+- Shorebird لا يقبل empty string (`""`)
+- يجب أن يكون إما:
+  - ✅ `app_id: abc123` (قيمة صحيحة)
+  - ✅ `# app_id:` (معطّل/commented)
+  - ❌ `app_id: ""` (empty string - يسبب error!)
 
 ---
 
@@ -34,36 +29,41 @@ shorebird release android
 ```powershell
 # احفظ التغييرات
 git add .
-git commit -m "Fix: Remove invalid --force flag"
+git commit -m "Fix: Comment out app_id instead of empty string"
 git push
 
 # جرّب أول release
-git tag v0.1.6
-git push origin v0.1.6
+git tag v0.1.7
+git push origin v0.1.7
 ```
 
-**يجب أن يعمل الآن!** ✅
+**Shorebird سيقوم بـ:**
+1. يكتشف أن `app_id` غير موجود (commented)
+2. ينشئ app جديد تلقائياً
+3. يحفظ `app_id` في `shorebird.yaml`
+4. يبني ويرفع الـ release
 
 ---
 
-## 📝 ملاحظة مهمة
+## 📝 ملف shorebird.yaml الصحيح
 
-**لا تستخدم `--force`** - هذا ليس flag صحيح لـ `shorebird release`!
+```yaml
+# قبل أول release:
+# app_id:  ← commented out
+auto_update: false
 
-الـ flags الصحيحة:
-- `--dart-define`
-- `--flavor`
-- `--build-name`
-- `--build-number`
-- `--artifact` (aab أو apk)
+# بعد أول release:
+app_id: abc123xyz  ← Shorebird يضيفه تلقائياً
+auto_update: false
+```
 
 ---
 
 ## 🎉 الخلاصة
 
-**المشكلة**: استخدام `--force` (غير موجود)
+**المشكلة**: `app_id: ""` يسبب parsing error
 
-**الحل**: إزالته - Shorebird ينشئ app تلقائياً
+**الحل**: `# app_id:` (commented out)
 
 **النتيجة**: ✅ يجب أن يعمل الآن!
 

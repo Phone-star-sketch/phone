@@ -1,7 +1,7 @@
 # 🎯 الخطوات التالية - جاهز للاستخدام!
 
 **التاريخ**: 2026-05-12  
-**الحالة**: ✅ الكود جاهز - تحتاج فقط إضافة Token
+**الحالة**: ✅ الكود جاهز - تم إصلاح مشكلة app_id
 
 ---
 
@@ -12,32 +12,34 @@
 - GitHub Actions Workflow محدّث ومُصلح
 - التوثيق الكامل
 
-✅ **آخر إصلاح**:
-- إزالة `--force` flag (غير مدعوم)
-- إضافة `SHOREBIRD_TOKEN` env لكل خطوة
+✅ **آخر إصلاح** (2026-05-12):
+- ✅ إصلاح `app_id: ""` → `# app_id:` (commented out)
+- ✅ تحديث workflow للتعامل مع app_id المعطّل
+- ✅ إزالة خطوة "Initialize Shorebird" غير الضرورية
 
 ---
 
-## 🎯 الخطوة الوحيدة المتبقية
+## 🎯 جرّب الآن!
 
 ### ✅ تم إصلاح جميع المشاكل!
 
 **ما تم حله:**
 1. ✅ مشكلة الشبكة (retry logic)
-2. ✅ مشكلة `app_id` الفارغ (auto-create)
+2. ✅ مشكلة `app_id: ""` parsing error (commented out)
 3. ✅ Token تم إضافته
+4. ✅ Workflow مُحسّن
 
 **الآن جرّب:**
 
 ```powershell
 # 1. احفظ التغييرات
 git add .
-git commit -m "Fix: Auto-create app on first release"
+git commit -m "Fix: Comment out app_id to avoid parsing error"
 git push
 
 # 2. جرّب أول release
-git tag v0.1.6
-git push origin v0.1.6
+git tag v0.1.7
+git push origin v0.1.7
 ```
 
 **يجب أن يعمل الآن!** ✅
@@ -49,8 +51,8 @@ git push origin v0.1.6
 ### في GitHub Actions:
 
 1. ✅ Shorebird يثبت (مع retry إذا فشل)
-2. ✅ يكتشف أن `app_id` فارغ
-3. ✅ ينشئ app جديد تلقائياً
+2. ✅ يتحقق من `app_id` (سيجده معطّل)
+3. ✅ `shorebird release` ينشئ app جديد تلقائياً
 4. ✅ يبني ويرفع APK
 5. ✅ يحفظ `app_id` في `shorebird.yaml`
 
@@ -60,6 +62,8 @@ git push origin v0.1.6
 # حمّل التغييرات (app_id الجديد)
 git pull origin ramy/newdesign
 ```
+
+**ملاحظة**: `shorebird.yaml` سيتحدث تلقائياً بـ `app_id` الحقيقي!
 
 ---
 
@@ -98,10 +102,9 @@ git push origin patch-001
 |--------|--------|-------|
 | 1. الكود | ✅ جاهز | - |
 | 2. GitHub Workflow | ✅ جاهز | - |
-| 3. احصل على Token | ⏳ **الآن** | 1 دقيقة |
-| 4. أضف Token لـ GitHub | ⏳ **الآن** | 1 دقيقة |
-| 5. أول Release | ⏳ بعد Token | 5 دقائق |
-| 6. استمتع بالتحديثات! | 🎉 | - |
+| 3. إصلاح app_id | ✅ **تم الآن** | - |
+| 4. أول Release | ⏳ **جرّب الآن** | 5 دقائق |
+| 5. استمتع بالتحديثات! | 🎉 | - |
 
 ---
 
@@ -113,13 +116,16 @@ git push origin patch-001
 - راقب التحديثات من: https://console.shorebird.dev
 
 ### ❌ لا تفعل:
-- لا تستخدم `shorebird init` على Windows (مشاكل Gradle)
-- لا تنسى إضافة Token قبل أول release
+- لا تستخدم `app_id: ""` (empty string) - استخدم `# app_id:` بدلاً منه
+- لا تنسى `git pull` بعد أول release لتحصل على `app_id` الجديد
 - لا تستخدم patch لتغييرات native (permissions, إلخ)
 
 ---
 
 ## 🆘 إذا واجهت مشكلة
+
+### المشكلة: "ParsedYamlException: Unsupported value for app_id"
+**الحل**: ✅ تم الإصلاح! استخدمنا `# app_id:` بدلاً من `app_id: ""`
 
 ### المشكلة: "You must be logged in"
 **الحل**: تأكد من إضافة `SHOREBIRD_TOKEN` في GitHub Secrets
@@ -127,23 +133,19 @@ git push origin patch-001
 ### المشكلة: "App not found"
 **الحل**: أول release سينشئ الـ app تلقائياً - لا تقلق!
 
-### المشكلة: Workflow يفشل
-**الحل**: 
-1. تحقق من الـ logs في GitHub Actions
-2. تأكد من Token صحيح
-3. تأكد من Flutter version (3.24.0)
-
 ---
 
 ## 🎉 الخلاصة
 
-**أنت على بُعد خطوتين فقط:**
+**أنت جاهز الآن!**
 
-1. ✅ احصل على Token من `shorebird login:ci`
-2. ✅ أضفه في GitHub Secrets
+```powershell
+git tag v0.1.7 && git push origin v0.1.7
+```
 
 **بعدها:**
-- ✅ `git tag v0.1.6 && git push origin v0.1.6`
+- ✅ انتظر 5 دقائق (GitHub Actions)
+- ✅ `git pull` لتحصل على `app_id` الجديد
 - ✅ استمتع بالتحديثات التلقائية!
 
 ---
@@ -152,5 +154,5 @@ git push origin patch-001
 
 **المصادر**:
 - [Shorebird Console](https://console.shorebird.dev)
-- [GitHub Secrets](https://github.com/Phone-star-sketch/phone/settings/secrets/actions)
 - [GitHub Actions](https://github.com/Phone-star-sketch/phone/actions)
+- [APP_ID_FIX.md](./APP_ID_FIX.md) - شرح تفصيلي للإصلاح

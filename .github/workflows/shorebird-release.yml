@@ -57,34 +57,17 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       
-      # Initialize Shorebird (creates app_id if missing)
-      - name: Initialize Shorebird
+      # Check if app_id exists
+      - name: Check Shorebird App ID
         run: |
-          # Check if app_id is empty
-          APP_ID=$(grep "^app_id:" shorebird.yaml | cut -d'"' -f2 | tr -d ' ')
-          
-          if [ -z "$APP_ID" ]; then
-            echo "No app_id found - running shorebird init..."
-            
-            # Run shorebird init which will create the app
-            # Use --force to skip confirmation prompts
-            echo "y" | shorebird init || true
-            
-            # Check if app_id was created
-            NEW_APP_ID=$(grep "^app_id:" shorebird.yaml | cut -d'"' -f2 | tr -d ' ')
-            
-            if [ -n "$NEW_APP_ID" ]; then
-              echo "✅ Initialized with app_id: $NEW_APP_ID"
-            else
-              echo "❌ Failed to initialize - trying manual approach"
-              # Fallback: just proceed with release, it will create app automatically
-              echo "Will create app during release..."
-            fi
-          else
+          # Check if app_id is defined and not commented
+          if grep -q "^app_id: [a-zA-Z0-9]" shorebird.yaml; then
+            APP_ID=$(grep "^app_id:" shorebird.yaml | cut -d' ' -f2)
             echo "✅ app_id already exists: $APP_ID"
+          else
+            echo "ℹ️ No app_id found - will be created automatically during first release"
+            echo "Shorebird will create the app and update shorebird.yaml"
           fi
-        env:
-          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       
       # Check if it's a patch or full release
       - name: Determine build type
