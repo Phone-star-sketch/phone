@@ -53,12 +53,12 @@ jobs:
       # Full release
       - name: Shorebird Release
         if: steps.build_type.outputs.type == 'release'
-        run: shorebird release android --force
+        run: shorebird release android
       
       # Patch
       - name: Shorebird Patch
         if: steps.build_type.outputs.type == 'patch'
-        run: shorebird patch android --force
+        run: shorebird patch android
       
       # Upload APK (only for full releases)
       - name: Upload APK
