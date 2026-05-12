@@ -54,11 +54,15 @@ jobs:
       - name: Shorebird Release
         if: steps.build_type.outputs.type == 'release'
         run: shorebird release android
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       
       # Patch
       - name: Shorebird Patch
         if: steps.build_type.outputs.type == 'patch'
         run: shorebird patch android
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       
       # Upload APK (only for full releases)
       - name: Upload APK

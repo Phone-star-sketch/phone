@@ -65,50 +65,46 @@
 
 ---
 
-## 🚀 الخطوات التالية للاستخدام
+## 🚀 الخطوة الوحيدة المتبقية
 
-### ⚠️ مشكلة Windows
+### ✅ الكود جاهز بالكامل!
 
-`shorebird init` لا يعمل على Windows بسبب مشاكل Gradle.
+**ما تم إنجازه:**
+- ✅ جميع ملفات Shorebird
+- ✅ GitHub Actions Workflow (محدّث ومُصلح)
+- ✅ إزالة `--force` flag
+- ✅ إضافة `SHOREBIRD_TOKEN` env
 
-**الحل الموصى به**: استخدم **GitHub Actions** (موثق بالكامل)
+**ما تحتاجه الآن:**
 
-### الخطوات:
+#### 1️⃣ احصل على Shorebird Token
 
-#### 1. احصل على Shorebird Token
-
-```bash
+```powershell
+# في PowerShell
 shorebird login:ci
 ```
 
 أو من: https://console.shorebird.dev → Settings → API Keys
 
-#### 2. أضف Token لـ GitHub Secrets
+#### 2️⃣ أضف Token لـ GitHub Secrets
 
-1. روح: `Settings` → `Secrets and variables` → `Actions`
+1. روح: https://github.com/Phone-star-sketch/phone/settings/secrets/actions
 2. اضغط `New repository secret`
 3. Name: `SHOREBIRD_TOKEN`
-4. Value: [الـ token اللي نسخته]
+4. Value: [الصق الـ token]
 
-#### 3. أنشئ GitHub Actions Workflow
+#### 3️⃣ جرّب أول Release
 
-أنشئ ملف: `.github/workflows/shorebird-release.yml`
+```powershell
+git add .
+git commit -m "Ready for Shorebird"
+git push
 
-انسخ المحتوى من: `SHOREBIRD_WINDOWS_WORKAROUND.md`
-
-#### 4. استخدم Tags للإصدارات
-
-**للإصدار الأول (Full Release):**
-```bash
 git tag v0.1.6
 git push origin v0.1.6
 ```
 
-**للتحديثات الصغيرة (Patch):**
-```bash
-git tag patch-001
-git push origin patch-001
-```
+**اقرأ**: `NEXT_STEPS.md` للتفاصيل الكاملة
 
 ---
 
