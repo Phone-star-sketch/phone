@@ -71,13 +71,9 @@ jobs:
       - name: Shorebird Release
         if: steps.build_type.outputs.type == 'release'
         run: |
-          # First release creates the app automatically
-          if [ -z "$(grep 'app_id:' shorebird.yaml | grep -v '^#' | cut -d':' -f2 | tr -d ' ')" ]; then
-            echo "First release - creating app..."
-            shorebird release android --force
-          else
-            shorebird release android
-          fi
+          # Shorebird automatically creates app if app_id is empty
+          echo "Building release..."
+          shorebird release android
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       
