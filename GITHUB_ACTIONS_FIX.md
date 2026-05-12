@@ -5,8 +5,8 @@
 ### 1. ❌ استخدام upload-artifact@v3 القديم
 **الحل**: تم التحديث إلى `upload-artifact@v4`
 
-### 2. ❌ Shorebird command not found
-**الحل**: إضافة `export PATH` في كل خطوة تستخدم shorebird
+### 2. ❌ تثبيت Shorebird يدوياً (معقد وغير موثوق)
+**الحل**: استخدام **Shorebird Official GitHub Action**
 
 ---
 
@@ -21,34 +21,32 @@
 - uses: actions/upload-artifact@v4  # ✅ محدّث
 ```
 
-### المشكلة 2: PATH
+### المشكلة 2: تثبيت Shorebird
 ```yaml
-# قبل
+# ❌ قبل (معقد وفيه مشاكل)
 - name: Install Shorebird
   run: |
-    curl -fsSL ... | bash
-    echo "$HOME/.shorebird/bin" >> $GITHUB_PATH
+    curl -fsSL https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
+    echo "$HOME/.config/shorebird/bin" >> $GITHUB_PATH
+    export PATH="$HOME/.config/shorebird/bin:$PATH"
 
-- name: Shorebird Login
-  run: shorebird login:ci  # ❌ لا يجد الأمر
-
-# بعد
-- name: Install Shorebird
-  run: |
-    curl -fsSL ... | bash
-    echo "$HOME/.shorebird/bin" >> $GITHUB_PATH
-    export PATH="$HOME/.shorebird/bin:$PATH"  # ✅ إضافة export
-
-- name: Verify Shorebird Installation
-  run: |
-    export PATH="$HOME/.shorebird/bin:$PATH"
-    shorebird --version  # ✅ التحقق من التثبيت
-
-- name: Shorebird Login
-  run: |
-    export PATH="$HOME/.shorebird/bin:$PATH"  # ✅ إضافة PATH
-    shorebird login:ci
+# ✅ بعد (بسيط وموثوق)
+- name: Setup Shorebird
+  uses: shorebirdtech/setup-shorebird@v1
+  with:
+    cache: true
 ```
+
+---
+
+## 🎉 الفوائد
+
+### استخدام Official Action:
+1. ✅ **أبسط**: 3 أسطر بدل 10+
+2. ✅ **أسرع**: يدعم caching
+3. ✅ **أكثر موثوقية**: من Shorebird نفسهم
+4. ✅ **لا مشاكل PATH**: يضبط كل شيء تلقائياً
+5. ✅ **يدعم Flutter**: يضبط Flutter version تلقائياً
 
 ---
 
@@ -56,8 +54,8 @@
 
 ### 1. Commit التغييرات
 ```bash
-git add .github/workflows/shorebird-release.yml
-git commit -m "Fix: Update upload-artifact to v4"
+git add .
+git commit -m "Fix: Use official Shorebird GitHub Action"
 git push
 ```
 
@@ -76,15 +74,23 @@ git push origin patch-001
 
 ## ✅ النتيجة المتوقعة
 
-الآن الـ workflow سيعمل بدون أخطاء:
+```
+✓ Setup Shorebird
+  ✓ Downloading Shorebird...
+  ✓ Installing Shorebird...
+  ✓ Adding to PATH...
+  ✓ Done!
 
-1. ✅ Setup job - ينجح
-2. ✅ Install Shorebird - ينجح
-3. ✅ Verify Installation - يظهر الإصدار
-4. ✅ Shorebird Login - ينجح
-5. ✅ Build/Patch - ينجح
-6. ✅ Upload artifact - ينجح (بـ v4)
-7. ✅ Create release - ينجح
+✓ Verify Shorebird Installation
+  Shorebird 1.x.x
+
+✓ Shorebird Login
+  ✓ Logged in successfully
+
+✓ Shorebird Release
+  Building...
+  ✓ Release created successfully
+```
 
 ---
 
@@ -94,24 +100,24 @@ git push origin patch-001
 
 ```bash
 # يجب أن ترى:
-✓ Install Shorebird
-✓ Verify Shorebird Installation
-  Shorebird 1.x.x
+✓ Setup Shorebird (< 30 ثانية)
+✓ Verify Installation
 ✓ Shorebird Login
-  Logged in as: your-email@example.com
 ✓ Shorebird Release/Patch
-  Building...
-  ✓ Release created successfully
+✓ Upload artifact (للـ releases فقط)
+✓ Create release (للـ releases فقط)
 ```
 
 ---
 
 ## 📚 المراجع
 
-- [GitHub Blog: Deprecation Notice](https://github.blog/changelog/2024-04-16-deprecation-notice-v3-of-the-artifact-actions/)
-- [upload-artifact v4 Documentation](https://github.com/actions/upload-artifact)
+- [Shorebird Official Action](https://github.com/shorebirdtech/setup-shorebird)
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [Shorebird Documentation](https://docs.shorebird.dev)
 
 ---
 
 **التاريخ**: 2026-05-12  
-**الحالة**: ✅ تم الإصلاح
+**الحالة**: ✅ تم الإصلاح بالكامل  
+**الطريقة**: استخدام Official Action

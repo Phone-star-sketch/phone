@@ -75,23 +75,18 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'  # Shorebird يدعم 3.24.0
+          flutter-version: '3.24.0'
       
-      - name: Install Shorebird
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
-          echo "$HOME/.shorebird/bin" >> $GITHUB_PATH
-          export PATH="$HOME/.shorebird/bin:$PATH"
+      - name: Setup Shorebird
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
       
       - name: Verify Shorebird Installation
-        run: |
-          export PATH="$HOME/.shorebird/bin:$PATH"
-          shorebird --version
+        run: shorebird --version
       
       - name: Shorebird Login
-        run: |
-          export PATH="$HOME/.shorebird/bin:$PATH"
-          shorebird login:ci
+        run: shorebird login:ci
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       
@@ -111,16 +106,12 @@ jobs:
       # Full release
       - name: Shorebird Release
         if: steps.build_type.outputs.type == 'release'
-        run: |
-          export PATH="$HOME/.shorebird/bin:$PATH"
-          shorebird release android --force
+        run: shorebird release android --force
       
       # Patch
       - name: Shorebird Patch
         if: steps.build_type.outputs.type == 'patch'
-        run: |
-          export PATH="$HOME/.shorebird/bin:$PATH"
-          shorebird patch android --force
+        run: shorebird patch android --force
       
       # Upload APK (only for full releases)
       - name: Upload APK
