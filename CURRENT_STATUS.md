@@ -25,13 +25,20 @@
 - ✅ `pubspec.yaml` - يحتوي على `shorebird_code_push: ^1.1.5`
 - ✅ `lib/main.dart` - مُحدّث مع UpdateController
 
-### 3. التوثيق (Documentation)
+### 3. GitHub Actions
+- ✅ `.github/workflows/shorebird-release.yml` - محدّث لـ `upload-artifact@v4`
+- ✅ يدعم full releases (`v*` tags)
+- ✅ يدعم patches (`patch-*` tags)
+- ✅ لا توجد أخطاء deprecated
+
+### 4. التوثيق (Documentation)
 - ✅ `START_HERE.md` - نقطة البداية
 - ✅ `SHOREBIRD_SUMMARY.md` - ملخص شامل
 - ✅ `SHOREBIRD_USAGE.md` - دليل الاستخدام
 - ✅ `SHOREBIRD_QUICK_START.md` - دليل البدء السريع
-- ✅ `SHOREBIRD_WINDOWS_WORKAROUND.md` - حل مشاكل Windows
+- ✅ `SHOREBIRD_WINDOWS_WORKAROUND.md` - حل مشاكل Windows (محدّث)
 - ✅ `SHOREBIRD_COMMANDS.md` - دليل الأوامر
+- ✅ `GITHUB_ACTIONS_FIX.md` - توثيق الإصلاح الأخير
 
 ---
 

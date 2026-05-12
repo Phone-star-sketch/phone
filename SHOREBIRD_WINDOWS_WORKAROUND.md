@@ -113,7 +113,7 @@ jobs:
       # Upload APK (only for full releases)
       - name: Upload APK
         if: steps.build_type.outputs.type == 'release'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
