@@ -1,9 +1,9 @@
 # Shorebird Configuration
 # هذا الملف يتحكم في إعدادات Shorebird للتحديثات التلقائية
 
-# App ID - سيتم إنشاؤه تلقائياً عند أول release
-# تركه فارغاً (بدون قيمة) حتى يتم إنشاء app_id الحقيقي
-# app_id: 
+# App ID - MUST be created first via 'shorebird init' or Shorebird Console
+# This is a placeholder - will be replaced by workflow
+app_id: PLACEHOLDER_APP_ID
 
 # تعطيل التحديث التلقائي الصامت
 # نريد التحكم اليدوي عبر الكود لعرض dialog للمستخدم

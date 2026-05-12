@@ -57,17 +57,42 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       
-      # Check if app_id exists
-      - name: Check Shorebird App ID
+      # Create Shorebird app if needed (first time only)
+      - name: Initialize Shorebird App
         run: |
-          # Check if app_id is defined and not commented
-          if grep -q "^app_id: [a-zA-Z0-9]" shorebird.yaml; then
-            APP_ID=$(grep "^app_id:" shorebird.yaml | cut -d' ' -f2)
-            echo "✅ app_id already exists: $APP_ID"
+          # Check if app_id is placeholder
+          if grep -q "PLACEHOLDER_APP_ID" shorebird.yaml; then
+            echo "📱 Creating new Shorebird app..."
+            
+            # Get app name from pubspec.yaml
+            APP_NAME=$(grep "^name:" pubspec.yaml | cut -d' ' -f2)
+            echo "App name: $APP_NAME"
+            
+            # Run shorebird init with app name
+            # This creates the app and updates shorebird.yaml
+            echo "$APP_NAME" | shorebird init --force
+            
+            # Verify app_id was created
+            if grep -q "PLACEHOLDER_APP_ID" shorebird.yaml; then
+              echo "❌ Failed to create app_id"
+              exit 1
+            fi
+            
+            NEW_APP_ID=$(grep "^app_id:" shorebird.yaml | cut -d' ' -f2)
+            echo "✅ Created app with ID: $NEW_APP_ID"
+            
+            # Commit the updated shorebird.yaml back to repo
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add shorebird.yaml
+            git commit -m "chore: Add Shorebird app_id [skip ci]" || true
+            git push || echo "⚠️ Could not push app_id - will be in artifacts"
           else
-            echo "ℹ️ No app_id found - will be created automatically during first release"
-            echo "Shorebird will create the app and update shorebird.yaml"
+            APP_ID=$(grep "^app_id:" shorebird.yaml | cut -d' ' -f2)
+            echo "✅ Using existing app_id: $APP_ID"
           fi
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       
       # Check if it's a patch or full release
       - name: Determine build type
