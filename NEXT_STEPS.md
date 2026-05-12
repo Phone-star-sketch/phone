@@ -18,59 +18,48 @@
 
 ---
 
-## 🚀 الخطوة الوحيدة المتبقية
+## 🎯 الخطوة الوحيدة المتبقية
 
-### احصل على Token وأضفه لـ GitHub
+### ✅ تم إصلاح جميع المشاكل!
 
-#### 1️⃣ احصل على Token
+**ما تم حله:**
+1. ✅ مشكلة الشبكة (retry logic)
+2. ✅ مشكلة `app_id` الفارغ (auto-create)
+3. ✅ Token تم إضافته
 
-**الطريقة الأولى (الأسهل):**
-```powershell
-# في PowerShell
-shorebird login:ci
-```
-
-سيظهر لك token - انسخه!
-
-**الطريقة الثانية (من الموقع):**
-1. زور: https://console.shorebird.dev
-2. سجّل دخول
-3. اذهب: Settings → API Keys
-4. انسخ الـ token
-
----
-
-#### 2️⃣ أضف Token لـ GitHub Secrets
-
-1. روح: https://github.com/Phone-star-sketch/phone/settings/secrets/actions
-2. اضغط: **"New repository secret"**
-3. املأ:
-   - **Name**: `SHOREBIRD_TOKEN`
-   - **Value**: [الصق الـ token هنا]
-4. اضغط: **"Add secret"**
-
----
-
-## ✅ بعد إضافة Token
-
-### جرّب أول Release:
+**الآن جرّب:**
 
 ```powershell
-# 1. تأكد من أن كل شيء محفوظ
+# 1. احفظ التغييرات
 git add .
-git commit -m "Ready for first Shorebird release"
+git commit -m "Fix: Auto-create app on first release"
 git push
 
-# 2. أنشئ tag للإصدار الأول
+# 2. جرّب أول release
 git tag v0.1.6
 git push origin v0.1.6
 ```
 
-### راقب GitHub Actions:
+**يجب أن يعمل الآن!** ✅
 
-1. روح: https://github.com/Phone-star-sketch/phone/actions
-2. شوف الـ workflow "Shorebird Release"
-3. يجب أن يكتمل بنجاح ✅
+---
+
+## 📋 ما سيحدث
+
+### في GitHub Actions:
+
+1. ✅ Shorebird يثبت (مع retry إذا فشل)
+2. ✅ يكتشف أن `app_id` فارغ
+3. ✅ ينشئ app جديد تلقائياً
+4. ✅ يبني ويرفع APK
+5. ✅ يحفظ `app_id` في `shorebird.yaml`
+
+### بعد اكتمال الـ workflow:
+
+```powershell
+# حمّل التغييرات (app_id الجديد)
+git pull origin ramy/newdesign
+```
 
 ---
 
