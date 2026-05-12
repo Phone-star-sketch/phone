@@ -1,0 +1,75 @@
+name: Shorebird Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # للـ releases الكاملة
+      - 'patch-*'  # للـ patches
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'  # Shorebird يدعم 3.24.0
+      
+      - name: Install Shorebird
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
+          echo "$HOME/.shorebird/bin" >> $GITHUB_PATH
+      
+      - name: Shorebird Login
+        run: shorebird login:ci
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+      
+      - name: Get dependencies
+        run: flutter pub get
+      
+      # Check if it's a patch or full release
+      - name: Determine build type
+        id: build_type
+        run: |
+          if [[ $GITHUB_REF == refs/tags/patch-* ]]; then
+            echo "type=patch" >> $GITHUB_OUTPUT
+          else
+            echo "type=release" >> $GITHUB_OUTPUT
+          fi
+      
+      # Full release
+      - name: Shorebird Release
+        if: steps.build_type.outputs.type == 'release'
+        run: shorebird release android --force
+      
+      # Patch
+      - name: Shorebird Patch
+        if: steps.build_type.outputs.type == 'patch'
+        run: shorebird patch android --force
+      
+      # Upload APK (only for full releases)
+      - name: Upload APK
+        if: steps.build_type.outputs.type == 'release'
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+      
+      # Create GitHub Release (only for full releases)
+      - name: Create Release
+        if: steps.build_type.outputs.type == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

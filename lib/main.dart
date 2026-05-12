@@ -5,11 +5,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:phone_system_app/firebase_options.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/services/fcm_service.dart';
 import 'package:phone_system_app/services/transaction_notification_service.dart';
+import 'package:phone_system_app/controllers/update_controller.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:phone_system_app/theme/welcome_theme_selector.dart';
@@ -148,6 +148,16 @@ Future<void> main() async {
 
 /// Check for Shorebird updates and download silently in background
 Future<void> _checkForShorebirdUpdate() async {
+  try {
+    // Import the service dynamically to avoid issues
+    final updateService = Get.put(UpdateController());
+    
+    // Check silently in background
+    await updateService.checkAndDownloadSilently();
+  } catch (e) {
+    debugPrint('🔄 Shorebird: Error in background check: $e');
+  }
+}
   try {
     // Note: shorebird_code_push package will be added when you run `shorebird init`
     // For now, this is a placeholder that will work once Shorebird is initialized
