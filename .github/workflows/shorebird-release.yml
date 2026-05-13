@@ -57,42 +57,29 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       
-      # Create Shorebird app if needed (first time only)
-      - name: Initialize Shorebird App
+      # Initialize Gradle wrapper (fix gradlew issue)
+      - name: Initialize Gradle
         run: |
-          # Check if app_id is placeholder
+          echo "🔧 Initializing Gradle wrapper..."
+          cd android
+          chmod +x gradlew
+          ./gradlew --version || echo "⚠️ Gradle check failed, continuing..."
+          cd ..
+      
+      # Check app_id status
+      - name: Check Shorebird App ID
+        run: |
+          echo "📋 Checking shorebird.yaml..."
+          cat shorebird.yaml
+          
           if grep -q "PLACEHOLDER_APP_ID" shorebird.yaml; then
-            echo "📱 Creating new Shorebird app..."
-            
-            # Get app name from pubspec.yaml
-            APP_NAME=$(grep "^name:" pubspec.yaml | cut -d' ' -f2)
-            echo "App name: $APP_NAME"
-            
-            # Run shorebird init with app name
-            # This creates the app and updates shorebird.yaml
-            echo "$APP_NAME" | shorebird init --force
-            
-            # Verify app_id was created
-            if grep -q "PLACEHOLDER_APP_ID" shorebird.yaml; then
-              echo "❌ Failed to create app_id"
-              exit 1
-            fi
-            
-            NEW_APP_ID=$(grep "^app_id:" shorebird.yaml | cut -d' ' -f2)
-            echo "✅ Created app with ID: $NEW_APP_ID"
-            
-            # Commit the updated shorebird.yaml back to repo
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add shorebird.yaml
-            git commit -m "chore: Add Shorebird app_id [skip ci]" || true
-            git push || echo "⚠️ Could not push app_id - will be in artifacts"
-          else
+            echo "⚠️ app_id is PLACEHOLDER - will be created automatically by shorebird release"
+          elif grep -q "^app_id:" shorebird.yaml && ! grep -q "^# app_id:" shorebird.yaml; then
             APP_ID=$(grep "^app_id:" shorebird.yaml | cut -d' ' -f2)
             echo "✅ Using existing app_id: $APP_ID"
+          else
+            echo "⚠️ app_id not set - will be created automatically by shorebird release"
           fi
-        env:
-          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       
       # Check if it's a patch or full release
       - name: Determine build type
@@ -108,16 +95,54 @@ jobs:
       - name: Shorebird Release
         if: steps.build_type.outputs.type == 'release'
         run: |
-          # Shorebird automatically creates app if app_id is empty
-          echo "Building release..."
-          shorebird release android
+          echo "🚀 Starting Shorebird Release..."
+          echo "📱 App: phone_system_app"
+          echo "🔧 Flutter Version: 3.24.0"
+          echo "📦 Build Type: Release"
+          echo ""
+          
+          # Run with verbose output for debugging
+          shorebird release android \
+            --flutter-version=3.24.0 \
+            --verbose \
+            --console-url=https://console.shorebird.dev || {
+              echo "❌ Release failed!"
+              echo "📋 Checking logs..."
+              ls -la /home/runner/.config/shorebird/logs/ || true
+              cat /home/runner/.config/shorebird/logs/*.log || true
+              exit 1
+            }
+          
+          echo ""
+          echo "✅ Release completed successfully!"
+          echo "🔗 Check status: https://console.shorebird.dev"
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       
       # Patch
       - name: Shorebird Patch
         if: steps.build_type.outputs.type == 'patch'
-        run: shorebird patch android
+        run: |
+          echo "🔄 Starting Shorebird Patch..."
+          echo "📱 App: phone_system_app"
+          echo "🔧 Flutter Version: 3.24.0"
+          echo "📦 Build Type: Patch"
+          echo ""
+          
+          # Run with verbose output for debugging
+          shorebird patch android \
+            --flutter-version=3.24.0 \
+            --verbose || {
+              echo "❌ Patch failed!"
+              echo "📋 Checking logs..."
+              ls -la /home/runner/.config/shorebird/logs/ || true
+              cat /home/runner/.config/shorebird/logs/*.log || true
+              exit 1
+            }
+          
+          echo ""
+          echo "✅ Patch completed successfully!"
+          echo "🔗 Check status: https://console.shorebird.dev"
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       
