@@ -57,29 +57,22 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       
-      # Initialize Gradle wrapper (fix gradlew issue)
-      - name: Initialize Gradle
-        run: |
-          echo "🔧 Initializing Gradle wrapper..."
-          cd android
-          chmod +x gradlew
-          ./gradlew --version || echo "⚠️ Gradle check failed, continuing..."
-          cd ..
-      
       # Check app_id status
       - name: Check Shorebird App ID
         run: |
           echo "📋 Checking shorebird.yaml..."
           cat shorebird.yaml
+          echo ""
           
           if grep -q "PLACEHOLDER_APP_ID" shorebird.yaml; then
-            echo "⚠️ app_id is PLACEHOLDER - will be created automatically by shorebird release"
+            echo "⚠️ app_id is PLACEHOLDER - will be created automatically"
           elif grep -q "^app_id:" shorebird.yaml && ! grep -q "^# app_id:" shorebird.yaml; then
             APP_ID=$(grep "^app_id:" shorebird.yaml | cut -d' ' -f2)
             echo "✅ Using existing app_id: $APP_ID"
           else
-            echo "⚠️ app_id not set - will be created automatically by shorebird release"
+            echo "⚠️ app_id not set - will be created automatically"
           fi
+          echo ""
       
       # Check if it's a patch or full release
       - name: Determine build type
@@ -101,15 +94,28 @@ jobs:
           echo "📦 Build Type: Release"
           echo ""
           
+          # Check if we need to create app
+          if grep -q "PLACEHOLDER_APP_ID" shorebird.yaml; then
+            echo "📱 First release - will create app automatically"
+            EXTRA_FLAGS="--force"
+          else
+            echo "📱 Using existing app"
+            EXTRA_FLAGS=""
+          fi
+          
           # Run with verbose output for debugging
           shorebird release android \
             --flutter-version=3.24.0 \
             --verbose \
-            --console-url=https://console.shorebird.dev || {
+            $EXTRA_FLAGS || {
+              echo ""
               echo "❌ Release failed!"
               echo "📋 Checking logs..."
-              ls -la /home/runner/.config/shorebird/logs/ || true
-              cat /home/runner/.config/shorebird/logs/*.log || true
+              echo ""
+              ls -la /home/runner/.config/shorebird/logs/ 2>/dev/null || true
+              echo ""
+              echo "📄 Last log file:"
+              cat /home/runner/.config/shorebird/logs/*.log 2>/dev/null | tail -100 || true
               exit 1
             }
           
