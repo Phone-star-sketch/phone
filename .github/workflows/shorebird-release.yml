@@ -57,32 +57,47 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       
-      # Check app_id status
-      - name: Check Shorebird App ID
+      # Initialize Shorebird app if needed
+      - name: Initialize Shorebird App
         run: |
           echo "📋 Checking shorebird.yaml..."
           cat shorebird.yaml
           echo ""
           
           if grep -q "PLACEHOLDER_APP_ID" shorebird.yaml; then
-            echo "❌ ERROR: app_id is still PLACEHOLDER"
+            echo "🔧 First time setup - creating Shorebird app..."
             echo ""
-            echo "🔧 You need to create the app first:"
-            echo "   1. Visit: https://console.shorebird.dev"
-            echo "   2. Create a new app named: phone_system_app"
-            echo "   3. Copy the app_id"
-            echo "   4. Update shorebird.yaml with the real app_id"
-            echo "   5. Commit and push the change"
+            
+            # Run shorebird init to create app_id
+            # Use --force to overwrite existing shorebird.yaml
+            shorebird init --force <<EOF
+phone_system_app
+EOF
+            
             echo ""
-            exit 1
+            echo "✅ Shorebird app created!"
+            echo "📋 New shorebird.yaml:"
+            cat shorebird.yaml
+            echo ""
+            
+            # Commit the new app_id back to repo
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add shorebird.yaml
+            git commit -m "chore: Update shorebird.yaml with real app_id [skip ci]"
+            git push
+            
+            echo "✅ shorebird.yaml updated in repository"
           elif grep -q "^app_id:" shorebird.yaml && ! grep -q "^# app_id:" shorebird.yaml; then
             APP_ID=$(grep "^app_id:" shorebird.yaml | cut -d' ' -f2)
-            echo "✅ Using app_id: $APP_ID"
+            echo "✅ Using existing app_id: $APP_ID"
           else
             echo "❌ ERROR: app_id not found in shorebird.yaml"
             exit 1
           fi
           echo ""
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       
       # Check if it's a patch or full release
       - name: Determine build type
