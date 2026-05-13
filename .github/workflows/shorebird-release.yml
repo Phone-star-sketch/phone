@@ -65,12 +65,22 @@ jobs:
           echo ""
           
           if grep -q "PLACEHOLDER_APP_ID" shorebird.yaml; then
-            echo "⚠️ app_id is PLACEHOLDER - will be created automatically"
+            echo "❌ ERROR: app_id is still PLACEHOLDER"
+            echo ""
+            echo "🔧 You need to create the app first:"
+            echo "   1. Visit: https://console.shorebird.dev"
+            echo "   2. Create a new app named: phone_system_app"
+            echo "   3. Copy the app_id"
+            echo "   4. Update shorebird.yaml with the real app_id"
+            echo "   5. Commit and push the change"
+            echo ""
+            exit 1
           elif grep -q "^app_id:" shorebird.yaml && ! grep -q "^# app_id:" shorebird.yaml; then
             APP_ID=$(grep "^app_id:" shorebird.yaml | cut -d' ' -f2)
-            echo "✅ Using existing app_id: $APP_ID"
+            echo "✅ Using app_id: $APP_ID"
           else
-            echo "⚠️ app_id not set - will be created automatically"
+            echo "❌ ERROR: app_id not found in shorebird.yaml"
+            exit 1
           fi
           echo ""
       
@@ -94,27 +104,18 @@ jobs:
           echo "📦 Build Type: Release"
           echo ""
           
-          # Check if we need to create app
-          if grep -q "PLACEHOLDER_APP_ID" shorebird.yaml; then
-            echo "📱 First release - will create app automatically"
-            EXTRA_FLAGS="--force"
-          else
-            echo "📱 Using existing app"
-            EXTRA_FLAGS=""
-          fi
-          
-          # Run with verbose output for debugging
+          # Run release (no --force flag needed!)
+          # Shorebird automatically handles first release
           shorebird release android \
             --flutter-version=3.24.0 \
-            --verbose \
-            $EXTRA_FLAGS || {
+            --verbose || {
               echo ""
               echo "❌ Release failed!"
-              echo "📋 Checking logs..."
               echo ""
+              echo "📋 Checking logs..."
               ls -la /home/runner/.config/shorebird/logs/ 2>/dev/null || true
               echo ""
-              echo "📄 Last log file:"
+              echo "📄 Last 100 lines of log:"
               cat /home/runner/.config/shorebird/logs/*.log 2>/dev/null | tail -100 || true
               exit 1
             }
