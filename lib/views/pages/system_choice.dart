@@ -101,8 +101,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
         actions: [
           TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child:
-                  Text('إلغاء', style: TextStyle(color: Colors.grey[600]))),
+              child: Text('إلغاء', style: TextStyle(color: Colors.grey[600]))),
           ElevatedButton(
             onPressed: () async {
               Navigator.of(dialogContext).pop();
@@ -284,8 +283,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
           },
         ),
         Expanded(
-          child:
-              GetBuilder<ClientBottomSheetController>(builder: (controller) {
+          child: GetBuilder<ClientBottomSheetController>(builder: (controller) {
             final clientSystems = controller.getClientSystems();
             if (clientSystems.isEmpty) return _buildEmptyState();
             final grouped = _groupSystemsByCategory(clientSystems);
@@ -343,8 +341,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
                         color: Colors.white,
                         fontSize: 20,
                         fontWeight: FontWeight.bold)),
-                Text(
-                    '${widget.client.name ?? 'غير محدد'} - اضغط مطولاً للحذف',
+                Text('${widget.client.name ?? 'غير محدد'} - اضغط مطولاً للحذف',
                     style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 13)),
@@ -363,8 +360,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
 
   Widget _buildEmptyState() {
     return Center(
-        child:
-            Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Icon(Icons.inbox_outlined, size: 80, color: Colors.grey[400]),
       const SizedBox(height: 16),
       Text('لا توجد باقات مشترك بها',
@@ -378,8 +374,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
     ]));
   }
 
-  Widget _buildCategorySection(
-      SystemCategory category, List<System> systems) {
+  Widget _buildCategorySection(SystemCategory category, List<System> systems) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -387,8 +382,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
             Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                    color:
-                        _getCategoryColor(category).withValues(alpha: 0.1),
+                    color: _getCategoryColor(category).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10)),
                 child: Icon(_getCategoryIcon(category),
                     color: _getCategoryColor(category), size: 20)),
@@ -413,8 +407,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount:
-                MediaQuery.of(context).size.width > 600 ? 3 : 2,
+            crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
             childAspectRatio: 0.75,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12),
@@ -431,8 +424,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
     final isActive = _systemActiveStatus[system.id] ?? true;
 
     return Obx(() {
-      final isLoading =
-          controller.systemLoadingStatus[system.id] ?? false;
+      final isLoading = controller.systemLoadingStatus[system.id] ?? false;
 
       final gradientColors = isActive
           ? [
@@ -517,9 +509,8 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
                                   systemType!.image!,
                                   fit: BoxFit.cover,
                                   errorBuilder: (c, e, s) => Icon(
-                                    _getCategoryIcon(
-                                        systemType.category ??
-                                            SystemCategory.mainPackage),
+                                    _getCategoryIcon(systemType.category ??
+                                        SystemCategory.mainPackage),
                                     color: Colors.white,
                                     size: 30,
                                   ),
@@ -560,8 +551,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
                             system.name!,
                             style: TextStyle(
                               fontSize: 11,
-                              color:
-                                  Colors.white.withValues(alpha: 0.85),
+                              color: Colors.white.withValues(alpha: 0.85),
                               fontStyle: FontStyle.italic,
                             ),
                             textAlign: TextAlign.center,
@@ -581,8 +571,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  Colors.black.withValues(alpha: 0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -598,8 +587,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              systemType?.price.toStringAsFixed(0) ??
-                                  '0',
+                              systemType?.price.toStringAsFixed(0) ?? '0',
                               style: TextStyle(
                                 color: gradientColors[1],
                                 fontWeight: FontWeight.bold,
@@ -637,9 +625,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              isActive
-                                  ? Icons.check_circle
-                                  : Icons.cancel,
+                              isActive ? Icons.check_circle : Icons.cancel,
                               size: 14,
                               color: Colors.white,
                             ),
@@ -737,8 +723,7 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
       List<System> systems) {
     final Map<SystemCategory, List<System>> grouped = {};
     for (final system in systems) {
-      final category =
-          system.type!.category ?? SystemCategory.mainPackage;
+      final category = system.type!.category ?? SystemCategory.mainPackage;
       grouped.putIfAbsent(category, () => []).add(system);
     }
     return grouped;
@@ -748,10 +733,12 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
     switch (category) {
       case SystemCategory.mainPackage:
         return Colors.purple;
-      case SystemCategory.internetPackage:
+      case SystemCategory.dslInternet:
         return Colors.blue;
       case SystemCategory.mobileInternet:
         return Colors.orange;
+      case SystemCategory.otherServices:
+        return Colors.green;
     }
   }
 
@@ -759,10 +746,12 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
     switch (category) {
       case SystemCategory.mainPackage:
         return Icons.wifi;
-      case SystemCategory.internetPackage:
+      case SystemCategory.dslInternet:
         return Icons.router;
       case SystemCategory.mobileInternet:
         return Icons.smartphone;
+      case SystemCategory.otherServices:
+        return Icons.miscellaneous_services;
     }
   }
 
@@ -770,9 +759,11 @@ class _ModernSystemChoiceSheetState extends State<ModernSystemChoiceSheet> {
     switch (category) {
       case SystemCategory.mainPackage:
         return 'باقات الفليكس';
-      case SystemCategory.internetPackage:
-        return 'باقات الإنترنت';
+      case SystemCategory.dslInternet:
+        return 'إنترنت أرضي';
       case SystemCategory.mobileInternet:
+        return 'إنترنت موبايل';
+      case SystemCategory.otherServices:
         return 'خدمات أخرى';
     }
   }

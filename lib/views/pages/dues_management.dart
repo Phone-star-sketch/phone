@@ -206,6 +206,8 @@ class _DuesManagementState extends State<DuesManagement>
                                                 icon: Icons.cancel,
                                                 color: const Color(0xFFEF4444),
                                                 onPressed: () {
+                                                  controller.clientPrintAdded
+                                                      .clear();
                                                   controller
                                                       .enableMulipleClientPrint
                                                       .value = false;
@@ -292,9 +294,8 @@ class _DuesManagementState extends State<DuesManagement>
 
   // Extract filtering logic to separate method for better performance
   List<Client> _getFilteredClients(String query) {
-    List<Client> clients = controller.clinets.value
-        .where((element) => element.totalCash < 0)
-        .toList();
+    List<Client> clients =
+        controller.clinets.where((element) => element.totalCash < 0).toList();
 
     if (query.isEmpty) return clients;
 
@@ -523,7 +524,10 @@ class _DuesManagementState extends State<DuesManagement>
       padding: const EdgeInsets.all(12), // reduced from 16
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [gradient[0].withValues(alpha: 0.1), gradient[1].withValues(alpha: 0.05)],
+          colors: [
+            gradient[0].withValues(alpha: 0.1),
+            gradient[1].withValues(alpha: 0.05)
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -745,8 +749,8 @@ class ModernClientPrintCard extends StatelessWidget {
                               const SizedBox(height: 4),
                               Container(
                                 decoration: BoxDecoration(
-                                  color:
-                                      const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                                  color: const Color(0xFF3B82F6)
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 padding: const EdgeInsets.symmetric(

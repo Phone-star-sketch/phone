@@ -1,61 +1,60 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_rx/get_rx.dart';
 import 'package:phone_system_app/models/system_type.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 
 class SystemListViewModel extends GetxController {
-  RxInt editedCardIndex = (-1).obs;
-
-  // ✅ استخدام RxList بدل List عادي
-  RxList<SystemType> _types = <SystemType>[].obs;
-  RxBool isLoading = false.obs;
-  RxBool isSaving = false.obs; // ✅ إضافة loading للتعديل
+  // Observable list of system types
+  final RxList<SystemType> _types = <SystemType>[].obs;
+  final RxBool isLoading = false.obs;
 
   @override
   void onReady() async {
+    super.onReady();
     await updateTypes(true);
   }
 
-  List<SystemType> getAllTypes() {
-    return _types;
-  }
+  List<SystemType> getAllTypes() => _types;
 
+  /// Update types with loading indicator
   Future<void> updateTypes(bool isAscending) async {
     isLoading.value = true;
-    final types = await BackendServices.instance.systemTypeRepository
-        .getAllTypes(isAscending);
-    _types.clear();
-    _types.addAll(types);
-    isLoading.value = false;
+    try {
+      final types = await BackendServices.instance.systemTypeRepository
+          .getAllTypes(isAscending);
+      _types.clear();
+      _types.addAll(types);
+    } catch (e) {
+      Get.snackbar(
+        'خطأ',
+        'فشل تحميل البيانات: ${e.toString()}',
+        backgroundColor: Get.theme.colorScheme.error,
+        colorText: Get.theme.colorScheme.onError,
+      );
+    } finally {
+      isLoading.value = false;
+    }
   }
 
-  // ✅ دالة للتحديث بدون loading indicator (للاستخدام بعد الحذف/الإضافة)
+  /// Update types silently (without loading indicator)
   Future<void> updateTypesSilently(bool isAscending) async {
-    final types = await BackendServices.instance.systemTypeRepository
-        .getAllTypes(isAscending);
-    _types.clear();
-    _types.addAll(types);
+    try {
+      final types = await BackendServices.instance.systemTypeRepository
+          .getAllTypes(isAscending);
+      _types.clear();
+      _types.addAll(types);
+    } catch (e) {
+      // Silent failure - could log to analytics
+    }
   }
 
-  // ✅ دالة للتحديث المباشر
+  /// Refresh the observable list
   void refreshTypes() {
     _types.refresh();
   }
 
-  //about the from
-  final formKey = GlobalKey<FormState>();
-  final systemName = TextEditingController();
-  final systemDescription = TextEditingController();
-  final systemPrice = TextEditingController();
-  final RxBool isRecurring =
-      false.obs; // خدمة متكررة شهرياً - الافتراضي false للخدمات الأخرى
-
-  // تحديث القيمة عند التعديل
-  void setCurrentSystem(SystemType system) {
-    systemName.text = system.name ?? '';
-    systemDescription.text = system.description ?? '';
-    systemPrice.text = system.price.toString();
-    isRecurring.value = system.isRecurring;
+  @override
+  void onClose() {
+    // Clean up if needed
+    super.onClose();
   }
 }

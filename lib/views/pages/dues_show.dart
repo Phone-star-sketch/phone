@@ -1379,170 +1379,135 @@ class _DuesShowPageState extends State<DuesShowPage>
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: [
-                _isSelectionMode && isSelected
-                    ? const Color(0xFF667EEA).withValues(alpha: 0.1)
-                    : Colors.white,
-                _isSelectionMode && isSelected
-                    ? const Color(0xFF667EEA).withValues(alpha: 0.05)
-                    : Colors.grey.shade50,
-              ],
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: _isSelectionMode ? () => _toggleSelection(dueIdInt) : null,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  _isSelectionMode && isSelected
+                      ? const Color(0xFF667EEA).withValues(alpha: 0.1)
+                      : Colors.white,
+                  _isSelectionMode && isSelected
+                      ? const Color(0xFF667EEA).withValues(alpha: 0.05)
+                      : Colors.grey.shade50,
+                ],
+              ),
+              border: _isSelectionMode && isSelected
+                  ? Border.all(
+                      color: const Color(0xFF667EEA),
+                      width: 2,
+                    )
+                  : null,
             ),
-            border: _isSelectionMode && isSelected
-                ? Border.all(
-                    color: const Color(0xFF667EEA),
-                    width: 2,
-                  )
-                : null,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Row with selection checkbox or edit/save buttons
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Selection checkbox or profile icon
-                    if (_isSelectionMode)
-                      GestureDetector(
-                        onTap: () => _toggleSelection(dueIdInt),
-                        child: Container(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Row with selection checkbox or edit/save buttons
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Selection checkbox or profile icon
+                      if (_isSelectionMode)
+                        GestureDetector(
+                          onTap: () => _toggleSelection(dueIdInt),
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xFF667EEA)
+                                  : Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFF667EEA)
+                                    : Colors.grey.shade400,
+                                width: 2,
+                              ),
+                            ),
+                            child: Icon(
+                              isSelected ? Icons.check : Icons.person,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.grey.shade600,
+                              size: 24,
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color(0xFF667EEA)
-                                : Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(15),
-                            border: Border.all(
-                              color: isSelected
-                                  ? const Color(0xFF667EEA)
-                                  : Colors.grey.shade400,
-                              width: 2,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
                             ),
+                            borderRadius: BorderRadius.circular(15),
                           ),
-                          child: Icon(
-                            isSelected ? Icons.check : Icons.person,
-                            color: isSelected
-                                ? Colors.white
-                                : Colors.grey.shade600,
+                          child: const Icon(
+                            Icons.person,
+                            color: Colors.white,
                             size: 24,
                           ),
                         ),
-                      )
-                    else
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                          ),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: const Icon(
-                          Icons.person,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Name field - Allow full width without constraints
-                          isEditing
-                              ? _buildEditField(
-                                  controller:
-                                      _editControllers['${dueId}_name']!,
-                                  label: 'الاسم',
-                                )
-                              : Container(
-                                  width: double.infinity,
-                                  child: Text(
-                                    _getStringValue(due['name']) ?? 'غير محدد',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Name field - Allow full width without constraints
+                            isEditing
+                                ? _buildEditField(
+                                    controller:
+                                        _editControllers['${dueId}_name']!,
+                                    label: 'الاسم',
+                                  )
+                                : Container(
+                                    width: double.infinity,
+                                    child: Text(
+                                      _getStringValue(due['name']) ??
+                                          'غير محدد',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                      softWrap: true,
+                                      textAlign: TextAlign.start,
                                     ),
-                                    softWrap: true,
-                                    textAlign: TextAlign.start,
                                   ),
-                                ),
-                          const SizedBox(height: 4),
-                          // Phone field
-                          isEditing
-                              ? _buildEditField(
-                                  controller:
-                                      _editControllers['${dueId}_phone']!,
-                                  label: 'رقم الهاتف',
-                                  keyboardType: TextInputType.phone,
-                                )
-                              : Text(
-                                  _formatPhoneForDisplay(due['phone']),
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade600,
+                            const SizedBox(height: 4),
+                            // Phone field
+                            isEditing
+                                ? _buildEditField(
+                                    controller:
+                                        _editControllers['${dueId}_phone']!,
+                                    label: 'رقم الهاتف',
+                                    keyboardType: TextInputType.phone,
+                                  )
+                                : Text(
+                                    _formatPhoneForDisplay(due['phone']),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade600,
+                                    ),
                                   ),
-                                ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Action buttons - Only show in non-selection mode
-                    if (!_isSelectionMode)
-                      Column(
-                        children: [
-                          if (!isEditing) ...[
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  width: 40,
-                                  height: 40,
-                                  child: IconButton(
-                                    onPressed: () => _startEditing(due),
-                                    icon: const Icon(Icons.edit, size: 20),
-                                    color: const Color(0xFF667EEA),
-                                    tooltip: 'تعديل',
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                SizedBox(
-                                  width: 40,
-                                  height: 40,
-                                  child: IconButton(
-                                    onPressed: () => _deleteDue(due),
-                                    icon: const Icon(Icons.delete, size: 20),
-                                    color: Colors.red,
-                                    tooltip: 'حذف',
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ] else ...[
-                            if (_isSaving)
-                              const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF667EEA),
-                                ),
-                              )
-                            else
+                      const SizedBox(width: 12),
+                      // Action buttons - Only show in non-selection mode
+                      if (!_isSelectionMode)
+                        Column(
+                          children: [
+                            if (!isEditing) ...[
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -1550,10 +1515,10 @@ class _DuesShowPageState extends State<DuesShowPage>
                                     width: 40,
                                     height: 40,
                                     child: IconButton(
-                                      onPressed: _saveChanges,
-                                      icon: const Icon(Icons.check, size: 20),
-                                      color: Colors.green,
-                                      tooltip: 'حفظ',
+                                      onPressed: () => _startEditing(due),
+                                      icon: const Icon(Icons.edit, size: 20),
+                                      color: const Color(0xFF667EEA),
+                                      tooltip: 'تعديل',
                                       padding: EdgeInsets.zero,
                                     ),
                                   ),
@@ -1562,159 +1527,200 @@ class _DuesShowPageState extends State<DuesShowPage>
                                     width: 40,
                                     height: 40,
                                     child: IconButton(
-                                      onPressed: _cancelEditing,
-                                      icon: const Icon(Icons.close, size: 20),
+                                      onPressed: () => _deleteDue(due),
+                                      icon: const Icon(Icons.delete, size: 20),
                                       color: Colors.red,
-                                      tooltip: 'إلغاء',
+                                      tooltip: 'حذف',
                                       padding: EdgeInsets.zero,
                                     ),
                                   ),
                                 ],
                               ),
+                            ] else ...[
+                              if (_isSaving)
+                                const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFF667EEA),
+                                  ),
+                                )
+                              else
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(
+                                      width: 40,
+                                      height: 40,
+                                      child: IconButton(
+                                        onPressed: _saveChanges,
+                                        icon: const Icon(Icons.check, size: 20),
+                                        color: Colors.green,
+                                        tooltip: 'حفظ',
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    SizedBox(
+                                      width: 40,
+                                      height: 40,
+                                      child: IconButton(
+                                        onPressed: _cancelEditing,
+                                        icon: const Icon(Icons.close, size: 20),
+                                        color: Colors.red,
+                                        tooltip: 'إلغاء',
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
                           ],
-                        ],
-                      ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                // Amount Section
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF667EEA).withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(
-                      color: const Color(0xFF667EEA).withValues(alpha: 0.1),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.attach_money,
-                        color: Color(0xFF667EEA),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'المبلغ:',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
                         ),
-                      ),
-                      const Spacer(),
-                      isEditing
-                          ? SizedBox(
-                              width: 120,
-                              child: _buildEditField(
-                                controller:
-                                    _editControllers['${dueId}_amount']!,
-                                label: 'المبلغ',
-                                keyboardType: TextInputType.number,
-                                textAlign: TextAlign.center,
-                              ),
-                            )
-                          : Text(
-                              '${_getAmountString(due['amount'])} ج.م',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF667EEA),
-                              ),
-                            ),
                     ],
                   ),
-                ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
-                // Date Section - Only created_at now
-                Container(
-                  decoration: BoxDecoration(
-                    color: isEditing ? Colors.white : Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isEditing
-                          ? const Color(0xFF667EEA).withValues(alpha: 0.3)
-                          : Colors.grey.shade200,
+                  // Amount Section
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF667EEA).withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(
+                        color: const Color(0xFF667EEA).withValues(alpha: 0.1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.attach_money,
+                          color: Color(0xFF667EEA),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'المبلغ:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        const Spacer(),
+                        isEditing
+                            ? SizedBox(
+                                width: 120,
+                                child: _buildEditField(
+                                  controller:
+                                      _editControllers['${dueId}_amount']!,
+                                  label: 'المبلغ',
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            : Text(
+                                '${_getAmountString(due['amount'])} ج.م',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF667EEA),
+                                ),
+                              ),
+                      ],
                     ),
                   ),
-                  child: InkWell(
-                    onTap: isEditing
-                        ? () => _selectEditDate('${dueId}_created_at')
-                        : null,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.calendar_today_outlined,
-                                size: 16,
-                                color: Colors.grey.shade600,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'تاريخ الإنشاء',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                              if (isEditing) ...[
-                                const Spacer(),
+
+                  const SizedBox(height: 16),
+
+                  // Date Section - Only created_at now
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isEditing ? Colors.white : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isEditing
+                            ? const Color(0xFF667EEA).withValues(alpha: 0.3)
+                            : Colors.grey.shade200,
+                      ),
+                    ),
+                    child: InkWell(
+                      onTap: isEditing
+                          ? () => _selectEditDate('${dueId}_created_at')
+                          : null,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
                                 Icon(
-                                  Icons.edit,
-                                  size: 14,
+                                  Icons.calendar_today_outlined,
+                                  size: 16,
                                   color: Colors.grey.shade600,
                                 ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'تاريخ الإنشاء',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                if (isEditing) ...[
+                                  const Spacer(),
+                                  Icon(
+                                    Icons.edit,
+                                    size: 14,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ],
                               ],
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            () {
-                              final dateValue = isEditing
-                                  ? _editDates['${dueId}_created_at']
-                                  : due['created_at'];
-
-                              if (dateValue == null) return 'غير محدد';
-
-                              DateTime? date;
-                              try {
-                                if (dateValue is String) {
-                                  date = DateTime.parse(dateValue);
-                                } else if (dateValue is int) {
-                                  date = DateTime.fromMillisecondsSinceEpoch(
-                                      dateValue);
-                                } else if (dateValue is DateTime) {
-                                  date = dateValue;
-                                }
-                              } catch (e) {
-                                date = null;
-                              }
-
-                              return date != null
-                                  ? DateFormat('dd MMM yyyy', 'ar').format(date)
-                                  : 'غير محدد';
-                            }(),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black87,
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            Text(
+                              () {
+                                final dateValue = isEditing
+                                    ? _editDates['${dueId}_created_at']
+                                    : due['created_at'];
+
+                                if (dateValue == null) return 'غير محدد';
+
+                                DateTime? date;
+                                try {
+                                  if (dateValue is String) {
+                                    date = DateTime.parse(dateValue);
+                                  } else if (dateValue is int) {
+                                    date = DateTime.fromMillisecondsSinceEpoch(
+                                        dateValue);
+                                  } else if (dateValue is DateTime) {
+                                    date = dateValue;
+                                  }
+                                } catch (e) {
+                                  date = null;
+                                }
+
+                                return date != null
+                                    ? DateFormat('dd MMM yyyy', 'ar')
+                                        .format(date)
+                                    : 'غير محدد';
+                              }(),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1733,7 +1739,8 @@ class _DuesShowPageState extends State<DuesShowPage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF667EEA).withValues(alpha: 0.3)),
+        border:
+            Border.all(color: const Color(0xFF667EEA).withValues(alpha: 0.3)),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(

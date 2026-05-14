@@ -231,8 +231,7 @@ class _ModernClientSheet extends StatelessWidget {
                       color: const Color(0xFF8b5cf6),
                       onTap: () {
                         final clientLogs = controller.getClientLogs();
-                        final clientSystems =
-                            controller.getClientSystems();
+                        final clientSystems = controller.getClientSystems();
                         showPrintClientReport(context, currentClient,
                             logs: clientLogs, systems: clientSystems);
                       },
@@ -1058,7 +1057,8 @@ Future<void> showDiscountDialog(BuildContext context, Client client) async {
                     'خطأ',
                     e.toString(),
                     snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: const Color(0xFFef4444).withValues(alpha: 0.1),
+                    backgroundColor:
+                        const Color(0xFFef4444).withValues(alpha: 0.1),
                     colorText: const Color(0xFFef4444),
                   );
                 }
@@ -1393,14 +1393,17 @@ List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
   final allTypes = controller.getAllTypes();
   final List<DropdownMenuEntry<SystemType>> entries = [];
 
-  final internetTypes = allTypes
-      .where((type) => type.category == SystemCategory.internetPackage)
+  final dslTypes = allTypes
+      .where((type) => type.category == SystemCategory.dslInternet)
       .toList();
   final mobileTypes = allTypes
       .where((type) => type.category == SystemCategory.mobileInternet)
       .toList();
   final mainTypes = allTypes
       .where((type) => type.category == SystemCategory.mainPackage)
+      .toList();
+  final otherTypes = allTypes
+      .where((type) => type.category == SystemCategory.otherServices)
       .toList();
 
   if (mainTypes.isNotEmpty) {
@@ -1441,11 +1444,11 @@ List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
     }
   }
 
-  if (internetTypes.isNotEmpty) {
+  if (dslTypes.isNotEmpty) {
     entries.add(
       DropdownMenuEntry<SystemType>(
-        value: internetTypes.first,
-        label: '━━━ باقات الإنترنت ━━━',
+        value: dslTypes.first,
+        label: '━━━ إنترنت أرضي ━━━',
         enabled: false,
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.all(
@@ -1458,7 +1461,7 @@ List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
         ),
       ),
     );
-    for (var type in internetTypes) {
+    for (var type in dslTypes) {
       entries.add(
         DropdownMenuEntry<SystemType>(
           value: type,
@@ -1508,6 +1511,44 @@ List<DropdownMenuEntry<SystemType>> _buildGroupedSystemEntries(
             backgroundColor: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.hovered)) {
                 return const Color(0xFF10b981).withValues(alpha: 0.1);
+              }
+              return Colors.white;
+            }),
+          ),
+        ),
+      );
+    }
+  }
+
+  if (otherTypes.isNotEmpty) {
+    entries.add(
+      DropdownMenuEntry<SystemType>(
+        value: otherTypes.first,
+        label: '━━━ خدمات أخرى ━━━',
+        enabled: false,
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.all(
+            const Color(0xFF8b5cf6).withValues(alpha: 0.05),
+          ),
+          foregroundColor: WidgetStateProperty.all(const Color(0xFF8b5cf6)),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          ),
+        ),
+      ),
+    );
+    for (var type in otherTypes) {
+      entries.add(
+        DropdownMenuEntry<SystemType>(
+          value: type,
+          label: type.name ?? '',
+          leadingIcon: const Icon(Icons.miscellaneous_services_rounded,
+              color: Color(0xFF8b5cf6), size: 20),
+          style: ButtonStyle(
+            foregroundColor: WidgetStateProperty.all(Colors.grey[800]),
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.hovered)) {
+                return const Color(0xFF8b5cf6).withValues(alpha: 0.1);
               }
               return Colors.white;
             }),

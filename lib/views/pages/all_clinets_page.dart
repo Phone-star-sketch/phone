@@ -32,7 +32,7 @@ class _AllClientsPageState extends State<AllClientsPage>
   final controller = Get.find<AccountClientInfo>();
 
   List<Client> _getFilteredClients(String query) {
-    List<Client> clients = controller.clinets.value;
+    List<Client> clients = controller.clinets;
     if (query.isEmpty) return clients;
 
     return clients.where((element) {
@@ -435,10 +435,11 @@ class _ModernClientCardState extends State<ModernClientCard> {
       builder: (ctrl) {
         final isSelected =
             ctrl.clientPrintAdded.any((c) => c.id == widget.client.id);
+        final isSelectionMode = ctrl.enableMulipleClientPrint.value;
 
         return GestureDetector(
           onTap: () {
-            if (ctrl.enableMulipleClientPrint.value) {
+            if (isSelectionMode) {
               if (isSelected) {
                 ctrl.clientPrintAdded
                     .removeWhere((c) => c.id == widget.client.id);
@@ -454,12 +455,14 @@ class _ModernClientCardState extends State<ModernClientCard> {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              color: Colors.white,
+              color: isSelectionMode && isSelected
+                  ? const Color(0xFF3b82f6).withValues(alpha: 0.05)
+                  : Colors.white,
               border: Border.all(
-                color: isSelected
+                color: isSelectionMode && isSelected
                     ? const Color(0xFF3b82f6)
                     : const Color(0xFFE2E8F0),
-                width: isSelected ? 2 : 1,
+                width: isSelectionMode && isSelected ? 2 : 1,
               ),
               boxShadow: [
                 BoxShadow(
@@ -476,26 +479,53 @@ class _ModernClientCardState extends State<ModernClientCard> {
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
-                      // Avatar
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: _getStatusColor().withValues(alpha: 0.1),
-                        ),
-                        child: Center(
-                          child: Text(
-                            widget.client.name?.substring(0, 1).toUpperCase() ??
-                                '؟',
-                            style: TextStyle(
-                              color: _getStatusColor(),
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
+                      // Avatar or Checkbox
+                      if (isSelectionMode)
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: isSelected
+                                ? const Color(0xFF3b82f6)
+                                : Colors.grey.shade200,
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF3b82f6)
+                                  : Colors.grey.shade400,
+                              width: 2,
+                            ),
+                          ),
+                          child: Icon(
+                            isSelected ? Icons.check : Icons.person,
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.grey.shade600,
+                            size: 24,
+                          ),
+                        )
+                      else
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: _getStatusColor().withValues(alpha: 0.1),
+                          ),
+                          child: Center(
+                            child: Text(
+                              widget.client.name
+                                      ?.substring(0, 1)
+                                      .toUpperCase() ??
+                                  '؟',
+                              style: TextStyle(
+                                color: _getStatusColor(),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
-                      ),
                       const SizedBox(width: 12),
                       // Info
                       Expanded(

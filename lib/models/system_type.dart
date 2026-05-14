@@ -1,20 +1,33 @@
 import 'package:phone_system_app/models/model.dart';
 
 enum SystemCategory {
-  mainPackage,
-  internetPackage,
-  mobileInternet,
+  mainPackage, // 0 - أنظمة الفليكسات
+  dslInternet, // 1 - إنترنت أرضي (ADSL/هوائي)
+  mobileInternet, // 2 - إنترنت موبايل
+  otherServices, // 3 - خدمات أخرى
 }
 
 extension SystemPrinting on SystemCategory {
   String icon() {
     Map<SystemCategory, String> paths = {
       SystemCategory.mainPackage: "assets/images/flex.jpg",
-      SystemCategory.internetPackage: "assets/images/dsl_packages.png",
+      SystemCategory.dslInternet: "assets/images/dsl_packages.png",
       SystemCategory.mobileInternet: "assets/images/v_logo.jpg",
+      SystemCategory.otherServices: "assets/images/v_logo.jpg",
     };
 
     return paths[this]!;
+  }
+
+  String displayName() {
+    Map<SystemCategory, String> names = {
+      SystemCategory.mainPackage: "أنظمة الفليكسات",
+      SystemCategory.dslInternet: "إنترنت أرضي",
+      SystemCategory.mobileInternet: "إنترنت موبايل",
+      SystemCategory.otherServices: "خدمات أخرى",
+    };
+
+    return names[this]!;
   }
 }
 
