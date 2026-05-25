@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer' as developer;
 import 'package:phone_system_app/services/excel_generator.dart';
+import 'package:phone_system_app/views/pages/monthly_invoice_pdf.dart';
 
 class ClientsReceipts extends StatefulWidget {
   const ClientsReceipts({super.key});
@@ -216,6 +217,49 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
                                   ),
                                 ),
                               ),
+                              // PDF Print Button
+                              const SizedBox(width: 8),
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF10B981),
+                                      Color(0xFF059669)
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () => Get.to(() => MonthlyInvoicePdf(
+                                          clients: filteredData,
+                                        )),
+                                    child: const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 8),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.picture_as_pdf,
+                                              color: Colors.white, size: 16),
+                                          SizedBox(width: 6),
+                                          Text(
+                                            'طباعة PDF',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Cairo',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -357,7 +401,10 @@ class _ClientsReceiptsState extends State<ClientsReceipts>
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [gradient[0].withValues(alpha: 0.1), gradient[1].withValues(alpha: 0.05)],
+          colors: [
+            gradient[0].withValues(alpha: 0.1),
+            gradient[1].withValues(alpha: 0.05)
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

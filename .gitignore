@@ -48,3 +48,6 @@ app.*.map.json
 .claude/
 .qwen/
 /screenshot/
+
+# FVM Version Cache
+.fvm/

@@ -9,6 +9,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:phone_system_app/repositories/system/supabase_system_repository.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
 import 'package:phone_system_app/services/fcm_service.dart';
+import 'package:phone_system_app/services/pdf_assets_cache.dart';
 import 'package:phone_system_app/services/transaction_notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -75,6 +76,9 @@ Future<void> main() async {
       debugPrint('Services initialization failed: $e');
     }
   }
+
+  // Preload PDF assets in background (no await — مش هيأخر الـ app)
+  PdfAssetsCache.instance.preload();
 
   // Initialize notification service
   try {
