@@ -7,6 +7,7 @@ import 'package:phone_system_app/controllers/account_details_controller.dart';
 import 'package:phone_system_app/controllers/account_profit_controller.dart';
 import 'package:phone_system_app/services/backend/auth.dart';
 import 'package:phone_system_app/services/backend/backend_services.dart';
+import 'package:phone_system_app/views/pages/dashboard_page.dart';
 import 'package:phone_system_app/views/pages/all_clinets_page.dart';
 import 'package:phone_system_app/views/pages/dues.dart';
 import 'package:phone_system_app/views/pages/dues_management.dart';
@@ -50,6 +51,13 @@ class _AccountDetailsState extends State<AccountDetails>
   late AnimationController _waveController;
 
   static List<Page> get _pages => [
+        // Dashboard — متاح للجميع
+        Page(
+          roles: [UserRoles.manager, UserRoles.assistant],
+          builder: () => const DashboardPage(),
+          title: "لوحة التحكم",
+          icon: const Icon(Icons.dashboard_rounded),
+        ),
         if (SupabaseAuthentication.myUser?.role == UserRoles.manager.index)
           Page(
             roles: [UserRoles.manager],
