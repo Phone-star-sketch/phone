@@ -259,8 +259,7 @@ class PrintClientsReceipts extends StatelessWidget {
                       isFirstPage: true,
                       extraBoldFont: cairoExtraBold,
                     ),
-                    pw.SizedBox(height: 20),
-                    pw.Divider(color: PdfColors.red),
+                    pw.SizedBox(height: 18),
                     pw.Expanded(child: pw.Container()),
                     buildFooter(
                         vCashIcon, instaPayIcon, whatsappIcon, cairoBold),
@@ -300,7 +299,7 @@ class PrintClientsReceipts extends StatelessWidget {
                       children: [
                         buildHeader(logo, cairoBold,
                             extraBoldFont: cairoExtraBold),
-                        pw.SizedBox(height: 20),
+                        pw.SizedBox(height: 18),
                         pw.Container(
                           width: double.infinity,
                           child: pw.Text(
@@ -461,7 +460,18 @@ class PrintClientsReceipts extends StatelessWidget {
       pw.Container(
         child: pw.Table(
           defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-          border: pw.TableBorder.all(width: 1, color: PdfColors.black),
+          border: pw.TableBorder(
+            horizontalInside:
+                pw.BorderSide(width: 0.4, color: PdfColor.fromHex('#dce7f5')),
+            verticalInside:
+                pw.BorderSide(width: 0.4, color: PdfColor.fromHex('#e7eef7')),
+            top: pw.BorderSide(width: 0.7, color: PdfColor.fromHex('#101827')),
+            bottom:
+                pw.BorderSide(width: 0.7, color: PdfColor.fromHex('#101827')),
+            left: pw.BorderSide(width: 0.7, color: PdfColor.fromHex('#101827')),
+            right:
+                pw.BorderSide(width: 0.7, color: PdfColor.fromHex('#101827')),
+          ),
           columnWidths: const {
             0: pw.FlexColumnWidth(2), // Date
             1: pw.FlexColumnWidth(1.5), // Amount
@@ -491,6 +501,7 @@ class PrintClientsReceipts extends StatelessWidget {
                 ],
                 regularFont,
                 11.0,
+                index: index,
               );
             }),
             // Add a row if no visible systems to show
@@ -553,24 +564,30 @@ class PrintClientsReceipts extends StatelessWidget {
     return bytes;
   }
 
-  pw.TableRow buildRow(List<String> data, pw.Font font, double fontSize) {
-    final lightBlue = PdfColor.fromHex('#e5f9fe');
-    final borderBlue = PdfColor.fromHex('#02ccfe');
+  pw.TableRow buildRow(List<String> data, pw.Font font, double fontSize,
+      {int index = 0}) {
+    final rowColor =
+        index.isEven ? PdfColors.white : PdfColor.fromHex('#f8fafc');
+    final borderColor = PdfColor.fromHex('#e7eef7');
 
     return pw
-        .TableRow(decoration: pw.BoxDecoration(color: lightBlue), children: [
+        .TableRow(decoration: pw.BoxDecoration(color: rowColor), children: [
       for (final d in data)
         pw.Container(
-            padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 3),
+            padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 5),
             decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: borderBlue, width: 0.5),
+              border: pw.Border.all(color: borderColor, width: 0.35),
             ),
             child: pw.Center(
                 child: pw.Text(
               d,
               textDirection: pw.TextDirection.rtl,
               textAlign: pw.TextAlign.center,
-              style: pw.TextStyle(font: font, fontSize: fontSize),
+              style: pw.TextStyle(
+                font: font,
+                fontSize: fontSize,
+                color: PdfColor.fromHex('#101827'),
+              ),
               maxLines: 2,
               softWrap: true,
             )))
@@ -579,20 +596,20 @@ class PrintClientsReceipts extends StatelessWidget {
 
   pw.TableRow buildTableHead(
       List<String> headers, pw.Font font, double fontSize) {
-    final headerBlue = PdfColor.fromHex('#02ccfe');
+    final headerColor = PdfColor.fromHex('#101827');
 
-    return pw.TableRow(
-        decoration: pw.BoxDecoration(color: headerBlue),
-        children: [
-          for (final head in headers)
-            pw.Container(
-                padding: const pw.EdgeInsets.all(3),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.white, width: 0.5),
-                ),
-                child: pw.Center(
-                    child: makeText(head, font, fontSize, PdfColors.white)))
-        ]);
+    return pw
+        .TableRow(decoration: pw.BoxDecoration(color: headerColor), children: [
+      for (final head in headers)
+        pw.Container(
+            padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            decoration: pw.BoxDecoration(
+              border:
+                  pw.Border.all(color: PdfColor.fromHex('#27364a'), width: 0.5),
+            ),
+            child: pw.Center(
+                child: makeText(head, font, fontSize, PdfColors.white)))
+    ]);
   }
 
   List<pw.Widget> buildTableTitle(
@@ -605,37 +622,61 @@ class PrintClientsReceipts extends StatelessWidget {
       double totalPrice,
       String number) {
     pw.Widget titleValue(String field, String value) {
+      final isAmount = field == ss;
       return pw.Container(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          width: 190,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColors.blue200, width: 1.5),
-            borderRadius: pw.BorderRadius.circular(8),
-            color: PdfColors.grey100,
+            border: pw.Border.all(color: PdfColor.fromHex('#dce7f5'), width: 1),
+            borderRadius: pw.BorderRadius.circular(14),
+            color: PdfColors.white,
           ),
           child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                makeText(field, fieldFont, 16, PdfColors.blue900),
-                pw.SizedBox(height: 8),
-                makeText(value, fieldFont, 15, PdfColors.red900),
+                makeText(field, fieldFont, 12.5, PdfColor.fromHex('#0b4db3')),
+                pw.SizedBox(height: 6),
+                makeText(
+                  value,
+                  fieldFont,
+                  isAmount ? 15.5 : 14.0,
+                  isAmount
+                      ? PdfColor.fromHex('#d71920')
+                      : PdfColor.fromHex('#101827'),
+                ),
               ]));
     }
 
     return [
-      pw.Align(
-        alignment: pw.Alignment.center,
-        child: makeText(tableTitle, titleFont, 18),
+      pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+        decoration: pw.BoxDecoration(
+          color: PdfColor.fromHex('#f8fafc'),
+          borderRadius: pw.BorderRadius.circular(14),
+          border: pw.Border.all(color: PdfColor.fromHex('#dce7f5'), width: 0.8),
+        ),
+        child: pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Container(
+                width: 46, height: 2, color: PdfColor.fromHex('#d71920')),
+            makeText(tableTitle, titleFont, 18, PdfColor.fromHex('#101827')),
+            pw.Container(
+                width: 46, height: 2, color: PdfColor.fromHex('#d71920')),
+          ],
+        ),
       ),
-      pw.SizedBox(height: 15),
+      pw.SizedBox(height: 12),
       pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.center,
         children: [
           titleValue(ss, '${totalPrice.toStringAsFixed(2)} جنيه'),
-          pw.SizedBox(width: 50),
+          pw.SizedBox(width: 18),
           titleValue(fs, number),
         ],
       ),
-      pw.SizedBox(height: 15),
+      pw.SizedBox(height: 14),
     ];
   }
 
@@ -677,36 +718,95 @@ class PrintClientsReceipts extends StatelessWidget {
       {bool isFirstPage = false, required pw.Font extraBoldFont}) {
     final monthName = _getAppropriateMonthName();
     final (clientCount, totalAmount) = calculateStats();
-
-    // Get month and year for title
     final (month, year) = getPreviousMonthAndYear();
     final arabicMonth = _getArabicMonthName(month);
 
+    final ink = PdfColor.fromHex('#101827');
+    final inkSoft = PdfColor.fromHex('#1f2b3d');
+    final red = PdfColor.fromHex('#d71920');
+    final blue = PdfColor.fromHex('#0b4db3');
+    final paper = PdfColor.fromHex('#f8fafc');
+    final line = PdfColor.fromHex('#dce7f5');
+
+    pw.Widget metricCard({
+      required String label,
+      required String value,
+      required PdfColor valueColor,
+      required pw.Font valueFont,
+    }) {
+      return pw.Expanded(
+        child: pw.Container(
+          padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 10),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.white,
+            borderRadius: pw.BorderRadius.circular(12),
+            border: pw.Border.all(color: line, width: 0.8),
+          ),
+          child: pw.Column(
+            children: [
+              makeText(label, font, 12.5, blue),
+              pw.SizedBox(height: 6),
+              makeText(value, valueFont, 18.0, valueColor),
+            ],
+          ),
+        ),
+      );
+    }
+
     return pw.Container(
-      padding: const pw.EdgeInsets.all(10),
       child: pw.Column(
         children: [
           pw.Container(
-            padding: const pw.EdgeInsets.all(10),
+            padding: const pw.EdgeInsets.fromLTRB(20, 18, 20, 16),
+            decoration: pw.BoxDecoration(
+              color: ink,
+              borderRadius: pw.BorderRadius.circular(18),
+            ),
             child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.Image(pw.MemoryImage(logo), width: 100),
-                pw.Column(
-                  children: [
-                    makeText("فاتورة تحصيل", font, 24.0),
-                    pw.SizedBox(height: 4),
-                    makeText("شهر $arabicMonth لسنة $year", font, 18.0,
-                        PdfColors.blue900),
-                  ],
-                ),
-                // Date on the right (replacing the empty SizedBox)
                 pw.Container(
-                  width: 100,
+                  width: 108,
+                  height: 58,
+                  padding: const pw.EdgeInsets.all(7),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.white,
+                    borderRadius: pw.BorderRadius.circular(14),
+                  ),
+                  child: pw.Image(pw.MemoryImage(logo), fit: pw.BoxFit.contain),
+                ),
+                pw.SizedBox(width: 18),
+                pw.Container(width: 2, height: 56, color: red),
+                pw.SizedBox(width: 18),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      makeText(
+                          'فاتورة تحصيل', extraBoldFont, 23.0, PdfColors.white),
+                      pw.SizedBox(height: 5),
+                      makeText('شهر $arabicMonth لسنة $year', font, 15.0,
+                          PdfColor.fromHex('#d7e6ff')),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(width: 18),
+                pw.Container(
+                  width: 105,
+                  padding: const pw.EdgeInsets.symmetric(
+                      vertical: 8, horizontal: 10),
+                  decoration: pw.BoxDecoration(
+                    color: inkSoft,
+                    borderRadius: pw.BorderRadius.circular(12),
+                    border: pw.Border.all(color: PdfColor.fromHex('#33445c')),
+                  ),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
-                      makeText(monthName, font, 14.0, PdfColors.blue900),
+                      makeText('تاريخ الفاتورة', font, 9.5,
+                          PdfColor.fromHex('#9fb2cc')),
+                      pw.SizedBox(height: 4),
+                      makeText(monthName, extraBoldFont, 11.5, PdfColors.white),
                     ],
                   ),
                 ),
@@ -714,49 +814,40 @@ class PrintClientsReceipts extends StatelessWidget {
             ),
           ),
           if (isFirstPage) ...[
-            pw.SizedBox(height: 25),
-            pw.Divider(color: PdfColors.red),
-            pw.SizedBox(height: 15),
+            pw.SizedBox(height: 14),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 10),
+              padding: const pw.EdgeInsets.all(14),
               decoration: pw.BoxDecoration(
-                color: PdfColors.grey100,
-                borderRadius: pw.BorderRadius.circular(8),
-                border: pw.Border.all(color: PdfColors.blue200),
+                color: paper,
+                borderRadius: pw.BorderRadius.circular(16),
+                border: pw.Border.all(color: line, width: 0.9),
               ),
               child: pw.Column(
                 children: [
-                  makeText("الحساب الكلي", extraBoldFont, 18.0),
-                  pw.SizedBox(height: 15),
+                  makeText('الحساب الكلي', extraBoldFont, 18.0, ink),
+                  pw.SizedBox(height: 10),
                   pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
                     children: [
-                      pw.Column(
-                        children: [
-                          makeText("عدد العملاء", extraBoldFont, 18.0,
-                              PdfColors.blue900),
-                          makeText("$clientCount", extraBoldFont, 22.0,
-                              PdfColors.red900),
-                        ],
+                      metricCard(
+                        label: 'عدد العملاء',
+                        value: '$clientCount',
+                        valueColor: red,
+                        valueFont: extraBoldFont,
                       ),
-                      pw.Container(
-                        height: 40,
-                        width: 1,
-                        color: PdfColors.blue200,
-                      ),
-                      pw.Column(
-                        children: [
-                          makeText("المبلغ المطلوب", extraBoldFont, 18.0,
-                              PdfColors.blue900),
-                          makeText("${totalAmount.toStringAsFixed(2)} جنيه",
-                              extraBoldFont, 22.0, PdfColors.red900),
-                        ],
+                      pw.SizedBox(width: 12),
+                      metricCard(
+                        label: 'المبلغ المطلوب',
+                        value: '${totalAmount.toStringAsFixed(2)} جنيه',
+                        valueColor: red,
+                        valueFont: extraBoldFont,
                       ),
                     ],
                   ),
                 ],
               ),
             ),
+            pw.SizedBox(height: 8),
+            pw.Container(height: 1.2, color: red),
           ],
         ],
       ),
@@ -765,56 +856,107 @@ class PrintClientsReceipts extends StatelessWidget {
 
   pw.Widget buildFooter(Uint8List vCashIcon, Uint8List instaPayIcon,
       Uint8List whatsappIcon, pw.Font font) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(10),
-      margin: const pw.EdgeInsets.only(top: 60),
-      decoration: pw.BoxDecoration(
-        color: PdfColors.grey50,
-        borderRadius: pw.BorderRadius.circular(8),
-        border: pw.Border.all(color: PdfColors.blue200),
-      ),
-      child: pw.Column(
-        children: [
-          makeText("وسائل الدفع المتاحة", font, 14.0, PdfColors.blue900),
-          pw.SizedBox(height: 10),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+    final ink = PdfColor.fromHex('#101827');
+    final red = PdfColor.fromHex('#d71920');
+    final line = PdfColor.fromHex('#dce7f5');
+
+    pw.Widget paymentTile({
+      required Uint8List icon,
+      required String label,
+      required String value,
+      required PdfColor color,
+      double iconSize = 22,
+    }) {
+      return pw.Expanded(
+        child: pw.Container(
+          padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.white,
+            borderRadius: pw.BorderRadius.circular(12),
+            border: pw.Border.all(color: line, width: 0.8),
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
             children: [
-              pw.Row(
+              pw.Image(pw.MemoryImage(icon), width: iconSize, height: iconSize),
+              pw.SizedBox(width: 7),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
                 children: [
-                  pw.Image(pw.MemoryImage(vCashIcon), width: 50),
-                  pw.SizedBox(width: 10),
-                  makeText("01022690901", font, 14.0, PdfColors.red900),
-                ],
-              ),
-              pw.Container(
-                width: 1,
-                height: 40,
-                color: PdfColors.grey300,
-              ),
-              pw.Row(
-                children: [
-                  pw.Image(pw.MemoryImage(instaPayIcon), width: 50),
-                  pw.SizedBox(width: 10),
-                  makeText("01017174149", font, 14.0, PdfColors.purple900),
+                  makeText(label, font, 8.8, color),
+                  pw.SizedBox(height: 3),
+                  pw.Text(
+                    value,
+                    textDirection: pw.TextDirection.ltr,
+                    style: pw.TextStyle(font: font, fontSize: 10.5, color: ink),
+                  ),
                 ],
               ),
             ],
           ),
-          pw.SizedBox(height: 15),
-          pw.Divider(color: PdfColors.grey300),
-          pw.SizedBox(height: 10),
+        ),
+      );
+    }
+
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 28),
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('#f8fafc'),
+        borderRadius: pw.BorderRadius.circular(16),
+        border: pw.Border.all(color: line, width: 0.9),
+      ),
+      child: pw.Column(
+        children: [
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.center,
             children: [
-              pw.Image(pw.MemoryImage(whatsappIcon), width: 20),
-              pw.SizedBox(width: 8),
-              makeText("01017174149", font, 14.0, PdfColors.red900),
-              makeText("للاستفسار : ", font, 14.0, PdfColors.blue900),
-              //makeText("01017174149", font, 14.0, PdfColors.red900),
-              pw.SizedBox(width: 5),
-              pw.SizedBox(width: 5),
+              pw.Container(width: 52, height: 1, color: red),
+              pw.SizedBox(width: 10),
+              makeText('وسائل الدفع المتاحة', font, 13.0, ink),
+              pw.SizedBox(width: 10),
+              pw.Container(width: 52, height: 1, color: red),
             ],
+          ),
+          pw.SizedBox(height: 12),
+          pw.Row(
+            children: [
+              paymentTile(
+                icon: vCashIcon,
+                label: 'فودافون كاش',
+                value: '01022690901',
+                color: red,
+                iconSize: 26,
+              ),
+              pw.SizedBox(width: 10),
+              paymentTile(
+                icon: instaPayIcon,
+                label: 'InstaPay',
+                value: '01017174149',
+                color: PdfColors.purple700,
+                iconSize: 28,
+              ),
+              pw.SizedBox(width: 10),
+              paymentTile(
+                icon: whatsappIcon,
+                label: 'للاستفسار',
+                value: '01017174149',
+                color: PdfColors.green700,
+                iconSize: 23,
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 10),
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.symmetric(vertical: 8),
+            decoration: pw.BoxDecoration(
+              color: ink,
+              borderRadius: pw.BorderRadius.circular(12),
+            ),
+            child: pw.Center(
+              child: makeText('شكرا لثقتكم بنا', font, 11.0, PdfColors.white),
+            ),
           ),
         ],
       ),

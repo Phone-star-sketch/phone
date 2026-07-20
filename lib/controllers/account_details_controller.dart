@@ -66,7 +66,7 @@ class AccountDetailsController extends GetxController {
       roles: [UserRoles.admin, UserRoles.manager],
     ),
     PageData(
-      title: "المتابعة",
+      title: "متابعة المدفوعات",
       icon: const Icon(Icons.toc_rounded, color: Colors.black54),
       roles: [UserRoles.admin, UserRoles.manager],
     ),
