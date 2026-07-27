@@ -210,7 +210,9 @@ class PrintClientsReceipts extends StatelessWidget {
   // Cache for logo and icons
   static Uint8List? _cachedLogo;
   static Uint8List? _cachedBackgroundImage;
-  static Uint8List? _cachedVCashIcon;
+  static Uint8List? _cachedHeaderBackground;
+  static Uint8List? _cachedFooterBackground;
+  static String? _cachedFooterVodafoneSvg;
   static Uint8List? _cachedInstaPayIcon;
   static Uint8List? _cachedWhatsappIcon;
 
@@ -228,13 +230,22 @@ class PrintClientsReceipts extends StatelessWidget {
       // Load and cache images only once
       _cachedLogo ??= await getImage("assets/images/newlogo.png");
       _cachedBackgroundImage ??= await getImage("assets/images/newlogo.png");
-      _cachedVCashIcon ??= await getImage("assets/images/v_cash_icon.png");
-      _cachedInstaPayIcon ??= await getImage("assets/images/instapay_icon.png");
-      _cachedWhatsappIcon ??= await getImage("assets/images/whatsapp_icon.png");
+      _cachedHeaderBackground ??=
+          await getImage("assets/images/invoice_header_background_v2.png");
+      _cachedFooterBackground ??=
+          await getImage("assets/images/invoice_footer_background_v3.png");
+      _cachedFooterVodafoneSvg ??= await rootBundle
+          .loadString("assets/images/invoice_footer_vodafone.svg");
+      _cachedInstaPayIcon ??=
+          await getImage("assets/images/invoice_footer_instapay.png");
+      _cachedWhatsappIcon ??=
+          await getImage("assets/images/invoice_footer_whatsapp.png");
 
       final logo = _cachedLogo!;
       final backgroundImage = _cachedBackgroundImage!;
-      final vCashIcon = _cachedVCashIcon!;
+      final headerBackground = _cachedHeaderBackground!;
+      final footerBackground = _cachedFooterBackground!;
+      final vodafoneSvg = _cachedFooterVodafoneSvg!;
       final instaPayIcon = _cachedInstaPayIcon!;
       final whatsappIcon = _cachedWhatsappIcon!;
 
@@ -255,14 +266,15 @@ class PrintClientsReceipts extends StatelessWidget {
                   children: [
                     buildHeader(
                       logo,
+                      headerBackground,
                       cairoBold,
                       isFirstPage: true,
                       extraBoldFont: cairoExtraBold,
                     ),
                     pw.SizedBox(height: 18),
                     pw.Expanded(child: pw.Container()),
-                    buildFooter(
-                        vCashIcon, instaPayIcon, whatsappIcon, cairoBold),
+                    buildFooter(footerBackground, vodafoneSvg, instaPayIcon,
+                        whatsappIcon, cairoBold),
                   ],
                 ),
               ],
@@ -297,7 +309,7 @@ class PrintClientsReceipts extends StatelessWidget {
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                       children: [
-                        buildHeader(logo, cairoBold,
+                        buildHeader(logo, headerBackground, cairoBold,
                             extraBoldFont: cairoExtraBold),
                         pw.SizedBox(height: 18),
                         pw.Container(
@@ -321,8 +333,8 @@ class PrintClientsReceipts extends StatelessWidget {
                           cairoRegular,
                         ),
                         pw.Expanded(child: pw.Container()),
-                        buildFooter(
-                            vCashIcon, instaPayIcon, whatsappIcon, cairoBold),
+                        buildFooter(footerBackground, vodafoneSvg, instaPayIcon,
+                            whatsappIcon, cairoBold),
                       ],
                     ),
                   ],
@@ -612,6 +624,61 @@ class PrintClientsReceipts extends StatelessWidget {
     ]);
   }
 
+  pw.Widget _buildInfoIcon(String type, PdfColor accent) {
+    final path = switch (type) {
+      'clients' =>
+        '<circle cx="13" cy="10" r="5"/><path d="M4 27v-3c0-5 4-8 9-8s9 3 9 8v3M23 7a4 4 0 0 1 0 8m3 12v-3c0-3-2-6-5-7"/>',
+      'phone' =>
+        '<path d="M7 3h6l2 7-4 2c2 5 5 8 10 10l2-4 7 2v6c0 2-2 4-4 4C13 29 3 19 3 7c0-2 2-4 4-4Z"/>',
+      _ =>
+        '<circle cx="16" cy="16" r="12"/><path d="M20 10c-1-1-3-2-5-2-3 0-5 2-5 4 0 3 2 4 6 4s6 1 6 4c0 2-2 4-6 4-2 0-5-1-6-2M16 5v22"/>',
+    };
+
+    return pw.Container(
+      width: 48,
+      height: 48,
+      child: pw.Stack(
+        alignment: pw.Alignment.center,
+        children: [
+          pw.Container(
+            width: 48,
+            height: 48,
+            decoration: pw.BoxDecoration(
+              shape: pw.BoxShape.circle,
+              color: PdfColor(accent.red, accent.green, accent.blue, 0.08),
+            ),
+          ),
+          pw.Container(
+            width: 36,
+            height: 36,
+            decoration: pw.BoxDecoration(
+              shape: pw.BoxShape.circle,
+              color: PdfColor(accent.red, accent.green, accent.blue, 0.13),
+              border: pw.Border.all(
+                color: PdfColor(
+                  accent.red,
+                  accent.green,
+                  accent.blue,
+                  0.32,
+                ),
+                width: 0.8,
+              ),
+            ),
+            child: pw.Center(
+              child: pw.SvgImage(
+                svg:
+                    '<svg viewBox="0 0 32 32" fill="none" stroke="#000000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">$path</svg>',
+                width: 19,
+                height: 19,
+                colorFilter: accent,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<pw.Widget> buildTableTitle(
       String tableTitle,
       pw.Font titleFont,
@@ -623,28 +690,50 @@ class PrintClientsReceipts extends StatelessWidget {
       String number) {
     pw.Widget titleValue(String field, String value) {
       final isAmount = field == ss;
+      final accent =
+          isAmount ? PdfColor.fromHex('#d71920') : PdfColor.fromHex('#20aeea');
+
       return pw.Container(
-          width: 190,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColor.fromHex('#dce7f5'), width: 1),
-            borderRadius: pw.BorderRadius.circular(14),
-            color: PdfColors.white,
-          ),
-          child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                makeText(field, fieldFont, 12.5, PdfColor.fromHex('#0b4db3')),
-                pw.SizedBox(height: 6),
-                makeText(
-                  value,
-                  fieldFont,
-                  isAmount ? 15.5 : 14.0,
-                  isAmount
-                      ? PdfColor.fromHex('#d71920')
-                      : PdfColor.fromHex('#101827'),
+        width: 200,
+        height: 76,
+        child: pw.Stack(
+          overflow: pw.Overflow.visible,
+          children: [
+            pw.Positioned.fill(
+              child: pw.Container(
+                padding: const pw.EdgeInsets.fromLTRB(42, 11, 14, 11),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(
+                      color: PdfColor.fromHex('#dce7f5'), width: 1),
+                  borderRadius: pw.BorderRadius.circular(14),
+                  color: PdfColors.white,
                 ),
-              ]));
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    makeText(
+                        field, fieldFont, 12.5, PdfColor.fromHex('#0b4db3')),
+                    pw.SizedBox(height: 6),
+                    makeText(
+                      value,
+                      fieldFont,
+                      isAmount ? 15.5 : 14.0,
+                      isAmount
+                          ? PdfColor.fromHex('#d71920')
+                          : PdfColor.fromHex('#101827'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            pw.Positioned(
+              left: -9,
+              top: 14,
+              child: _buildInfoIcon(isAmount ? 'money' : 'phone', accent),
+            ),
+          ],
+        ),
+      );
     }
 
     return [
@@ -672,7 +761,7 @@ class PrintClientsReceipts extends StatelessWidget {
         mainAxisAlignment: pw.MainAxisAlignment.center,
         children: [
           titleValue(ss, '${totalPrice.toStringAsFixed(2)} جنيه'),
-          pw.SizedBox(width: 18),
+          pw.SizedBox(width: 24),
           titleValue(fs, number),
         ],
       ),
@@ -714,7 +803,8 @@ class PrintClientsReceipts extends StatelessWidget {
     return (count, total);
   }
 
-  pw.Widget buildHeader(Uint8List logo, pw.Font font,
+  pw.Widget buildHeader(
+      Uint8List logo, Uint8List headerBackground, pw.Font font,
       {bool isFirstPage = false, required pw.Font extraBoldFont}) {
     final monthName = _getAppropriateMonthName();
     final (clientCount, totalAmount) = calculateStats();
@@ -722,7 +812,6 @@ class PrintClientsReceipts extends StatelessWidget {
     final arabicMonth = _getArabicMonthName(month);
 
     final ink = PdfColor.fromHex('#101827');
-    final inkSoft = PdfColor.fromHex('#1f2b3d');
     final red = PdfColor.fromHex('#d71920');
     final blue = PdfColor.fromHex('#0b4db3');
     final paper = PdfColor.fromHex('#f8fafc');
@@ -733,20 +822,36 @@ class PrintClientsReceipts extends StatelessWidget {
       required String value,
       required PdfColor valueColor,
       required pw.Font valueFont,
+      required String iconType,
     }) {
       return pw.Expanded(
         child: pw.Container(
-          padding: const pw.EdgeInsets.symmetric(vertical: 11, horizontal: 10),
-          decoration: pw.BoxDecoration(
-            color: PdfColors.white,
-            borderRadius: pw.BorderRadius.circular(12),
-            border: pw.Border.all(color: line, width: 0.8),
-          ),
-          child: pw.Column(
+          height: 78,
+          child: pw.Stack(
+            overflow: pw.Overflow.visible,
             children: [
-              makeText(label, font, 12.5, blue),
-              pw.SizedBox(height: 6),
-              makeText(value, valueFont, 18.0, valueColor),
+              pw.Positioned.fill(
+                child: pw.Container(
+                  padding: const pw.EdgeInsets.fromLTRB(42, 11, 12, 11),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.white,
+                    borderRadius: pw.BorderRadius.circular(12),
+                    border: pw.Border.all(color: line, width: 0.8),
+                  ),
+                  child: pw.Column(
+                    children: [
+                      makeText(label, font, 12.5, blue),
+                      pw.SizedBox(height: 6),
+                      makeText(value, valueFont, 18.0, valueColor),
+                    ],
+                  ),
+                ),
+              ),
+              pw.Positioned(
+                left: -9,
+                top: 15,
+                child: _buildInfoIcon(iconType, valueColor),
+              ),
             ],
           ),
         ),
@@ -757,57 +862,70 @@ class PrintClientsReceipts extends StatelessWidget {
       child: pw.Column(
         children: [
           pw.Container(
-            padding: const pw.EdgeInsets.fromLTRB(20, 18, 20, 16),
-            decoration: pw.BoxDecoration(
-              color: ink,
-              borderRadius: pw.BorderRadius.circular(18),
-            ),
-            child: pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
+            height: 118,
+            child: pw.Stack(
               children: [
-                pw.Container(
-                  width: 108,
-                  height: 58,
-                  padding: const pw.EdgeInsets.all(7),
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.white,
-                    borderRadius: pw.BorderRadius.circular(14),
+                pw.Positioned.fill(
+                  child: pw.Image(
+                    pw.MemoryImage(headerBackground),
+                    fit: pw.BoxFit.fill,
                   ),
-                  child: pw.Image(pw.MemoryImage(logo), fit: pw.BoxFit.contain),
                 ),
-                pw.SizedBox(width: 18),
-                pw.Container(width: 2, height: 56, color: red),
-                pw.SizedBox(width: 18),
-                pw.Expanded(
+                pw.Positioned(
+                  left: 20,
+                  top: 32,
+                  child: pw.Container(
+                    width: 92,
+                    height: 54,
+                    padding: const pw.EdgeInsets.all(6),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.white,
+                      borderRadius: pw.BorderRadius.circular(12),
+                    ),
+                    child:
+                        pw.Image(pw.MemoryImage(logo), fit: pw.BoxFit.contain),
+                  ),
+                ),
+                pw.Positioned(
+                  left: 135,
+                  right: 125,
+                  top: 29,
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.center,
                     children: [
-                      makeText(
-                          'فاتورة تحصيل', extraBoldFont, 23.0, PdfColors.white),
+                      makeText('فاتورة تحصيل', extraBoldFont, 23.0, ink),
                       pw.SizedBox(height: 5),
-                      makeText('شهر $arabicMonth لسنة $year', font, 15.0,
-                          PdfColor.fromHex('#d7e6ff')),
+                      makeText(
+                        'شهر $arabicMonth لسنة $year',
+                        font,
+                        14.5,
+                        PdfColor.fromHex('#49657d'),
+                      ),
                     ],
                   ),
                 ),
-                pw.SizedBox(width: 18),
-                pw.Container(
-                  width: 105,
-                  padding: const pw.EdgeInsets.symmetric(
-                      vertical: 8, horizontal: 10),
-                  decoration: pw.BoxDecoration(
-                    color: inkSoft,
-                    borderRadius: pw.BorderRadius.circular(12),
-                    border: pw.Border.all(color: PdfColor.fromHex('#33445c')),
-                  ),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.end,
-                    children: [
-                      makeText('تاريخ الفاتورة', font, 9.5,
-                          PdfColor.fromHex('#9fb2cc')),
-                      pw.SizedBox(height: 4),
-                      makeText(monthName, extraBoldFont, 11.5, PdfColors.white),
-                    ],
+                pw.Positioned(
+                  right: 20,
+                  top: 34,
+                  child: pw.Container(
+                    width: 88,
+                    padding: const pw.EdgeInsets.symmetric(
+                      vertical: 7,
+                      horizontal: 9,
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        makeText(
+                          'تاريخ الفاتورة',
+                          font,
+                          9.0,
+                          PdfColor.fromHex('#49657d'),
+                        ),
+                        pw.SizedBox(height: 4),
+                        makeText(monthName, extraBoldFont, 11.0, ink),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -833,6 +951,7 @@ class PrintClientsReceipts extends StatelessWidget {
                         value: '$clientCount',
                         valueColor: red,
                         valueFont: extraBoldFont,
+                        iconType: 'clients',
                       ),
                       pw.SizedBox(width: 12),
                       metricCard(
@@ -840,6 +959,7 @@ class PrintClientsReceipts extends StatelessWidget {
                         value: '${totalAmount.toStringAsFixed(2)} جنيه',
                         valueColor: red,
                         valueFont: extraBoldFont,
+                        iconType: 'money',
                       ),
                     ],
                   ),
@@ -854,108 +974,123 @@ class PrintClientsReceipts extends StatelessWidget {
     );
   }
 
-  pw.Widget buildFooter(Uint8List vCashIcon, Uint8List instaPayIcon,
-      Uint8List whatsappIcon, pw.Font font) {
+  pw.Widget buildFooter(Uint8List footerBackground, String vodafoneSvg,
+      Uint8List instaPayIcon, Uint8List whatsappIcon, pw.Font font) {
     final ink = PdfColor.fromHex('#101827');
     final red = PdfColor.fromHex('#d71920');
-    final line = PdfColor.fromHex('#dce7f5');
 
     pw.Widget paymentTile({
-      required Uint8List icon,
+      required pw.Widget icon,
       required String label,
       required String value,
       required PdfColor color,
-      double iconSize = 22,
     }) {
       return pw.Expanded(
-        child: pw.Container(
-          padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-          decoration: pw.BoxDecoration(
-            color: PdfColors.white,
-            borderRadius: pw.BorderRadius.circular(12),
-            border: pw.Border.all(color: line, width: 0.8),
-          ),
-          child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.center,
-            children: [
-              pw.Image(pw.MemoryImage(icon), width: iconSize, height: iconSize),
-              pw.SizedBox(width: 7),
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: [
-                  makeText(label, font, 8.8, color),
-                  pw.SizedBox(height: 3),
-                  pw.Text(
-                    value,
-                    textDirection: pw.TextDirection.ltr,
-                    style: pw.TextStyle(font: font, fontSize: 10.5, color: ink),
-                  ),
-                ],
+        child: pw.Column(
+          mainAxisAlignment: pw.MainAxisAlignment.center,
+          children: [
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Container(width: 22, height: 22, child: icon),
+                pw.SizedBox(width: 7),
+                makeText(label, font, 9.2, color),
+              ],
+            ),
+            pw.SizedBox(height: 6),
+            pw.Text(
+              value,
+              textDirection: pw.TextDirection.ltr,
+              style: pw.TextStyle(
+                font: font,
+                fontSize: 11.5,
+                color: ink,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
 
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 28),
-      padding: const pw.EdgeInsets.all(12),
-      decoration: pw.BoxDecoration(
-        color: PdfColor.fromHex('#f8fafc'),
-        borderRadius: pw.BorderRadius.circular(16),
-        border: pw.Border.all(color: line, width: 0.9),
-      ),
-      child: pw.Column(
+      height: 172,
+      child: pw.Stack(
         children: [
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.center,
-            children: [
-              pw.Container(width: 52, height: 1, color: red),
-              pw.SizedBox(width: 10),
-              makeText('وسائل الدفع المتاحة', font, 13.0, ink),
-              pw.SizedBox(width: 10),
-              pw.Container(width: 52, height: 1, color: red),
-            ],
-          ),
-          pw.SizedBox(height: 12),
-          pw.Row(
-            children: [
-              paymentTile(
-                icon: vCashIcon,
-                label: 'فودافون كاش',
-                value: '01022690901',
-                color: red,
-                iconSize: 26,
-              ),
-              pw.SizedBox(width: 10),
-              paymentTile(
-                icon: instaPayIcon,
-                label: 'InstaPay',
-                value: '01017174149',
-                color: PdfColors.purple700,
-                iconSize: 28,
-              ),
-              pw.SizedBox(width: 10),
-              paymentTile(
-                icon: whatsappIcon,
-                label: 'للاستفسار',
-                value: '01017174149',
-                color: PdfColors.green700,
-                iconSize: 23,
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 10),
-          pw.Container(
-            width: double.infinity,
-            padding: const pw.EdgeInsets.symmetric(vertical: 8),
-            decoration: pw.BoxDecoration(
-              color: ink,
-              borderRadius: pw.BorderRadius.circular(12),
+          pw.Positioned.fill(
+            child: pw.Image(
+              pw.MemoryImage(footerBackground),
+              fit: pw.BoxFit.fill,
             ),
-            child: pw.Center(
-              child: makeText('شكرا لثقتكم بنا', font, 11.0, PdfColors.white),
+          ),
+          pw.Positioned(
+            top: 7,
+            left: 0,
+            right: 0,
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Container(width: 52, height: 1.2, color: red),
+                pw.SizedBox(width: 12),
+                makeText('وسائل الدفع المتاحة', font, 14.0, ink),
+                pw.SizedBox(width: 12),
+                pw.Container(width: 52, height: 1.2, color: red),
+              ],
+            ),
+          ),
+          pw.Positioned(
+            top: 35,
+            left: 96,
+            right: 96,
+            bottom: 86,
+            child: pw.Row(
+              children: [
+                paymentTile(
+                  icon: pw.SvgImage(
+                    svg: vodafoneSvg,
+                    width: 20,
+                    height: 20,
+                  ),
+                  label: 'فودافون كاش',
+                  value: '01022690901',
+                  color: red,
+                ),
+                pw.SizedBox(width: 18),
+                paymentTile(
+                  icon: pw.Image(
+                    pw.MemoryImage(instaPayIcon),
+                    fit: pw.BoxFit.contain,
+                  ),
+                  label: 'InstaPay',
+                  value: '01017174149',
+                  color: PdfColors.purple700,
+                ),
+                pw.SizedBox(width: 18),
+                paymentTile(
+                  icon: pw.Image(
+                    pw.MemoryImage(whatsappIcon),
+                    fit: pw.BoxFit.contain,
+                  ),
+                  label: 'للاستفسار',
+                  value: '01017174149',
+                  color: PdfColors.green700,
+                ),
+              ],
+            ),
+          ),
+          pw.Positioned(
+            left: 0,
+            right: 0,
+            bottom: 22,
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Container(width: 50, height: 1.1, color: red),
+                pw.SizedBox(width: 12),
+                makeText('شكرا لثقتكم بنا', font, 12.0, ink),
+                pw.SizedBox(width: 12),
+                pw.Container(width: 50, height: 1.1, color: red),
+              ],
             ),
           ),
         ],
