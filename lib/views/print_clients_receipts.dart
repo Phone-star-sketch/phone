@@ -624,7 +624,17 @@ class PrintClientsReceipts extends StatelessWidget {
     ]);
   }
 
-  pw.Widget _buildInfoIcon(String type, PdfColor accent) {
+  pw.Widget _buildInfoIcon(String type) {
+    final iconColor = switch (type) {
+      'clients' => '#0B4DB3',
+      'phone' => '#20AEEA',
+      _ => '#D71920',
+    };
+    final backgroundColor = switch (type) {
+      'clients' => PdfColor.fromHex('#EAF2FF'),
+      'phone' => PdfColor.fromHex('#EAF8FE'),
+      _ => PdfColor.fromHex('#FFF0F1'),
+    };
     final path = switch (type) {
       'clients' =>
         '<circle cx="13" cy="10" r="5"/><path d="M4 27v-3c0-5 4-8 9-8s9 3 9 8v3M23 7a4 4 0 0 1 0 8m3 12v-3c0-3-2-6-5-7"/>',
@@ -635,46 +645,23 @@ class PrintClientsReceipts extends StatelessWidget {
     };
 
     return pw.Container(
-      width: 48,
-      height: 48,
-      child: pw.Stack(
-        alignment: pw.Alignment.center,
-        children: [
-          pw.Container(
-            width: 48,
-            height: 48,
-            decoration: pw.BoxDecoration(
-              shape: pw.BoxShape.circle,
-              color: PdfColor(accent.red, accent.green, accent.blue, 0.08),
-            ),
-          ),
-          pw.Container(
-            width: 36,
-            height: 36,
-            decoration: pw.BoxDecoration(
-              shape: pw.BoxShape.circle,
-              color: PdfColor(accent.red, accent.green, accent.blue, 0.13),
-              border: pw.Border.all(
-                color: PdfColor(
-                  accent.red,
-                  accent.green,
-                  accent.blue,
-                  0.32,
-                ),
-                width: 0.8,
-              ),
-            ),
-            child: pw.Center(
-              child: pw.SvgImage(
-                svg:
-                    '<svg viewBox="0 0 32 32" fill="none" stroke="#000000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">$path</svg>',
-                width: 19,
-                height: 19,
-                colorFilter: accent,
-              ),
-            ),
-          ),
-        ],
+      width: 34,
+      height: 34,
+      decoration: pw.BoxDecoration(
+        color: backgroundColor,
+        borderRadius: pw.BorderRadius.circular(9),
+        border: pw.Border.all(
+          color: PdfColor.fromHex('#D8E6F2'),
+          width: 0.7,
+        ),
+      ),
+      child: pw.Center(
+        child: pw.SvgImage(
+          svg:
+              '<svg viewBox="0 0 32 32" fill="none" stroke="$iconColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">$path</svg>',
+          width: 20,
+          height: 20,
+        ),
       ),
     );
   }
@@ -690,46 +677,35 @@ class PrintClientsReceipts extends StatelessWidget {
       String number) {
     pw.Widget titleValue(String field, String value) {
       final isAmount = field == ss;
-      final accent =
-          isAmount ? PdfColor.fromHex('#d71920') : PdfColor.fromHex('#20aeea');
-
       return pw.Container(
         width: 200,
-        height: 76,
-        child: pw.Stack(
-          overflow: pw.Overflow.visible,
+        padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColor.fromHex('#dce7f5'), width: 1),
+          borderRadius: pw.BorderRadius.circular(14),
+          color: PdfColors.white,
+        ),
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            pw.Positioned.fill(
-              child: pw.Container(
-                padding: const pw.EdgeInsets.fromLTRB(42, 11, 14, 11),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(
-                      color: PdfColor.fromHex('#dce7f5'), width: 1),
-                  borderRadius: pw.BorderRadius.circular(14),
-                  color: PdfColors.white,
-                ),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.center,
-                  children: [
-                    makeText(
-                        field, fieldFont, 12.5, PdfColor.fromHex('#0b4db3')),
-                    pw.SizedBox(height: 6),
-                    makeText(
-                      value,
-                      fieldFont,
-                      isAmount ? 15.5 : 14.0,
-                      isAmount
-                          ? PdfColor.fromHex('#d71920')
-                          : PdfColor.fromHex('#101827'),
-                    ),
-                  ],
-                ),
+            _buildInfoIcon(isAmount ? 'money' : 'phone'),
+            pw.SizedBox(width: 10),
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  makeText(field, fieldFont, 12.5, PdfColor.fromHex('#0b4db3')),
+                  pw.SizedBox(height: 5),
+                  makeText(
+                    value,
+                    fieldFont,
+                    isAmount ? 15.5 : 14.0,
+                    isAmount
+                        ? PdfColor.fromHex('#d71920')
+                        : PdfColor.fromHex('#101827'),
+                  ),
+                ],
               ),
-            ),
-            pw.Positioned(
-              left: -9,
-              top: 14,
-              child: _buildInfoIcon(isAmount ? 'money' : 'phone', accent),
             ),
           ],
         ),
@@ -826,31 +802,25 @@ class PrintClientsReceipts extends StatelessWidget {
     }) {
       return pw.Expanded(
         child: pw.Container(
-          height: 78,
-          child: pw.Stack(
-            overflow: pw.Overflow.visible,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.white,
+            borderRadius: pw.BorderRadius.circular(12),
+            border: pw.Border.all(color: line, width: 0.8),
+          ),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
-              pw.Positioned.fill(
-                child: pw.Container(
-                  padding: const pw.EdgeInsets.fromLTRB(42, 11, 12, 11),
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.white,
-                    borderRadius: pw.BorderRadius.circular(12),
-                    border: pw.Border.all(color: line, width: 0.8),
-                  ),
-                  child: pw.Column(
-                    children: [
-                      makeText(label, font, 12.5, blue),
-                      pw.SizedBox(height: 6),
-                      makeText(value, valueFont, 18.0, valueColor),
-                    ],
-                  ),
+              _buildInfoIcon(iconType),
+              pw.SizedBox(width: 10),
+              pw.Expanded(
+                child: pw.Column(
+                  children: [
+                    makeText(label, font, 12.5, blue),
+                    pw.SizedBox(height: 5),
+                    makeText(value, valueFont, 18.0, valueColor),
+                  ],
                 ),
-              ),
-              pw.Positioned(
-                left: -9,
-                top: 15,
-                child: _buildInfoIcon(iconType, valueColor),
               ),
             ],
           ),
